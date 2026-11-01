@@ -25,3 +25,9 @@ export async function login(role: Role) {
 }
 
 export const json = (o: unknown) => JSON.stringify(o);
+
+export async function addPond(name = 'SP 1', active = true) {
+  const id = crypto.randomUUID();
+  await env.DB.prepare('INSERT INTO settling_ponds (id,name,is_active) VALUES (?,?,?)').bind(id, name, active ? 1 : 0).run();
+  return id;
+}
