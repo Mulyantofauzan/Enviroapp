@@ -1,0 +1,18 @@
+{
+  "name": "@evo/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "vitest run"
+  },
+  "dependencies": { "@evo/shared": "*", "hono": "^4.9.0" },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "latest",
+    "@cloudflare/workers-types": "latest",
+    "vitest": "^4.1.0",
+    "wrangler": "latest",
+    "typescript": "^5.9.0"
+  }
+}
