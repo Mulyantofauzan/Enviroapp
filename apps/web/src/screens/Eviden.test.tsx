@@ -139,3 +139,78 @@ describe('Eviden', () => {
     expect(screen.queryByText(/Unggah galeri/)).toBeNull();
   });
 });
+
+describe('Eviden ZIP', () => {
+  const three = [item(1), item(2), item(3)];
+  function zipSetup(opts: { total?: number; failId?: string; gate?: Promise<void> } = {}) {
+    const fileCalls: string[] = [];
+    const calls = mockApi({
+      role: 'Auditor',
+      handler: (url) => {
+        if (url.startsWith('/api/evidence?')) return json({ total: opts.total ?? 3, items: three });
+        if (url.startsWith('/api/schedules')) return json(SCHEDULES);
+        const m = url.match(/^\/api\/evidence\/(\w+)\/file$/);
+        if (m) {
+          fileCalls.push(m[1]);
+          if (m[1] === opts.failId) return new Response('x', { status: 500 });
+          if (m[1] === 'e3' && opts.gate) return opts.gate.then(() => new Response(new Uint8Array([3])));
+          return new Response(new Uint8Array([Number(m[1].slice(1))]));
+        }
+        return undefined;
+      },
+    });
+    const downloads: string[] = [];
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() }));
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { downloads.push(this.download); });
+    return { calls, fileCalls, downloads };
+  }
+
+  it('is disabled when there is nothing to download', async () => {
+    setup('Auditor', [], 0);
+    renderApp('/eviden');
+    await screen.findByText('Belum ada eviden pada rentang ini.');
+    expect(screen.getByRole('button', { name: 'Unduh semua eviden (ZIP)' })).toBeDisabled();
+  });
+
+  it('downloads every file in order and names the zip after the range', async () => {
+    const { calls, fileCalls, downloads } = zipSetup();
+    renderApp('/eviden');
+    await screen.findByAltText('foto-1.jpg');
+    await userEvent.click(screen.getByRole('button', { name: 'Unduh semua eviden (ZIP)' }));
+    await waitFor(() => expect(downloads).toEqual(['eviden-2026-10-04-2026-11-02.zip']));
+    expect(fileCalls).toEqual(['e1', 'e2', 'e3']);
+    expect(listCalls(calls).some((c) => new URL(c.url, 'http://x').searchParams.get('limit') === '100')).toBe(true);
+  });
+
+  it('refuses over 100 and fetches no file', async () => {
+    const { fileCalls, downloads } = zipSetup({ total: 101 });
+    renderApp('/eviden');
+    await screen.findByAltText('foto-1.jpg');
+    await userEvent.click(screen.getByRole('button', { name: 'Unduh semua eviden (ZIP)' }));
+    expect(await screen.findByText('Ada 101 eviden. Persempit rentang agar tidak lebih dari 100.')).toBeInTheDocument();
+    expect(fileCalls).toEqual([]);
+    expect(downloads).toEqual([]);
+  });
+
+  it('shows progress and disables the button while running', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    const { downloads } = zipSetup({ gate });
+    renderApp('/eviden');
+    await screen.findByAltText('foto-1.jpg');
+    await userEvent.click(screen.getByRole('button', { name: 'Unduh semua eviden (ZIP)' }));
+    expect(await screen.findByText('Menyiapkan 2 dari 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Menyiapkan|Unduh semua/ })).toBeDisabled();
+    release();
+    await waitFor(() => expect(downloads.length).toBe(1));
+  });
+
+  it('a failed file shows its name and starts no download', async () => {
+    const { downloads } = zipSetup({ failId: 'e2' });
+    renderApp('/eviden');
+    await screen.findByAltText('foto-1.jpg');
+    await userEvent.click(screen.getByRole('button', { name: 'Unduh semua eviden (ZIP)' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('foto-2.jpg');
+    expect(downloads).toEqual([]);
+  });
+});

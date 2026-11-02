@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLE_LABEL, formatDateId } from '@evo/shared';
 import { useAuth } from '../auth/AuthContext';
@@ -16,11 +16,12 @@ import { ScreenHeader } from '../ui/ScreenHeader';
 import { Segmented } from '../ui/Segmented';
 import { pondLabel } from '../ui/PondPicker';
 import { api } from '../api/client';
+import { buildZip } from '../lib/zip';
 import { localToday } from './input/DayScope';
-import { useEffect } from 'react';
 
 const SPANS = [{ value: '7', label: '7 hari' }, { value: '30', label: '30 hari' }, { value: '90', label: '90 hari' }] as const;
 type Span = (typeof SPANS)[number]['value'];
+const ZIP_MAX = 100;
 const PREVIEW = ['image/jpeg', 'image/png', 'image/webp'];
 
 export function Eviden() {
@@ -44,6 +45,42 @@ export function Eviden() {
   const list = useEvidenceList({ from, to: today, schedule, sp: current, ready: !!today && !pondsLoading });
   const pond = useMemo(() => ponds.find((p) => p.id === current), [ponds, current]);
   const readOnly = user?.role === 'Auditor';
+
+  const [zip, setZip] = useState<{ done: number; total: number } | null>(null);
+  const [zipError, setZipError] = useState('');
+
+  async function downloadAll() {
+    if (!from || !today) return;
+    setZipError('');
+    if (list.total > ZIP_MAX) { setZipError(`Ada ${list.total} eviden. Persempit rentang agar tidak lebih dari ${ZIP_MAX}.`); return; }
+    setZip({ done: 0, total: list.total });
+    try {
+      const q = new URLSearchParams({ from, to: today, limit: String(ZIP_MAX), offset: '0' });
+      if (schedule) q.set('schedule', schedule);
+      if (current) q.set('sp', current);
+      const all = await api<{ total: number; items: EvidenceRow[] }>(`/evidence?${q}`);
+      if (all.total > ZIP_MAX) throw new Error(`Ada ${all.total} eviden. Persempit rentang agar tidak lebih dari ${ZIP_MAX}.`);
+      const blob = await buildZip(
+        all.items.map((x) => ({ id: x.id, due_date: x.due_date!, title: x.title ?? 'eviden', filename: x.filename })),
+        async (id) => {
+          const r = await fetch(`/api/evidence/${id}/file`);
+          if (!r.ok) throw new Error('unduh gagal');
+          return new Uint8Array(await r.arrayBuffer());
+        },
+        (done, total) => setZip({ done, total }),
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `eviden-${from}-${today}.zip`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setZipError((e as Error).message);
+    } finally {
+      setZip(null);
+    }
+  }
 
   function closeViewer() { viewing?.opener?.focus(); setViewing(null); }
 
@@ -85,6 +122,10 @@ export function Eviden() {
             ))}
           </ul>
         )}
+        {zipError && <p className="ui-error" role="alert">{zipError}</p>}
+        <Button disabled={!!zip || list.loading || list.items.length === 0} onClick={downloadAll}>
+          <Icon name="download" /> {zip ? `Menyiapkan ${zip.done} dari ${zip.total}` : 'Unduh semua eviden (ZIP)'}
+        </Button>
         {!list.loading && list.total > list.items.length && <Button variant="outline" onClick={list.more}>Muat lebih banyak</Button>}
       </div>
       {viewing && <EvidenceViewer item={viewing.item} onClose={closeViewer} />}
