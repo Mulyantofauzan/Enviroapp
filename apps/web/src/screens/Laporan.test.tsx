@@ -5,6 +5,11 @@ import { unzipSync } from 'fflate';
 import type { Role } from '@evo/shared';
 import { mockApi, renderApp, json, POND } from '../test-utils';
 
+vi.mock('../lib/chartImage', () => ({ chartToPng: vi.fn(async () => ({ dataUrl: 'data:image/png;base64,AAAA', width: 340, height: 220 })) }));
+vi.mock('../lib/pdf', () => ({ buildPdf: vi.fn(async () => new Blob(['%PDF-'], { type: 'application/pdf' })) }));
+import { chartToPng } from '../lib/chartImage';
+import { buildPdf } from '../lib/pdf';
+
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); try { localStorage.clear(); } catch { /* ignore */ } });
 
 const water = (o = {}) => ({ ph_inlet: 7, ph_outlet: 7.1, tss_inlet: 100, tss_outlet: 30, debit_inlet_m3d: 1000, debit_outlet_m3d: 1278.7, ...o });
@@ -185,4 +190,52 @@ describe('Laporan: Excel export', () => {
     expect(await screen.findByRole('alert', {}, { timeout: 20000 })).toHaveTextContent(/Ada 21\.003 baris\. Persempit periode agar tidak lebih dari 20\.000\./);
     expect(names).toEqual([]);
   }, 40000);
+});
+
+describe('Laporan: PDF export', () => {
+  it('turns each chart into an image, builds the PDF and downloads it under the right name', async () => {
+    setup();
+    const names: string[] = [];
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download); });
+    renderApp('/laporan');
+    await ready();
+    await screen.findByRole('heading', { name: 'pH harian' });
+    await userEvent.click(screen.getByRole('button', { name: 'Ekspor PDF' }));
+    await waitFor(() => expect(names).toEqual(['laporan-evo-SP-02_Pit_Selatan-2026-10-27-2026-11-02.pdf']));
+    const charts = vi.mocked(buildPdf).mock.calls.at(-1)![2];
+    expect(charts.length).toBeGreaterThanOrEqual(7);
+    expect(new Set(charts.map((c) => c.section))).toEqual(new Set(['cuaca', 'air', 'koagulan']));
+    expect(charts.find((c) => c.title === 'pH harian')!.legend.map((l) => l.label)).toContain('Outlet');
+    expect(vi.mocked(chartToPng)).toHaveBeenCalled();
+  });
+  it('a failed chart image shows a message and downloads nothing', async () => {
+    setup();
+    vi.mocked(chartToPng).mockRejectedValueOnce(new Error('Grafik tidak bisa dibuat menjadi gambar.'));
+    const names: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download); });
+    renderApp('/laporan');
+    await ready();
+    await screen.findByRole('heading', { name: 'pH harian' });
+    await userEvent.click(screen.getByRole('button', { name: 'Ekspor PDF' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Grafik tidak bisa dibuat menjadi gambar.');
+    expect(names).toEqual([]);
+  });
+  it('both export buttons wait while a file is being prepared', async () => {
+    setup();
+    let release!: () => void;
+    vi.mocked(buildPdf).mockImplementationOnce(() => new Promise((r) => { release = () => r(new Blob(['x'])); }));
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderApp('/laporan');
+    await ready();
+    await screen.findByRole('heading', { name: 'pH harian' });
+    await userEvent.click(screen.getByRole('button', { name: 'Ekspor PDF' }));
+    expect(await screen.findByRole('button', { name: 'Menyiapkan…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Ekspor Excel (.xlsx)' })).toBeDisabled();
+    release();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Ekspor PDF' })).toBeEnabled());
+  });
 });

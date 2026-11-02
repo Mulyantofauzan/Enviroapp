@@ -9,6 +9,8 @@ import { Icon } from '../icons';
 import { addDays, addMonths, dateText, monthRange } from '../lib/dates';
 import { reportFilename, saveBlob } from '../lib/download';
 import { buildReport, cellText, reportRowCount, type ReportKind, type ReportRow } from '../lib/report';
+import { chartToPng } from '../lib/chartImage';
+import { buildPdf, type PdfChart } from '../lib/pdf';
 import { witaStamp } from '../lib/stamp';
 import { validatePeriod } from '../lib/windows';
 import { buildXlsx, type ReportMeta } from '../lib/xlsx';
@@ -41,7 +43,7 @@ export function Laporan() {
   const [spChoice, setSpChoice] = useState<string | null>(null);
   const [active, setActive] = useState<Set<ReportKind>>(new Set(['cuaca', 'air', 'koagulan']));
   const [view, setView] = useState<ReportKind>('air');
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<'xlsx' | 'pdf' | null>(null);
   const [exportError, setExportError] = useState('');
 
   const sp = spChoice ?? current ?? '';
@@ -87,14 +89,38 @@ export function Laporan() {
   async function exportExcel() {
     setExportError('');
     if (total > MAX_ROWS) { setExportError(`Ada ${formatNumber(total, 0)} baris. Persempit periode agar tidak lebih dari 20.000.`); return; }
-    setBusy(true);
+    setBusy('xlsx');
     try {
       const bytes = buildXlsx(meta(), sections);
       saveBlob(new Blob([bytes.slice()], { type: XLSX_TYPE }), reportFilename(lokasi, from, to, 'xlsx'));
     } catch (e) {
       setExportError((e as Error).message || 'Berkas tidak bisa dibuat. Coba lagi.');
     } finally {
-      setBusy(false);
+      setBusy(null);
+    }
+  }
+
+  async function exportPdf() {
+    setExportError('');
+    if (total > MAX_ROWS) { setExportError(`Ada ${formatNumber(total, 0)} baris. Persempit periode agar tidak lebih dari 20.000.`); return; }
+    setBusy('pdf');
+    try {
+      const charts: PdfChart[] = [];
+      for (const card of Array.from(document.querySelectorAll<HTMLElement>('[data-report-chart-card]'))) {
+        const svg = card.querySelector<SVGSVGElement>('svg[role="img"]');
+        if (!svg) continue;
+        const img = await chartToPng(svg);
+        const legend = Array.from(card.querySelectorAll('.ui-legend li')).map((li) => {
+          const mark = li.querySelector('i');
+          return { label: li.textContent ?? '', color: mark ? getComputedStyle(mark).backgroundColor : '' };
+        });
+        charts.push({ section: card.dataset.section as ReportKind, title: card.querySelector('h2')?.textContent ?? '', ...img, legend });
+      }
+      saveBlob(await buildPdf(meta(), sections, charts), reportFilename(lokasi, from, to, 'pdf'));
+    } catch (e) {
+      setExportError((e as Error).message || 'Berkas tidak bisa dibuat. Coba lagi.');
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -105,7 +131,7 @@ export function Laporan() {
   }));
   const previewRows: Row[] = (section?.rows ?? []).slice(0, PREVIEW_ROWS).map((r, i) => ({ ...r, i }));
   const error = periodError || data.error;
-  const canExport = !data.loading && !error && total > 0 && !busy;
+  const canExport = !data.loading && !error && total > 0 && busy === null;
 
   return (
     <>
@@ -156,7 +182,8 @@ export function Laporan() {
         )}
 
         {exportError && <p className="ui-error" role="alert">{exportError}</p>}
-        <Button disabled={!canExport} onClick={exportExcel}><Icon name="download" /> {busy ? 'Menyiapkan…' : 'Ekspor Excel (.xlsx)'}</Button>
+        <Button disabled={!canExport} onClick={exportExcel}><Icon name="download" /> {busy === 'xlsx' ? 'Menyiapkan…' : 'Ekspor Excel (.xlsx)'}</Button>
+        <Button variant="outline" disabled={!canExport} onClick={exportPdf}><Icon name="file" /> {busy === 'pdf' ? 'Menyiapkan…' : 'Ekspor PDF'}</Button>
       </div>
     </>
   );
