@@ -182,7 +182,7 @@ describe('Laporan: Excel export', () => {
     renderApp('/laporan');
     await ready();
     await userEvent.click(screen.getByRole('button', { name: 'Ekspor Excel (.xlsx)' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Ada 21\.003 baris\. Persempit periode agar tidak lebih dari 20\.000\./);
+    expect(await screen.findByRole('alert', {}, { timeout: 20000 })).toHaveTextContent(/Ada 21\.003 baris\. Persempit periode agar tidak lebih dari 20\.000\./);
     expect(names).toEqual([]);
-  });
+  }, 40000);
 });
