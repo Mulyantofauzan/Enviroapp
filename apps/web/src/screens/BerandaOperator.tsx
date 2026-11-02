@@ -25,7 +25,9 @@ function Stat({ label, value, unit, verdict: vd }: { label: string; value: numbe
   return (
     <div className="ui-stat">
       <span className="ui-stat__label">{label}</span>
-      <strong className={vd === 'abnormal' ? 'is-bad' : ''}>{formatNumber(value, 1)}{unit && <small> {unit}</small>}</strong>
+      {value === null
+        ? <strong className="is-empty">Belum diisi</strong>
+        : <strong className={vd === 'abnormal' ? 'is-bad' : ''}>{formatNumber(value, 1)}{unit && <small> {unit}</small>}</strong>}
       {vd && <Badge tone={vd === 'abnormal' ? 'danger' : 'success'}>{vd === 'abnormal' ? 'Abnormal' : 'Normal'}</Badge>}
     </div>
   );

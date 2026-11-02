@@ -19,7 +19,9 @@ function Kpi({ label, value, unit, sub, tone }: { label: string; value: number |
   return (
     <div className="ui-card ui-kpi" role="group" aria-label={label}>
       <span className="ui-kpi__label">{label}</span>
-      <strong className={tone === 'abnormal' ? 'is-bad' : ''}>{formatNumber(value, 1)}{unit && <small> {unit}</small>}</strong>
+      {value === null
+        ? <strong className="is-empty">Belum diisi</strong>
+        : <strong className={tone === 'abnormal' ? 'is-bad' : ''}>{formatNumber(value, 1)}{unit && <small> {unit}</small>}</strong>}
       {tone && <Badge tone={tone === 'abnormal' ? 'danger' : 'success'}>{tone === 'abnormal' ? 'Abnormal' : 'Normal'}</Badge>}
       {sub && <span className="ui-kpi__sub">{sub}</span>}
     </div>

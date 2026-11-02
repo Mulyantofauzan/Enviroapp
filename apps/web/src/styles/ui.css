@@ -253,3 +253,14 @@ body { font-size: 15px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .ui-matrix th:first-child, .ui-matrix td:first-child { text-align: left; }
 .ui-matrix td { padding: 12px 4px; text-align: center; border-bottom: 1px solid var(--border); }
 .ui-tick { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--success-soft); color: var(--success); }
+
+/* Layout safety: grid tracks must be allowed to shrink below an input's intrinsic width. */
+.ui-page, .ui-stack, .ui-module, .ui-pickers, .ui-users { grid-template-columns: minmax(0, 1fr); }
+.ui-page > *, .ui-stack > *, .ui-module > *, .ui-card { min-width: 0; }
+.ui-two, .ui-filters, .ui-kpis, .ui-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 400px) { .ui-three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ui-num__box input, .ui-filters input, .ui-filters select, .ui-text input, .ui-text select { width: 100%; min-width: 0; }
+.ui-kpi strong { font-size: 24px; overflow-wrap: anywhere; }
+.ui-kpi strong.is-empty, .ui-stat strong.is-empty { font: 500 14px var(--font); color: var(--text-sub); }
+/* Toggle keeps Figma's 52x30 look, with a 44px tall tap area. */
+.ui-toggle::after { content: ''; position: absolute; inset: -7px -4px; }

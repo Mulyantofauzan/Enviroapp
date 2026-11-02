@@ -18,7 +18,17 @@ npm run build -w @evo/web             # API serves apps/web/dist
 cd apps/api && npx wrangler dev       # http://localhost:8787
 npm run dev -w @evo/web               # optional: Vite on :5173, proxies /api to :8787
 ```
-After first login as admin: add ponds, set pH/TSS limits, add users.
+Migrations: `npx wrangler d1 migrations apply evo --local` (0001 schema, 0002 redesign: pond code/coordinates, per-pond limits, user active flag).
+
+## Peran dan layar
+| Peran | Tab | Catatan |
+|---|---|---|
+| Operator | Beranda, Input, Akun | Isi cuaca, air, koagulan; Riwayat lewat Akun |
+| Manager | Beranda (Dashboard), Akun | Baca saja |
+| Auditor | Riwayat, Akun | Baca saja |
+| Admin | Beranda, Input, Akun | Akses penuh; Pengguna dan Master lewat Akun |
+
+Setelah masuk sebagai Admin: tambah settling pond di Master (isi kode, koordinat, baku mutu pH dan TSS), lalu tambah pengguna di Kelola Pengguna. Desain acuan ada di `design/`.
 
 ## Test
 ```

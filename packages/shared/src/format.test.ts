@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { formatNumber, formatDateId, parseLocaleNumber, ROLE_LABEL } from './format';
-import { THRESHOLD_KEYS } from './types';
+import { THRESHOLD_KEYS, COAGULANT_TYPES } from './types';
 
 describe('formatNumber', () => {
   it('uses id-ID separators', () => expect(formatNumber(1278.72, 1)).toBe('1.278,7'));
@@ -21,6 +21,7 @@ describe('parseLocaleNumber', () => {
   it('negative', () => expect(parseLocaleNumber('-3,5')).toBe(-3.5));
 });
 describe('constants', () => {
+  it('coagulant order follows the design: Kapur first', () => expect([...COAGULANT_TYPES]).toEqual(['Kapur', 'Tawas Serbuk', 'Tawas Batu']));
   it('threshold keys are outlet only', () => expect([...THRESHOLD_KEYS]).toEqual(['ph_outlet', 'tss_outlet']));
   it('role labels', () => expect(ROLE_LABEL.Operator).toBe('Operator Lapangan'));
 });
