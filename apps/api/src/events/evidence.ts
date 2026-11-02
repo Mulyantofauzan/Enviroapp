@@ -134,3 +134,37 @@ evidenceRoutes.post('/events/:scheduleId/:date/complete', requireAuth, requireEx
   }
   return c.json({ completed_at: at, completed_on: today, late: isLate(date, today) });
 });
+
+const DAY_MS = 86_400_000;
+const MAX_RANGE_DAYS = 366;
+
+/** Evidence across all events, for the Eviden screen. Everyone who is signed in may read it. */
+evidenceRoutes.get('/evidence', requireAuth, async (c) => {
+  const from = c.req.query('from') ?? '';
+  const to = c.req.query('to') ?? '';
+  if (!isValidDate(from) || !isValidDate(to) || from > to) return c.json({ error: 'Pilih rentang tanggal yang benar.' }, 400);
+  if ((Date.parse(to) - Date.parse(from)) / DAY_MS > MAX_RANGE_DAYS) return c.json({ error: 'Pilih rentang satu tahun atau kurang.' }, 400);
+  const limitRaw = c.req.query('limit');
+  const offsetRaw = c.req.query('offset');
+  const limit = limitRaw === undefined ? 50 : Number(limitRaw);
+  const offset = offsetRaw === undefined ? 0 : Number(offsetRaw);
+  if (!Number.isInteger(limit) || limit < 1) return c.json({ error: 'Batas halaman tidak valid.' }, 400);
+  if (!Number.isInteger(offset) || offset < 0) return c.json({ error: 'Posisi halaman tidak valid.' }, 400);
+
+  const where = ['e.due_date BETWEEN ? AND ?'];
+  const args: unknown[] = [from, to];
+  const schedule = c.req.query('schedule');
+  const sp = c.req.query('sp');
+  if (schedule) { where.push('s.id = ?'); args.push(schedule); }
+  if (sp) { where.push('(s.sp_id IS NULL OR s.sp_id = ?)'); args.push(sp); }
+  const clause = where.join(' AND ');
+  const db = c.env.DB;
+  const total = await db.prepare(`SELECT COUNT(*) n FROM evidences e JOIN event_schedules s ON s.id = e.schedule_id WHERE ${clause}`).bind(...args).first<{ n: number }>();
+  const { results } = await db.prepare(
+    `SELECT e.id, e.filename, e.mime, e.size, e.source, e.gps_lat, e.gps_lng, e.gps_accuracy, e.taken_at, e.uploaded_at,
+            u.name AS uploaded_by_name, u.role AS uploaded_by_role, e.schedule_id, s.title, e.due_date, s.sp_id
+     FROM evidences e JOIN event_schedules s ON s.id = e.schedule_id JOIN users u ON u.id = e.uploaded_by
+     WHERE ${clause} ORDER BY e.due_date DESC, e.uploaded_at DESC, e.id DESC LIMIT ? OFFSET ?`,
+  ).bind(...args, Math.min(limit, 100), offset).all();
+  return c.json({ total: total?.n ?? 0, items: results });
+});
