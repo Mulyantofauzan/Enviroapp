@@ -5,7 +5,7 @@ export type Bucket = { key: string; label: string; value: number | null; partial
 
 type Mode = 'mean' | 'sum';
 
-const monthLabel = (month: string) => {
+export const monthLabel = (month: string) => {
   const m = new Intl.DateTimeFormat('id-ID', { timeZone: 'UTC', month: 'short' }).format(new Date(`${month}-01T00:00:00Z`)).replace('.', '');
   return `${m} ${month.slice(2, 4)}`;
 };

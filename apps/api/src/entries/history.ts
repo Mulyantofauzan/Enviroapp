@@ -42,21 +42,25 @@ historyRoutes.get('/', async (c) => {
 
   const wByDate = new Map(weather.map((w) => [w.date, w]));
   const keys = new Map<string, { date: string; sp_id: string | null }>();
-  const add = (date: string, sp_id: string | null) => keys.set(`${date}|${sp_id}`, { date, sp_id });
+  const datesSeen = new Set<string>();
+  const add = (date: string, sp_id: string | null) => { keys.set(`${date}|${sp_id}`, { date, sp_id }); datesSeen.add(date); };
   for (const r of [...water, ...coag]) add(r.date, r.sp_id);
-  for (const w of weather) {
-    const has = [...keys.values()].some((k) => k.date === w.date);
-    if (!has) add(w.date, sp);
-  }
+  for (const w of weather) if (!datesSeen.has(w.date)) add(w.date, sp);
+
+  // Indexed once: a year across many ponds would otherwise rescan these arrays for every entry.
+  const waterByKey = new Map<string, any>();
+  for (const r of water) { const k = `${r.date}|${r.sp_id}`; if (!waterByKey.has(k)) waterByKey.set(k, r); }
+  const coagByKey = new Map<string, any[]>();
+  for (const r of coag) { const k = `${r.date}|${r.sp_id}`; (coagByKey.get(k) ?? coagByKey.set(k, []).get(k)!).push(r); }
 
   const entries = [];
   for (const { date, sp_id } of keys.values()) {
-    const coagulant = coag.filter((r) => r.date === date && r.sp_id === sp_id);
+    const k = `${date}|${sp_id}`;
     entries.push({
       date, sp_id,
       weather: wByDate.get(date) ?? null,
-      water: withDerivedFlow(water.find((r) => r.date === date && r.sp_id === sp_id) ?? null),
-      coagulant,
+      water: withDerivedFlow(waterByKey.get(k) ?? null),
+      coagulant: coagByKey.get(k) ?? [],
     });
   }
   entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));

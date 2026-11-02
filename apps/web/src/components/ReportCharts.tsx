@@ -2,7 +2,7 @@ import { formatNumber, type Threshold } from '@evo/shared';
 import { meanByMonth, meanByWeek, sumByMonth, sumByWeek, type Bucket } from '../lib/aggregate';
 import { addDays } from '../lib/dates';
 import type { HistoryEntry, ReportKind } from '../lib/report';
-import { COAG_TYPES, coagUsageDaily, fillDates, rainByDate, tawasByDate, waterByDate } from '../lib/reportSeries';
+import { coagUsageBuckets, fillDates, rainByDate, tawasByDate, waterByDate } from '../lib/reportSeries';
 import { BarChart } from './BarChart';
 import { PhChart } from './PhChart';
 import { TrendChart } from './TrendChart';
@@ -98,15 +98,15 @@ export function ReportCharts({ kinds, entries, ytd, ytdError = '', spId, thresho
   }
 
   if (kinds.includes('koagulan')) {
-    const t1 = 'Penggunaan koagulan per jenis, harian';
+    const dailyTitle = (u: string) => `Penggunaan koagulan per jenis, ${u === 'hari' ? 'harian' : u === 'minggu' ? 'mingguan' : 'bulanan'}`;
     const t2 = 'Penggunaan tawas per minggu, 5 minggu terakhir';
     const t3 = 'Penggunaan tawas per bulan, 12 bulan terakhir';
-    if (!entries) cards.push(loadingCard('koagulan', t1)); else {
-      const daily = coagUsageDaily(entries, from, to);
+    if (!entries) cards.push(loadingCard('koagulan', 'Penggunaan koagulan per jenis')); else {
+      const usage = coagUsageBuckets(entries, from, to);
+      const t1 = dailyTitle(usage.unit);
       cards.push(
         <Card kind="koagulan" key={t1} title={t1}>
-          <BarChart name="Penggunaan koagulan" unit="kg" categories={daily.map((d) => ({ key: d.date, label: String(Number(d.date.slice(8))) }))}
-            series={COAG_TYPES.map((c) => ({ name: c, values: daily.map((d) => d[c]) }))} />
+          <BarChart name="Penggunaan koagulan" unit="kg" categories={usage.categories} series={usage.series} />
         </Card>,
       );
     }
