@@ -1,10 +1,30 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as db from './db';
-import { enqueue, listItems, markFailed, removeItem, removePending, retryItem, scheduleRetry, subscribe } from './queue';
+import { enqueue, listItems, loadBlob, markFailed, removeItem, removePending, retryItem, scheduleRetry, subscribe } from './queue';
 
 afterEach(() => vi.restoreAllMocks());
 
 const base = { owner: 'u1', kind: 'weather' as const, key: 'weather|2026-11-02', label: 'Cuaca 2 Nov', request: { method: 'PUT' as const, path: '/weather/2026-11-02', body: { rainfall_mm: 5 } } };
+
+describe('photo bytes', () => {
+  it('listing never loads the photos, loadBlob reads exactly one', async () => {
+    const a = await enqueue({ ...base, kind: 'evidence', key: 'e1', blob: new Blob(['aaa'], { type: 'image/jpeg' }) });
+    await enqueue({ ...base, kind: 'evidence', key: 'e2', blob: new Blob(['bbbbb'], { type: 'image/png' }) });
+    const items = await listItems('u1');
+    expect(items.every((i) => i.blob === null)).toBe(true);
+    expect((await loadBlob(a.id))?.size).toBe(3);
+  });
+  it('removing an item removes its photo', async () => {
+    const a = await enqueue({ ...base, kind: 'evidence', key: 'e1', blob: new Blob(['aaa'], { type: 'image/jpeg' }) });
+    await removeItem(a.id);
+    expect(await loadBlob(a.id)).toBeNull();
+  });
+  it('a replaced pending item takes its photo with it', async () => {
+    const a = await enqueue({ ...base, kind: 'evidence', key: 'same', blob: new Blob(['aaa'], { type: 'image/jpeg' }) });
+    await enqueue({ ...base, kind: 'evidence', key: 'same', blob: new Blob(['bb'], { type: 'image/jpeg' }) });
+    expect(await loadBlob(a.id)).toBeNull();
+  });
+});
 
 describe('outbox queue', () => {
   it('assigns an ascending seq and starts pending', async () => {
@@ -77,9 +97,10 @@ describe('outbox queue', () => {
   });
 
   it('stores a blob and reads it back with the same size', async () => {
-    await enqueue({ ...base, kind: 'evidence', key: 'evidence|s|d|1', blob: new Blob(['abcdef'], { type: 'image/jpeg' }) });
-    const [item] = await listItems('u1');
-    expect(item.blob?.size).toBe(6);
+    const added = await enqueue({ ...base, kind: 'evidence', key: 'evidence|s|d|1', blob: new Blob(['abcdef'], { type: 'image/jpeg' }) });
+    const blob = await loadBlob(added.id);
+    expect(blob?.size).toBe(6);
+    expect(blob?.type).toBe('image/jpeg');
   });
 
   it('notifies subscribers once per change and stops after unsubscribe', async () => {

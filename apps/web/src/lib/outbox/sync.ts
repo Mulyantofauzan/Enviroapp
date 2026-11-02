@@ -1,6 +1,6 @@
 import { api, ApiError } from '../../api/client';
 import type { OutboxItem } from './db';
-import { listItems, markFailed, removeItem, scheduleRetry, subscribe } from './queue';
+import { listItems, loadBlob, markFailed, removeItem, scheduleRetry, subscribe } from './queue';
 
 export type SyncResult = { sent: number; failed: number; remaining: number; paused: 'auth' | null };
 
@@ -19,13 +19,15 @@ async function send(item: OutboxItem): Promise<void> {
   const { request } = item;
   if (item.kind === 'evidence') {
     const form = new FormData();
-    form.append('file', new File([item.blob ?? new Blob()], request.filename ?? 'foto.jpg', { type: item.blob?.type ?? '' }));
+    const blob = (await loadBlob(item.id)) ?? new Blob();
+    form.append('file', new File([blob], request.filename ?? 'foto.jpg', { type: blob.type }));
     for (const [k, v] of Object.entries(request.fields ?? {})) form.append(k, v);
     form.append('client_id', item.id);
     await api(request.path, { method: 'POST', body: form });
     return;
   }
-  const body = DATA_KINDS.has(item.kind) ? JSON.stringify({ ...request.body, recorded_at: item.recordedAt }) : undefined;
+  const body = DATA_KINDS.has(item.kind) ? JSON.stringify({ ...request.body, recorded_at: item.recordedAt })
+    : item.kind === 'complete' ? JSON.stringify({ recorded_at: item.recordedAt }) : undefined;
   await api(request.path, { method: request.method, body });
 }
 

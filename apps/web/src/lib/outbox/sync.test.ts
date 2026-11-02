@@ -156,6 +156,15 @@ describe('runSync', () => {
   });
 });
 
+describe('completion time', () => {
+  it('a queued completion is sent with the time it was recorded', async () => {
+    const d = await done();
+    const calls = stubFetch(() => ok());
+    await runSync('u1');
+    expect(calls[0].body).toEqual({ recorded_at: d.recordedAt });
+  });
+});
+
 describe('retry timing', () => {
   it('a network error is retried after 5 s, 15 s, then never waits longer than 30 s', async () => {
     await data('weather|2026-11-02');

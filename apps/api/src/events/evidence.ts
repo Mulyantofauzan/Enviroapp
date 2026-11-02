@@ -4,6 +4,7 @@ import type { AppEnv } from '../types';
 import { requireAuth, requireExecutor } from '../auth/guard';
 import { safeFilename, sniffMime } from './sniff';
 import { readCameraMeta } from './evidence-meta';
+import { isFail, readRecordedAt } from '../entries/common';
 
 export const evidenceRoutes = new Hono<AppEnv>();
 
@@ -145,17 +146,22 @@ evidenceRoutes.post('/events/:scheduleId/:date/complete', requireAuth, requireEx
   const ALREADY = 'Event ini sudah selesai.';
   const exists = await db.prepare('SELECT 1 x FROM event_completions WHERE schedule_id = ? AND due_date = ?').bind(s.id, date).first();
   if (exists) return c.json({ error: ALREADY }, 409);
-  const at = new Date().toISOString();
+  // An offline phone sends the moment the person pressed the button, so a late upload does not make it late.
+  const body = await c.req.json().catch(() => ({}));
+  const rec = readRecordedAt(c, body && typeof body === 'object' ? (body as Record<string, unknown>) : {});
+  if (isFail(rec)) return rec.fail;
+  const at = rec.iso;
+  const doneOn = rec.explicit ? todayInSite(new Date(at)) : today;
   try {
     const res = await db.prepare(
       `INSERT INTO event_completions (schedule_id,due_date,completed_by,completed_at,completed_on)
        SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM evidences WHERE schedule_id = ? AND due_date = ?)`,
-    ).bind(s.id, date, c.get('user').id, at, today, s.id, date).run();
+    ).bind(s.id, date, c.get('user').id, at, doneOn, s.id, date).run();
     if (res.meta.changes === 0) return c.json({ error: 'Unggah minimal satu eviden dulu.' }, 409);
   } catch {
     return c.json({ error: ALREADY }, 409); // two completions at once: the primary key lets only one through
   }
-  return c.json({ completed_at: at, completed_on: today, late: isLate(date, today) });
+  return c.json({ completed_at: at, completed_on: doneOn, late: isLate(date, doneOn) });
 });
 
 const DAY_MS = 86_400_000;

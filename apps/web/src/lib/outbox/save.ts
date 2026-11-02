@@ -1,7 +1,7 @@
-import { api, isNetworkError, put } from '../../api/client';
+import { api, ApiError, isNetworkError, put } from '../../api/client';
 import type { OutboxKind } from './db';
 import { outboxAvailable } from './db';
-import { enqueue, removePending } from './queue';
+import { enqueue, listItems, removePending } from './queue';
 
 export type SaveResult = { queued: boolean };
 
@@ -53,7 +53,11 @@ export async function saveEvidence(o: EvidenceToSave): Promise<SaveResult> {
 /** Completes an event, or queues the completion to go out after its photos. */
 export async function completeEvent(o: { owner: string; scheduleId: string; date: string; label: string }): Promise<SaveResult> {
   const path = `/events/${o.scheduleId}/${o.date}/complete`;
+  const group = `${o.scheduleId}|${o.date}`;
+  const waitsForPhotos = outboxAvailable() && (await listItems(o.owner).catch(() => [])).some((i) => i.kind === 'evidence' && i.group === group);
   try {
+    // Photos still on the phone must reach the server first: a completion sent ahead of them would lock the event and lose them.
+    if (waitsForPhotos) throw new ApiError('Tidak ada koneksi. Coba lagi.', 0);
     await api(path, { method: 'POST' });
     return { queued: false };
   } catch (e) {

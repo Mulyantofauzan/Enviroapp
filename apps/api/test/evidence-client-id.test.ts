@@ -79,3 +79,37 @@ describe('complete twice', () => {
     expect((await env.DB.prepare('SELECT COUNT(*) n FROM event_completions').first<any>()).n).toBe(1);
   });
 });
+
+describe('complete with recorded_at', () => {
+  const done = async (body?: Record<string, unknown>) => {
+    const op = await login('Operator'); const sid = await schedule(op.user.id);
+    await upload(op.cookie, sid, form());
+    const res = await call(`/events/${sid}/${day(-1)}/complete`, { method: 'POST', cookie: op.cookie, ...(body ? { body: JSON.stringify(body) } : {}) });
+    const row = await env.DB.prepare('SELECT completed_at, completed_on FROM event_completions WHERE schedule_id = ?').bind(sid).first<any>();
+    return { res, row };
+  };
+  it('uses the phone time: done on the due day while offline is not late even when uploaded later', async () => {
+    const at = `${day(-1)}T03:00:00.000Z`;
+    const { res, row } = await done({ recorded_at: at });
+    expect(res.status).toBe(200);
+    expect(row.completed_at).toBe(at);
+    expect(row.completed_on).toBe(day(-1));
+    expect(((await res.json()) as any).late).toBe(false);
+  });
+  it('without it nothing changes: completed now', async () => {
+    const { res, row } = await done();
+    expect(res.status).toBe(200);
+    expect(row.completed_on).toBe(T);
+    expect(((await res.json()) as any).late).toBe(true);
+  });
+  it('a future time is held to the server clock', async () => {
+    const { row } = await done({ recorded_at: '2999-01-01T00:00:00Z' });
+    expect(Date.parse(row.completed_at)).toBeLessThanOrEqual(Date.now() + 1000);
+  });
+  it('an unreadable time is a 400 and completes nothing', async () => {
+    const { res, row } = await done({ recorded_at: 'kemarin' });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as any).error).toBe('Waktu pencatatan tidak sah.');
+    expect(row).toBeNull();
+  });
+});

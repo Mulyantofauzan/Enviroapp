@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { enqueue, listItems } from './queue';
+import { enqueue, listItems, loadBlob } from './queue';
 import { completeEvent, saveEntry, saveEvidence } from './save';
 import { runSync } from './sync';
 
@@ -81,7 +81,7 @@ describe('saveEvidence and completeEvent', () => {
     expect(await saveEvidence(photoArgs)).toEqual({ queued: true });
     const [item] = await listItems('u1');
     expect(item).toMatchObject({ kind: 'evidence', group: 's1|2026-11-02', request: { method: 'POST', path: '/events/s1/2026-11-02/evidence', filename: 'foto-1.jpg', fields: photoArgs.fields } });
-    expect(item.blob?.size).toBe(3);
+    expect((await loadBlob(item.id))?.size).toBe(3);
     expect(item.key).toBe(`evidence|s1|2026-11-02|${item.id}`);
     const f = reply(201, { id: 'e1' });
     vi.stubGlobal('fetch', f);
@@ -110,5 +110,24 @@ describe('saveEvidence and completeEvent', () => {
     vi.stubGlobal('fetch', f);
     expect(await completeEvent({ owner: 'u1', scheduleId: 's1', date: '2026-11-02', label: 'x' })).toEqual({ queued: false });
     expect((f.mock.calls[0] as any)[1].method).toBe('POST');
+  });
+});
+
+
+describe('completeEvent with photos still queued', () => {
+  it('online, it queues the completion instead of sending it ahead of its photos', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('offline'); }));
+    await saveEvidence({ owner: 'u1', scheduleId: 's1', date: '2026-11-02', label: 'Foto', file: new File(['abc'], 'a.jpg', { type: 'image/jpeg' }), fields: { source: 'gallery' } });
+    const f = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', f);
+    expect(await completeEvent({ owner: 'u1', scheduleId: 's1', date: '2026-11-02', label: 'Selesai' })).toEqual({ queued: true });
+    expect(f).not.toHaveBeenCalled();
+    expect((await listItems('u1')).map((i) => i.kind)).toEqual(['evidence', 'complete']);
+  });
+  it("another event's queued photo does not hold it back", async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('offline'); }));
+    await saveEvidence({ owner: 'u1', scheduleId: 's9', date: '2026-11-02', label: 'Foto', file: new File(['abc'], 'a.jpg', { type: 'image/jpeg' }), fields: { source: 'gallery' } });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })));
+    expect(await completeEvent({ owner: 'u1', scheduleId: 's1', date: '2026-11-02', label: 'Selesai' })).toEqual({ queued: false });
   });
 });

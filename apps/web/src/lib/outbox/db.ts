@@ -14,6 +14,7 @@ export type OutboxItem = {
 
 const NAME = 'evo-outbox';
 const STORE = 'items';
+const BLOBS = 'blobs';
 let opened: Promise<IDBDatabase> | null = null;
 
 export const outboxAvailable = () => typeof indexedDB !== 'undefined' && indexedDB !== null;
@@ -31,6 +32,7 @@ function open(): Promise<IDBDatabase> {
       req.onupgradeneeded = () => {
         const store = req.result.createObjectStore(STORE, { keyPath: 'id' });
         store.createIndex('owner', 'owner');
+        req.result.createObjectStore(BLOBS, { keyPath: 'id' });
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => { opened = null; reject(req.error); };
@@ -40,19 +42,20 @@ function open(): Promise<IDBDatabase> {
   return opened;
 }
 
-async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  const db = await open();
-  return new Promise<T>((resolve, reject) => {
-    const tx = db.transaction(STORE, mode);
-    const req = fn(tx.objectStore(STORE));
-    tx.oncomplete = () => resolve(req.result);
-    tx.onerror = () => reject(tx.error ?? req.error);
-    tx.onabort = () => reject(tx.error ?? new Error('aborted'));
-  });
+function tx<T>(mode: IDBTransactionMode, stores: string[], fn: (t: IDBTransaction) => IDBRequest<T>): Promise<T> {
+  return open().then((db) => new Promise<T>((resolve, reject) => {
+    const t = db.transaction(stores, mode);
+    const req = fn(t);
+    t.oncomplete = () => resolve(req.result);
+    t.onerror = () => reject(t.error ?? req.error);
+    t.onabort = () => reject(t.error ?? new Error('aborted'));
+  }));
 }
+const run = <T,>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>) => tx(mode, [STORE], (t) => fn(t.objectStore(STORE)));
 
-// Photos are stored as bytes plus type: it avoids Blob quirks in some browsers' IndexedDB.
-export type Stored = Omit<OutboxItem, 'blob'> & { blob: { data: ArrayBuffer; type: string } | null };
+// Photos live in their own store as bytes plus type (avoids Blob quirks in some browsers' IndexedDB), so listing
+// the queue never loads them: a photo is read only when it is about to be sent.
+export type Stored = Omit<OutboxItem, 'blob'> & { blob: null };
 
 const readBytes = (b: Blob): Promise<ArrayBuffer> => new Promise((resolve, reject) => {
   const r = new FileReader();
@@ -62,19 +65,28 @@ const readBytes = (b: Blob): Promise<ArrayBuffer> => new Promise((resolve, rejec
 });
 
 export async function allItems(): Promise<OutboxItem[]> {
-  const rows = await run<Stored[]>('readonly', (s) => s.getAll());
-  return rows.map((r) => ({ ...r, blob: r.blob ? new Blob([r.blob.data], { type: r.blob.type }) : null }));
+  return run<OutboxItem[]>('readonly', (s) => s.getAll());
 }
-export async function putItem(item: OutboxItem): Promise<IDBValidKey> {
-  const stored: Stored = { ...item, blob: item.blob ? { data: await readBytes(item.blob), type: item.blob.type } : null };
-  return run('readwrite', (s) => s.put(stored));
+
+export async function putItem(item: OutboxItem): Promise<void> {
+  const bytes = item.blob ? { id: item.id, data: await readBytes(item.blob), type: item.blob.type } : null;
+  await tx('readwrite', [STORE, BLOBS], (t) => {
+    if (bytes) t.objectStore(BLOBS).put(bytes);
+    return t.objectStore(STORE).put({ ...item, blob: null });
+  });
 }
+
+export async function loadBlob(id: string): Promise<Blob | null> {
+  const row = await tx<{ data: ArrayBuffer; type: string } | undefined>('readonly', [BLOBS], (t) => t.objectStore(BLOBS).get(id));
+  return row ? new Blob([row.data], { type: row.type }) : null;
+}
+
 /** Reads, changes and writes one item in a single transaction, so two tabs cannot overwrite each other's change. */
 export async function updateItem(id: string, patch: (x: Stored) => Partial<Stored>): Promise<boolean> {
   const db = await open();
   return new Promise<boolean>((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    const store = tx.objectStore(STORE);
+    const t = db.transaction(STORE, 'readwrite');
+    const store = t.objectStore(STORE);
     let found = false;
     const get = store.get(id);
     get.onsuccess = () => {
@@ -82,9 +94,11 @@ export async function updateItem(id: string, patch: (x: Stored) => Partial<Store
       found = true;
       store.put({ ...get.result, ...patch(get.result) });
     };
-    tx.oncomplete = () => resolve(found);
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error ?? new Error('aborted'));
+    t.oncomplete = () => resolve(found);
+    t.onerror = () => reject(t.error);
+    t.onabort = () => reject(t.error ?? new Error('aborted'));
   });
 }
-export const deleteItem = (id: string): Promise<undefined> => run('readwrite', (s) => s.delete(id));
+
+export const deleteItem = (id: string): Promise<void> =>
+  tx('readwrite', [STORE, BLOBS], (t) => { t.objectStore(BLOBS).delete(id); return t.objectStore(STORE).delete(id); }).then(() => undefined);

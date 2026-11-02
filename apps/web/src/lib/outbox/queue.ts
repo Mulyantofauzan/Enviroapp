@@ -1,4 +1,4 @@
-import { allItems, deleteItem, outboxAvailable, putItem, updateItem, type Stored, type OutboxItem, type OutboxKind, type OutboxRequest } from './db';
+import { allItems, deleteItem, loadBlob as readBlob, outboxAvailable, putItem, updateItem, type Stored, type OutboxItem, type OutboxKind, type OutboxRequest } from './db';
 
 const CHANNEL = 'evo-outbox';
 const FULL = 'Tidak bisa menyimpan di HP. Ruang penyimpanan penuh atau diblokir.';
@@ -52,6 +52,9 @@ export async function enqueue(i: NewItem): Promise<OutboxItem> {
     throw new Error(FULL);
   }
 }
+
+/** The photo of one queued item, read only when it is about to be sent. */
+export const loadBlob = (id: string): Promise<Blob | null> => readBlob(id);
 
 export async function listItems(owner: string): Promise<OutboxItem[]> {
   if (!outboxAvailable()) return [];

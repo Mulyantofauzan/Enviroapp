@@ -34,10 +34,13 @@ export function useDay(date: string, sp: string | null) {
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
   // Once the queue has been uploaded, show what the server now holds.
+  // Refreshed quietly: the form keeps what is being typed (its key only changes on a normal load).
   useEffect(() => {
-    window.addEventListener('outbox:drained', reload);
-    return () => window.removeEventListener('outbox:drained', reload);
-  }, [reload]);
+    if (!sp) return;
+    const refresh = () => { api<DayData>(`/day?date=${date}&sp=${sp}`).then((d) => setData(d)).catch(() => {}); };
+    window.addEventListener('outbox:drained', refresh);
+    return () => window.removeEventListener('outbox:drained', refresh);
+  }, [date, sp]);
   // The form takes its starting values from `data`, so it waits until the queue has been read.
   const shown = useMemo(() => (data && sp && ready ? applyPending(data, items, date, sp) : null), [data, items, date, sp, ready]);
   return { data: shown, error, reload, version };
