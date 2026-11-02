@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { COAGULANT_TYPES, formatNumber, type CoagulantType } from '@evo/shared';
-import { put } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { saveEntry } from '../lib/outbox/save';
+import { dayMonth } from '../lib/dates';
 import { Icon } from '../icons';
 import { useToast } from '../components/Toast';
 import { Button } from '../ui/Button';
@@ -10,6 +12,7 @@ import { effectiveRemaining, hasInvalid, initialCoag, type CoagState } from './i
 
 function KoagulanForm({ date, sp, data, canEdit, reload }: DayCtx) {
   const toast = useToast();
+  const { user } = useAuth();
   const root = useRef<HTMLDivElement>(null);
   const [coag, setCoag] = useState(() => initialCoag(data));
   const [busy, setBusy] = useState(false);
@@ -19,13 +22,18 @@ function KoagulanForm({ date, sp, data, canEdit, reload }: DayCtx) {
     if (hasInvalid(root.current)) return toast('Perbaiki angka yang ditandai dulu.');
     setBusy(true);
     try {
+      let queued = false;
       for (const t of COAGULANT_TYPES) {
         const v = coag[t];
         if (!data.coagulant[t] && v.stock_in === null && v.stock_out === null && v.stock_remaining === null) continue;
-        await put(`/coagulant/${date}/${sp}/${encodeURIComponent(t)}`, {
-          stock_in: v.stock_in, stock_out: v.stock_out, ...(v.stock_remaining !== null ? { stock_remaining: v.stock_remaining } : {}),
+        const r = await saveEntry({
+          owner: user!.id, kind: 'coagulant', key: `coagulant|${date}|${sp}|${t}`, label: `${t} ${dayMonth(date)}`,
+          path: `/coagulant/${date}/${sp}/${encodeURIComponent(t)}`,
+          body: { stock_in: v.stock_in, stock_out: v.stock_out, ...(v.stock_remaining !== null ? { stock_remaining: v.stock_remaining } : {}) },
         });
+        queued = queued || r.queued;
       }
+      if (queued) { toast('Tersimpan di HP, menunggu sinyal'); return; }
       toast('Data koagulan tersimpan');
       reload();
     } catch (e) {

@@ -4,6 +4,9 @@ export class ApiError extends Error {
   }
 }
 
+/** A failure that may go away: no connection, or a session that must be renewed. */
+export const isNetworkError = (e: unknown): boolean => e instanceof ApiError && (e.status === 0 || e.status === 401);
+
 let onUnauthorized: () => void = () => {};
 export function setUnauthorizedHandler(fn: () => void) {
   onUnauthorized = fn;

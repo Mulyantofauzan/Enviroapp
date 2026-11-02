@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CoagulantType } from '@evo/shared';
 import { api } from '../api/client';
+import { applyPending } from '../lib/outbox/overlay';
+import { useOutbox } from './useOutbox';
 
 export type DayData = {
   weather: { rainfall_mm: number | null; rain_hours: number | null } | null;
@@ -17,6 +19,7 @@ export function useDay(date: string, sp: string | null) {
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [version, setVersion] = useState(0);
+  const { items, ready } = useOutbox();
 
   useEffect(() => {
     if (!sp) return;
@@ -30,5 +33,12 @@ export function useDay(date: string, sp: string | null) {
   }, [date, sp, reloadKey]);
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
-  return { data, error, reload, version };
+  // Once the queue has been uploaded, show what the server now holds.
+  useEffect(() => {
+    window.addEventListener('outbox:drained', reload);
+    return () => window.removeEventListener('outbox:drained', reload);
+  }, [reload]);
+  // The form takes its starting values from `data`, so it waits until the queue has been read.
+  const shown = useMemo(() => (data && sp && ready ? applyPending(data, items, date, sp) : null), [data, items, date, sp, ready]);
+  return { data: shown, error, reload, version };
 }

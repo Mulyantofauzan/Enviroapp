@@ -2,6 +2,10 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { json, mockApi, renderApp, emptyDay } from '../test-utils';
+import { listItems } from '../lib/outbox/queue';
+
+const offlinePut = (u: string, init?: RequestInit): Response | undefined => { if (init?.method === 'PUT') throw new TypeError('offline'); return undefined; };
+const QUEUED = 'Tersimpan di HP, menunggu sinyal';
 
 afterEach(() => vi.unstubAllGlobals());
 const D = '2026-11-02';
@@ -144,5 +148,53 @@ describe('Input Koagulan', () => {
     expect(puts(calls)[0].url).toBe(`/api/coagulant/${D}/p1/Kapur`);
     expect(puts(calls)[0].body).toMatchObject({ stock_in: 100, stock_remaining: 255 });
     expect(await screen.findByText('Data koagulan tersimpan')).toBeInTheDocument();
+  });
+});
+
+
+describe('Input offline', () => {
+  it('Cuaca: offline save is queued, says so, keeps the numbers and shows no error', async () => {
+    mockApi({ handler: offlinePut });
+    renderApp(`/input/cuaca?date=${D}&sp=p1`);
+    await userEvent.type(await screen.findByLabelText('Rainfall'), '12,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data cuaca' }));
+    expect(await screen.findByText(QUEUED)).toBeInTheDocument();
+    expect(screen.getByLabelText('Rainfall')).toHaveValue('12,5');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(await listItems('u1')).toHaveLength(1);
+  });
+  it('Cuaca: reopening the screen offline shows the queued numbers again', async () => {
+    mockApi({ handler: offlinePut });
+    const first = renderApp(`/input/cuaca?date=${D}&sp=p1`);
+    await userEvent.type(await screen.findByLabelText('Rainfall'), '12,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data cuaca' }));
+    await screen.findByText(QUEUED);
+    first.unmount();
+    renderApp(`/input/cuaca?date=${D}&sp=p1`);
+    await waitFor(() => expect(screen.getByLabelText('Rainfall')).toHaveValue('12,5'));
+  });
+  it('Air: offline save is queued', async () => {
+    mockApi({ handler: offlinePut });
+    renderApp(`/input/air?date=${D}&sp=p1`);
+    await userEvent.type(await screen.findByLabelText('pH inlet'), '7');
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air' }));
+    expect(await screen.findByText(QUEUED)).toBeInTheDocument();
+    expect((await listItems('u1'))[0].key).toBe(`water|${D}|p1`);
+  });
+  it('Koagulan: offline save queues one item per type that has numbers', async () => {
+    mockApi({ handler: offlinePut });
+    renderApp(`/input/koagulan?date=${D}&sp=p1`);
+    await userEvent.type(await screen.findByLabelText('Tawas Serbuk keluar'), '5');
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data koagulan' }));
+    expect(await screen.findByText(QUEUED)).toBeInTheDocument();
+    expect((await listItems('u1')).length).toBeGreaterThanOrEqual(1);
+  });
+  it('a 400 from the server is shown and not queued', async () => {
+    mockApi({ handler: (u, init) => (init?.method === 'PUT' ? json({ error: 'Curah hujan harus 0 atau lebih.' }, 400) : undefined) });
+    renderApp(`/input/cuaca?date=${D}&sp=p1`);
+    await userEvent.type(await screen.findByLabelText('Rainfall'), '5');
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data cuaca' }));
+    expect(await screen.findByText('Curah hujan harus 0 atau lebih.')).toBeInTheDocument();
+    expect((await listItems('u1')).map((x) => `${x.key} ${x.label} ${x.recordedAt}`)).toEqual([]);
   });
 });

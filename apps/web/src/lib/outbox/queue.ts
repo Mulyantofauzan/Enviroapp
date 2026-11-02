@@ -1,4 +1,4 @@
-import { allItems, deleteItem, outboxAvailable, putItem, type OutboxItem, type OutboxKind, type OutboxRequest } from './db';
+import { allItems, deleteItem, outboxAvailable, putItem, updateItem, type Stored, type OutboxItem, type OutboxKind, type OutboxRequest } from './db';
 
 const CHANNEL = 'evo-outbox';
 const FULL = 'Tidak bisa menyimpan di HP. Ruang penyimpanan penuh atau diblokir.';
@@ -58,17 +58,14 @@ export async function listItems(owner: string): Promise<OutboxItem[]> {
   return (await allItems()).filter((x) => x.owner === owner).sort(bySeq);
 }
 
-async function update(id: string, patch: (x: OutboxItem) => OutboxItem) {
-  const item = (await allItems()).find((x) => x.id === id);
-  if (!item) return;
-  await putItem(patch(item));
-  changed();
+async function update(id: string, patch: (x: Stored) => Partial<Stored>) {
+  if (await updateItem(id, patch)) changed();
 }
 
 export async function removeItem(id: string) { await deleteItem(id); changed(); }
-export const markFailed = (id: string, error: string) => update(id, (x) => ({ ...x, status: 'failed', error }));
-export const retryItem = (id: string) => update(id, (x) => ({ ...x, status: 'pending', error: null, tries: 0, nextAt: 0 }));
-export const scheduleRetry = (id: string, nextAt: number) => update(id, (x) => ({ ...x, tries: x.tries + 1, nextAt }));
+export const markFailed = (id: string, error: string) => update(id, () => ({ status: 'failed', error }));
+export const retryItem = (id: string) => update(id, () => ({ status: 'pending', error: null, tries: 0, nextAt: 0 }));
+export const scheduleRetry = (id: string, nextAt: number) => update(id, (x) => ({ tries: x.tries + 1, nextAt }));
 
 export async function removePending(owner: string, key: string) {
   const gone = (await allItems()).filter((x) => x.owner === owner && x.key === key && x.status === 'pending');

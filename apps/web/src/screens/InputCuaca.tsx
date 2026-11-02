@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
-import { put } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { saveEntry } from '../lib/outbox/save';
+import { dayMonth } from '../lib/dates';
 import { Icon } from '../icons';
 import { useToast } from '../components/Toast';
 import { Banner } from '../ui/Banner';
@@ -8,8 +10,11 @@ import { NumberInput } from '../ui/NumberInput';
 import { DayScope, type DayCtx } from './input/DayScope';
 import { hasInvalid } from './input/coag';
 
+const QUEUED = 'Tersimpan di HP, menunggu sinyal';
+
 function CuacaForm({ date, data, canEdit, reload }: DayCtx) {
   const toast = useToast();
+  const { user } = useAuth();
   const root = useRef<HTMLDivElement>(null);
   const [rain, setRain] = useState<number | null>(data.weather?.rainfall_mm ?? null);
   const [hours, setHours] = useState<number | null>(data.weather?.rain_hours ?? null);
@@ -19,7 +24,8 @@ function CuacaForm({ date, data, canEdit, reload }: DayCtx) {
     if (hasInvalid(root.current)) return toast('Perbaiki angka yang ditandai dulu.');
     setBusy(true);
     try {
-      await put(`/weather/${date}`, { rainfall_mm: rain, rain_hours: hours });
+      const r = await saveEntry({ owner: user!.id, kind: 'weather', key: `weather|${date}`, label: `Cuaca ${dayMonth(date)}`, path: `/weather/${date}`, body: { rainfall_mm: rain, rain_hours: hours } });
+      if (r.queued) { toast(QUEUED); return; }
       toast('Data cuaca tersimpan');
       reload();
     } catch (e) {

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import type { Role } from '@evo/shared';
 import { useAuth } from './auth/AuthContext';
@@ -8,6 +8,7 @@ import { useWide } from './hooks/useWide';
 import { TabBar } from './components/TabBar';
 import { SideRail } from './components/SideRail';
 import { ConnectionChip } from './ui/ConnectionChip';
+import { startSync } from './lib/outbox/sync';
 import { Login } from './screens/Login';
 import { Akun } from './screens/Akun';
 import { BerandaOperator } from './screens/BerandaOperator';
@@ -32,6 +33,7 @@ function RequireRole({ role, allow, children }: { role: Role; allow: Role[]; chi
 export function App() {
   const { user, loading } = useAuth();
   const wide = useWide();
+  useEffect(() => (user ? startSync(() => user.id) : undefined), [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (loading) return <p className="ui-loading">Memuat…</p>;
   if (!user) return <Login />;
   const role = user.role;

@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { m3sToM3d } from '@evo/shared';
-import { put } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { saveEntry } from '../lib/outbox/save';
+import { dayMonth } from '../lib/dates';
 import { Icon } from '../icons';
 import { useToast } from '../components/Toast';
 import { Banner } from '../ui/Banner';
@@ -16,6 +18,7 @@ const SIDE_LABEL: Record<Side, string> = { inlet: 'Inlet', outlet: 'Outlet' };
 
 function AirForm({ date, sp, data, thresholds, canEdit, reload }: DayCtx) {
   const toast = useToast();
+  const { user } = useAuth();
   const root = useRef<HTMLDivElement>(null);
   const w = data.water;
   const [pts, setPts] = useState<Record<Side, Point>>({
@@ -29,10 +32,14 @@ function AirForm({ date, sp, data, thresholds, canEdit, reload }: DayCtx) {
     if (hasInvalid(root.current)) return toast('Perbaiki angka yang ditandai dulu.');
     setBusy(true);
     try {
-      await put(`/water/${date}/${sp}`, {
-        ph_inlet: pts.inlet.ph, tss_inlet: pts.inlet.tss, debit_inlet_m3s: pts.inlet.flow,
-        ph_outlet: pts.outlet.ph, tss_outlet: pts.outlet.tss, debit_outlet_m3s: pts.outlet.flow,
+      const r = await saveEntry({
+        owner: user!.id, kind: 'water', key: `water|${date}|${sp}`, label: `Air ${dayMonth(date)}`, path: `/water/${date}/${sp}`,
+        body: {
+          ph_inlet: pts.inlet.ph, tss_inlet: pts.inlet.tss, debit_inlet_m3s: pts.inlet.flow,
+          ph_outlet: pts.outlet.ph, tss_outlet: pts.outlet.tss, debit_outlet_m3s: pts.outlet.flow,
+        },
       });
+      if (r.queued) { toast('Tersimpan di HP, menunggu sinyal'); return; }
       toast('Data air tersimpan');
       reload();
     } catch (e) {
