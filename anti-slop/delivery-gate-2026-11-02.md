@@ -118,3 +118,16 @@ Bukti (Chrome nyata, data contoh satu tahun di pond SP-02, Manager, 360 dan 1200
 Temuan yang diperbaiki selama verifikasi: label sumbu kiri terpotong untuk angka lima digit (debit), dua label bulan terakhir bertumpuk, pemilih Periode melebihi lebar 360 px. Catatan jujur: satu pengukuran awal menunjukkan overflow karena peramban menyajikan CSS lama dari cache service worker; setelah profil memuat versi baru, tidak ada overflow.
 
 Catatan: label di dekat titik abnormal merah pada grafik garis bisa menempel pada titik. Cache PWA mengunduh potongan PDF di latar belakang saat pemasangan.
+
+---
+
+# Tambahan: PDF laporan bergaya slide
+
+Bukti (Chrome nyata, Manager, data contoh satu tahun, pond SP 11 LGG dan SP-02; PDF dirender dengan PDFKit dan dibandingkan dengan `Design/Laporan Cuaca.pdf` dan `Design/Laporan pond.pdf`):
+- Ekspor satu pond menghasilkan 2 halaman (Cuaca, "SP 11 LGG MONITORING"); "Semua lokasi" menghasilkan 4 halaman, satu halaman pond per pond berdata, urut menurut kode. Tidak ada pesan galat.
+- Halaman Cuaca: banner merah, tabel dua tingkat dengan sel persik dan intensity merah, baris ringkasan kuning ("5 hari hujan | 44,0 mm | 21,0 hrs | 2,3 mm/hrs"), tiga grafik 1W, 1M (total per minggu), 1Y (total per bulan) berlabel kotak. Halaman pond: empat panel hijau (pH dengan garis pH Min dan pH Max, TSS dengan garis BML MHU, Debit L/s, koagulan), kolom Summary Penggunaan Koagulan (WEEKLY, MTD, MONTHLY, YTD, Year To Date, Project To Date).
+- Selisih disengaja terhadap sampel: tanpa batang oranye, footer, kotak nomor halaman, logo, dan kolom Shift (keputusan pemilik produk); nama bulan Inggris tiga huruf; hari tanpa catatan cuaca tampil 0,0.
+- Selisih yang ditemukan dan diperbaiki saat verifikasi: legenda TSS terpotong (legenda kini mengecil agar muat), label angka bertumpuk pada batang pH dan debit serta garis YTD (label dinaikkan bila sejajar), label biru menimpa sumbu tanggal (dipindah ke atas titik), kolom kanan menyisakan ruang kosong (grafik MTD dan YTD diperbesar).
+- Tes: shared 58, API 234, web 465 lulus; `tsc` bersih; `jspdf` tetap potongan terpisah.
+
+Catatan: pada grafik 1W, label rainfall dan durasi yang nilainya berdekatan saling menimpa (sama seperti sampel). Garis baku mutu TSS bisa melewati label batang kecil. Tidak diuji di HP sungguhan.
