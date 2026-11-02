@@ -54,7 +54,19 @@ describe('BarChart', () => {
   it('twelve categories never print the last two labels on top of each other', () => {
     const { container } = render(<BarChart name="x" unit="kg" categories={cats(12)} series={[{ name: 'x', values: Array.from({ length: 12 }, (_, i) => i + 1) }]} />);
     const ticks = [...container.querySelectorAll('text.ui-chart__tick')].map((t) => t.textContent);
-    expect(ticks).toContain('L11');
+    expect(ticks).toContain('L11*');
     expect(ticks).not.toContain('L10');
+  });
+  it('a running week or month is marked on the chart itself, so it also shows in the PDF image', () => {
+    const { container } = render(<BarChart name="x" unit="kg" categories={cats(3)} series={[{ name: 'x', values: [10, 20, 5] }]} />);
+    const ticks = [...container.querySelectorAll('text.ui-chart__tick')].map((t) => t.textContent);
+    expect(ticks).toContain('L2*');
+    expect(ticks).not.toContain('L1*');
+    expect(container.querySelectorAll('rect.ui-chart__bar--partial')).toHaveLength(1);
+    expect([...container.querySelectorAll('text.ui-chart__foot')].map((t) => t.textContent)).toEqual(['* periode berjalan']);
+  });
+  it('no footnote when nothing is partial', () => {
+    const { container } = render(<BarChart name="x" unit="kg" categories={[{ key: 'a', label: 'A' }, { key: 'b', label: 'B' }]} series={[{ name: 'x', values: [1, 2] }]} />);
+    expect(container.querySelector('text.ui-chart__foot')).toBeNull();
   });
 });

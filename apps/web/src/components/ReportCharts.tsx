@@ -11,6 +11,7 @@ type Props = {
   kinds: ReportKind[];
   entries: HistoryEntry[] | null;
   ytd: HistoryEntry[] | null;
+  ytdError?: string;
   spId: string;
   thresholds: Record<string, Threshold> | undefined;
   from: string;
@@ -18,11 +19,11 @@ type Props = {
   today: string;
 };
 
-function stats(values: (number | null)[], unit: string, decimals = 1): string | null {
+function stats(values: (number | null)[], unit: string, decimals = 1, runningLast = false): string | null {
   const v = values.filter((x): x is number => x !== null);
   if (v.length === 0) return null;
   const f = (n: number) => `${formatNumber(n, decimals)} ${unit}`.trim();
-  return `Tertinggi ${f(Math.max(...v))}, terendah ${f(Math.min(...v))}, terakhir ${f(v[v.length - 1])}.`;
+  return `Tertinggi ${f(Math.max(...v))}, terendah ${f(Math.min(...v))}, terakhir ${f(v[v.length - 1])}.${runningLast ? ' Periode terakhir masih berjalan.' : ''}`;
 }
 
 function Card({ kind, title, note, children }: { kind: ReportKind; title: string; note?: string | null; children: React.ReactNode }) {
@@ -38,7 +39,10 @@ function Card({ kind, title, note, children }: { kind: ReportKind; title: string
 const cats = (b: Bucket[]) => b.map((x) => ({ key: x.key, label: x.label, partial: x.partial }));
 
 /** The nine report charts, shown for the chips that are on. Each card keeps its svg so the PDF can reuse it. */
-export function ReportCharts({ kinds, entries, ytd, spId, thresholds, from, to, today }: Props) {
+export function ReportCharts({ kinds, entries, ytd, ytdError = '', spId, thresholds, from, to, today }: Props) {
+  const longCard = (kind: ReportKind, title: string) => (
+    <Card kind={kind} key={title} title={title}>{ytdError ? <p className="ui-error">Grafik jangka panjang tidak bisa dimuat: {ytdError}</p> : <p className="ui-muted">Memuat…</p>}</Card>
+  );
   const loadingCard = (kind: ReportKind, title: string) => <Card kind={kind} key={title} title={title}><p className="ui-muted">Memuat…</p></Card>;
   const cards: React.ReactNode[] = [];
 
@@ -46,7 +50,7 @@ export function ReportCharts({ kinds, entries, ytd, spId, thresholds, from, to, 
     const t1 = 'Curah hujan, 7 hari terakhir';
     const t2 = 'Rata-rata curah hujan per minggu, 5 minggu terakhir';
     const t3 = 'Rata-rata curah hujan per bulan, 12 bulan terakhir';
-    if (!ytd) cards.push(loadingCard('cuaca', t1), loadingCard('cuaca', t2), loadingCard('cuaca', t3));
+    if (!ytd) cards.push(longCard('cuaca', t1), longCard('cuaca', t2), longCard('cuaca', t3));
     else {
       const rain = rainByDate(ytd);
       const map = new Map(rain.map((d) => [d.date, d.value]));
@@ -59,10 +63,10 @@ export function ReportCharts({ kinds, entries, ytd, spId, thresholds, from, to, 
             ? <TrendChart name="Curah hujan" unit="mm" series={week} limit={undefined} hide="inlet" outletLabel="Curah hujan (mm)" floorZero decimals={1} />
             : <p className="ui-muted">Belum ada data pada rentang ini.</p>}
         </Card>,
-        <Card kind="cuaca" key={t2} title={t2} note={stats(wk.map((b) => b.value), 'mm/hari')}>
+        <Card kind="cuaca" key={t2} title={t2} note={stats(wk.map((b) => b.value), 'mm/hari', 1, wk[wk.length - 1].partial)}>
           <BarChart name="Rata-rata curah hujan per minggu" unit="mm/hari" categories={cats(wk)} series={[{ name: 'Rata-rata (mm/hari)', values: wk.map((b) => b.value) }]} />
         </Card>,
-        <Card kind="cuaca" key={t3} title={t3} note={stats(mo.map((b) => b.value), 'mm/hari')}>
+        <Card kind="cuaca" key={t3} title={t3} note={stats(mo.map((b) => b.value), 'mm/hari', 1, mo[mo.length - 1].partial)}>
           <BarChart name="Rata-rata curah hujan per bulan" unit="mm/hari" categories={cats(mo)} series={[{ name: 'Rata-rata (mm/hari)', values: mo.map((b) => b.value) }]} />
         </Card>,
       );
@@ -106,16 +110,16 @@ export function ReportCharts({ kinds, entries, ytd, spId, thresholds, from, to, 
         </Card>,
       );
     }
-    if (!ytd) cards.push(loadingCard('koagulan', t2), loadingCard('koagulan', t3));
+    if (!ytd) cards.push(longCard('koagulan', t2), longCard('koagulan', t3));
     else {
       const tawas = tawasByDate(ytd);
       const wk = sumByWeek(tawas, today);
       const mo = sumByMonth(tawas, today);
       cards.push(
-        <Card kind="koagulan" key={t2} title={t2} note="Tawas Serbuk ditambah Tawas Batu.">
+        <Card kind="koagulan" key={t2} title={t2} note={`Tawas Serbuk ditambah Tawas Batu. ${stats(wk.map((b) => b.value), 'kg', 1, wk[wk.length - 1].partial) ?? ''}`.trim()}>
           <BarChart name="Penggunaan tawas per minggu" unit="kg" categories={cats(wk)} series={[{ name: 'Tawas (kg)', values: wk.map((b) => b.value) }]} />
         </Card>,
-        <Card kind="koagulan" key={t3} title={t3} note="Tawas Serbuk ditambah Tawas Batu.">
+        <Card kind="koagulan" key={t3} title={t3} note={`Tawas Serbuk ditambah Tawas Batu. ${stats(mo.map((b) => b.value), 'kg', 1, mo[mo.length - 1].partial) ?? ''}`.trim()}>
           <BarChart name="Penggunaan tawas per bulan" unit="kg" categories={cats(mo)} series={[{ name: 'Tawas (kg)', values: mo.map((b) => b.value) }]} />
         </Card>,
       );

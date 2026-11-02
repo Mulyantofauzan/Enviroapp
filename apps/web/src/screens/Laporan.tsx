@@ -9,7 +9,7 @@ import { Icon } from '../icons';
 import { addDays, addMonths, dateText, monthRange } from '../lib/dates';
 import { reportFilename, saveBlob } from '../lib/download';
 import { buildReport, cellText, reportRowCount, type ReportKind, type ReportRow } from '../lib/report';
-import { chartToPng } from '../lib/chartImage';
+import { serializeChart, svgToPng } from '../lib/chartImage';
 import { buildPdf, type PdfChart } from '../lib/pdf';
 import { witaStamp } from '../lib/stamp';
 import { validatePeriod } from '../lib/windows';
@@ -105,16 +105,20 @@ export function Laporan() {
     if (total > MAX_ROWS) { setExportError(`Ada ${formatNumber(total, 0)} baris. Persempit periode agar tidak lebih dari 20.000.`); return; }
     setBusy('pdf');
     try {
-      const charts: PdfChart[] = [];
-      for (const card of Array.from(document.querySelectorAll<HTMLElement>('[data-report-chart-card]'))) {
+      // Capture every chart from the page first, in one synchronous pass: a filter change while images render must not leak into this file.
+      const snapshots = Array.from(document.querySelectorAll<HTMLElement>('[data-report-chart-card]')).flatMap((card) => {
         const svg = card.querySelector<SVGSVGElement>('svg[role="img"]');
-        if (!svg) continue;
-        const img = await chartToPng(svg);
+        if (!svg) return [];
         const legend = Array.from(card.querySelectorAll('.ui-legend li')).map((li) => {
           const mark = li.querySelector('i');
           return { label: li.textContent ?? '', color: mark ? getComputedStyle(mark).backgroundColor : '' };
         });
-        charts.push({ section: card.dataset.section as ReportKind, title: card.querySelector('h2')?.textContent ?? '', ...img, legend });
+        return [{ section: card.dataset.section as ReportKind, title: card.querySelector('h2')?.textContent ?? '', legend, chart: serializeChart(svg) }];
+      });
+      const charts: PdfChart[] = [];
+      for (const snap of snapshots) {
+        const img = await svgToPng(snap.chart);
+        charts.push({ section: snap.section, title: snap.title, legend: snap.legend, ...img });
       }
       saveBlob(await buildPdf(meta(), sections, charts), reportFilename(lokasi, from, to, 'pdf'));
     } catch (e) {
@@ -178,7 +182,7 @@ export function Laporan() {
         )}
 
         {today && !periodError && (
-          <ReportCharts kinds={kinds} entries={data.entries} ytd={data.ytd} spId={sp} thresholds={pond?.thresholds} from={from} to={to} today={today} />
+          <ReportCharts kinds={kinds} entries={data.entries} ytd={data.ytd} ytdError={data.ytdError} spId={sp} thresholds={pond?.thresholds} from={from} to={to} today={today} />
         )}
 
         {exportError && <p className="ui-error" role="alert">{exportError}</p>}

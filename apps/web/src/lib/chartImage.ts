@@ -24,9 +24,10 @@ export function serializeChart(svg: SVGSVGElement, styleOf: StyleOf = (el) => ge
   return { xml, width: w, height: h };
 }
 
-/** Draws the chart on a white canvas at `scale` times its size and returns it as a PNG data URL. */
-export function chartToPng(svg: SVGSVGElement, scale = 2): Promise<{ dataUrl: string; width: number; height: number }> {
-  const { xml, width, height } = serializeChart(svg);
+export type SerializedChart = { xml: string; width: number; height: number };
+
+/** Draws a serialized chart on a white canvas at `scale` times its size and returns it as a PNG data URL. */
+export function svgToPng({ xml, width, height }: SerializedChart, scale = 2): Promise<{ dataUrl: string; width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -48,3 +49,5 @@ export function chartToPng(svg: SVGSVGElement, scale = 2): Promise<{ dataUrl: st
     img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
   });
 }
+
+export const chartToPng = (svg: SVGSVGElement, scale = 2) => svgToPng(serializeChart(svg), scale);

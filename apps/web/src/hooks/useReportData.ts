@@ -75,6 +75,7 @@ export function useReportData({ from, to, sp, kinds, today }: Opts) {
   return {
     entries, ytd, events, progress,
     loading: pending.history || pending.ytd || pending.events,
-    error: errors.history || errors.events || errors.ytd,
+    error: errors.history || errors.events,
+    ytdError: errors.ytd,
   };
 }

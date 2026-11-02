@@ -489,3 +489,6 @@ a.ui-btn { text-decoration: none; }
 /* Laporan: five period options must wrap instead of pushing the page sideways at 360 px */
 .ui-filters .ui-seg { flex-wrap: wrap; }
 .ui-filters .ui-seg button { flex: 1 1 auto; min-width: 0; }
+
+.ui-chart__bar--partial { opacity: 0.55; }
+.ui-chart__foot { fill: var(--text-sub); font: 500 10px var(--font); }

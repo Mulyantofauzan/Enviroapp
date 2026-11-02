@@ -42,12 +42,12 @@ export function BarChart({ name, unit, categories, series, decimals = 1 }: Props
           </g>
         ))}
         {categories.map((c, i) => (i === n - 1 || (i % every === 0 && n - 1 - i >= every)) && (
-          <text key={c.key} className="ui-chart__tick" x={L + slot * i + slot / 2} y={H - 8} textAnchor="middle">{c.label}</text>
+          <text key={c.key} className="ui-chart__tick" x={L + slot * i + slot / 2} y={H - 8} textAnchor="middle">{c.partial ? `${c.label}*` : c.label}</text>
         ))}
         {series.map((s, si) => s.values.map((v, i) => {
           if (v === null) return null;
           const x0 = L + slot * i + (slot - groupW) / 2 + bw * si;
-          return <rect key={`${si}-${i}`} data-bar className={`ui-chart__bar ui-chart__bar--${si}`} rx={2} x={x0} width={bw - (k > 1 ? 1 : 0)} y={y(v)} height={T + ih - y(v)} />;
+          return <rect key={`${si}-${i}`} data-bar className={`ui-chart__bar ui-chart__bar--${si}${categories[i].partial ? ' ui-chart__bar--partial' : ''}`} rx={2} x={x0} width={bw - (k > 1 ? 1 : 0)} y={y(v)} height={T + ih - y(v)} />;
         }))}
         {series.map((s, si) => s.values.map((v, i) => {
           if (v === null || !shown[si].has(i)) return null;
@@ -55,6 +55,7 @@ export function BarChart({ name, unit, categories, series, decimals = 1 }: Props
           const t = formatNumber(v, decimals);
           return <text key={`l${si}-${i}`} className="ui-chart__label" x={cx} y={y(v) - 5} textAnchor={labelAnchor(cx, L, W - R, t.length * 6.5)}>{t}</text>;
         }))}
+        {categories.some((c) => c.partial) && <text className="ui-chart__foot" x={W - R} y={11} textAnchor="end">* periode berjalan</text>}
       </svg>
       <ul className="ui-legend">
         {series.map((s, si) => <li key={s.name}><i className={`ui-legend__bar ui-legend__bar--${si}`} />{s.name}</li>)}

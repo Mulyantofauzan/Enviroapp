@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { serializeChart, chartToPng } from './chartImage';
+import { serializeChart, svgToPng, chartToPng } from './chartImage';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -39,6 +39,16 @@ describe('serializeChart', () => {
     const el = svg();
     serializeChart(el, fake);
     expect(el.querySelector('path')!.getAttribute('stroke')).toBeNull();
+  });
+});
+
+describe('svgToPng', () => {
+  it('rasterizes an already-serialized snapshot, independent of the page', async () => {
+    class FakeImage { onload: (() => void) | null = null; onerror: (() => void) | null = null; set src(_v: string) { queueMicrotask(() => this.onload?.()); } }
+    vi.stubGlobal('Image', FakeImage);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn(), fillRect: vi.fn(), set fillStyle(_v: string) {} } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,BBBB');
+    expect(await svgToPng({ xml: '<svg xmlns="http://www.w3.org/2000/svg"/>', width: 100, height: 50 })).toEqual({ dataUrl: 'data:image/png;base64,BBBB', width: 100, height: 50 });
   });
 });
 
