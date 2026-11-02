@@ -7,7 +7,7 @@ import { homeFor } from './nav/nav';
 import { useWide } from './hooks/useWide';
 import { TabBar } from './components/TabBar';
 import { SideRail } from './components/SideRail';
-import { ConnectionChip } from './ui/ConnectionChip';
+import { SyncChip } from './ui/SyncChip';
 import { startSync } from './lib/outbox/sync';
 import { Login } from './screens/Login';
 import { Akun } from './screens/Akun';
@@ -43,7 +43,7 @@ export function App() {
       <div className={`ui-shell${wide ? ' ui-shell--wide' : ''}`}>
         {wide && <SideRail role={role} />}
         <main className="ui-main">
-          <div className="ui-conn-slot"><ConnectionChip /></div>
+          <div className="ui-conn-slot"><SyncChip /></div>
           <Routes>
             <Route path="/" element={role === 'Auditor' ? <Navigate to="/kalender" replace /> : role === 'Manager' || role === 'Admin' ? <BerandaManager /> : <BerandaOperator />} />
             <Route path="/input" element={<RequireRole role={role} allow={writers}><InputHub /></RequireRole>} />

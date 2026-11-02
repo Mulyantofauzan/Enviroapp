@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Button } from './Button';
 import { Badge } from './Badge';
@@ -8,7 +8,6 @@ import { Toggle } from './Toggle';
 import { Banner } from './Banner';
 import { ScreenHeader } from './ScreenHeader';
 import { PondPicker } from './PondPicker';
-import { ConnectionChip } from './ConnectionChip';
 import { Icon } from '../icons';
 
 afterEach(() => { Object.defineProperty(navigator, 'onLine', { value: true, configurable: true }); });
@@ -87,26 +86,6 @@ describe('PondPicker', () => {
     render(<PondPicker ponds={ponds as any} value="a" onChange={f} />);
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Settling Pond' }), 'b');
     expect(f).toHaveBeenCalledWith('b');
-  });
-});
-
-describe('ConnectionChip', () => {
-  it('renders nothing while online', () => {
-    const { container } = render(<ConnectionChip />);
-    expect(container).toBeEmptyDOMElement();
-  });
-  it('shows a plain message while offline, and updates on events', () => {
-    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
-    render(<ConnectionChip />);
-    expect(screen.getByText('Tidak ada koneksi')).toBeInTheDocument();
-  });
-  it('reacts to the browser going offline', () => {
-    render(<ConnectionChip />);
-    act(() => {
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
-      window.dispatchEvent(new Event('offline'));
-    });
-    expect(screen.getByText('Tidak ada koneksi')).toBeInTheDocument();
   });
 });
 

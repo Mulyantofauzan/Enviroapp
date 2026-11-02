@@ -88,7 +88,7 @@ body { font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .ui-shell--wide .ui-main { margin-left: 208px; padding-bottom: 32px; }
 .ui-page { max-width: 560px; margin: 0 auto; padding: 12px; display: grid; gap: 12px; }
 .ui-loading { padding: 3rem 16px; text-align: center; color: var(--text-sub); }
-.ui-conn-slot { display: flex; justify-content: center; }
+.ui-conn-slot { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
 .ui-conn-slot:empty { display: none; }
 .ui-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px; }
 .ui-card h2 { margin: 0 0 8px; font: 700 15px var(--font); }
@@ -492,3 +492,15 @@ a.ui-btn { text-decoration: none; }
 
 .ui-chart__bar--partial { opacity: 0.55; }
 .ui-chart__foot { fill: var(--text-sub); font: 500 10px var(--font); }
+
+/* Upload queue */
+.ui-sync { min-height: 44px; padding: 0 14px; border: 0; cursor: pointer; }
+.ui-outbox { position: fixed; inset: 0; z-index: 70; background: rgba(16, 22, 20, 0.6); display: grid; place-items: center; padding: 12px; overflow-y: auto; }
+.ui-outbox__panel { width: min(100%, 560px); background: var(--surface); border-radius: var(--radius-card); padding: 14px; display: grid; gap: 12px; max-height: 100%; overflow-y: auto; }
+.ui-outbox__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ui-outbox__head h2 { margin: 0; font: 700 15px var(--font); }
+.ui-outbox__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ui-outbox__list li { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-card); }
+.ui-outbox__list small { display: block; color: var(--text-sub); }
+.ui-outbox__actions, .ui-outbox__confirm { display: flex; flex-wrap: wrap; gap: 8px; }
+.ui-outbox__confirm p { flex-basis: 100%; margin: 0; }

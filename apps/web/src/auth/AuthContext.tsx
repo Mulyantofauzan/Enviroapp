@@ -24,6 +24,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     async logout() {
       await post('/auth/logout', {}).catch(() => {});
+      // The read cache holds this person's days and events; the outbox stays until its owner signs in again.
+      try { if (typeof caches !== 'undefined') await caches.delete('evo-api'); } catch { /* the cache is optional */ }
       setUser(null);
     },
   };

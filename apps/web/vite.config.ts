@@ -20,7 +20,21 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
-      workbox: { navigateFallback: '/index.html', navigateFallbackDenylist: [/^\/api\//] },
+      workbox: {
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
+        // Reads the input screens need, so they open without signal. Network first: online always shows fresh data.
+        runtimeCaching: [{
+          urlPattern: ({ url }: { url: URL }) => /^\/api\/(day|ponds|events|auth\/me)/.test(url.pathname),
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'evo-api',
+            networkTimeoutSeconds: 3,
+            expiration: { maxEntries: 60, maxAgeSeconds: 14 * 24 * 3600 },
+            cacheableResponse: { statuses: [200] },
+          },
+        }],
+      },
     }),
   ],
   server: { proxy: { '/api': 'http://localhost:8787' } },

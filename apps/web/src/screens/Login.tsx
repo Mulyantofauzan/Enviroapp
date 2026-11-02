@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../ui/Button';
+import { allItems, outboxAvailable } from '../lib/outbox/db';
 
 export function Login() {
   const { login } = useAuth();
@@ -8,6 +9,10 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [waiting, setWaiting] = useState(0);
+  useEffect(() => {
+    if (outboxAvailable()) allItems().then((x) => setWaiting(x.length)).catch(() => {});
+  }, []);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -26,6 +31,7 @@ export function Login() {
     <main className="ui-login">
       <h1>EVO</h1>
       <p>Environment Operations</p>
+      {waiting > 0 && <p className="ui-muted" role="status">Ada {waiting} data belum terunggah di HP ini. Masuk dengan akun pemiliknya untuk mengunggah.</p>}
       <form onSubmit={submit} className="ui-login__form">
         <label>
           <span>Email</span>
