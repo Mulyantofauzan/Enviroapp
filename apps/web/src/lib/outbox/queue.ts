@@ -28,7 +28,7 @@ function changed() {
 const bySeq = (a: OutboxItem, b: OutboxItem) => a.seq - b.seq;
 
 export type NewItem = {
-  owner: string; kind: OutboxKind; key: string; group?: string | null; label: string;
+  id?: string; owner: string; kind: OutboxKind; key: string; group?: string | null; label: string;
   request: OutboxRequest; blob?: Blob | null; recordedAt?: string;
 };
 
@@ -40,7 +40,7 @@ export async function enqueue(i: NewItem): Promise<OutboxItem> {
       try { void navigator.storage?.persist?.(); } catch { /* best effort */ }
     }
     const item: OutboxItem = {
-      id: crypto.randomUUID(), owner: i.owner, kind: i.kind, key: i.key, group: i.group ?? null, label: i.label,
+      id: i.id ?? crypto.randomUUID(), owner: i.owner, kind: i.kind, key: i.key, group: i.group ?? null, label: i.label,
       request: i.request, blob: i.blob ?? null, recordedAt: i.recordedAt ?? new Date().toISOString(),
       seq: Math.max(0, ...all.map((x) => x.seq)) + 1, status: 'pending', error: null, tries: 0, nextAt: 0,
     };

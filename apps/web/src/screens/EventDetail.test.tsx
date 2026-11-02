@@ -23,14 +23,15 @@ const base: Record<string, unknown> = {
 };
 const evid = (over: Record<string, unknown> = {}) => ({ id: 'e1', filename: 'foto.jpg', mime: 'image/jpeg', size: 2048, uploaded_at: '2026-11-03T01:00:00Z', uploaded_by_name: 'Rudi Hartono', uploaded_by: 'u1', ...over });
 
-type S = { event?: Record<string, unknown>; evidences?: unknown[]; role?: any; status?: number };
+type S = { event?: Record<string, unknown>; evidences?: unknown[]; role?: any; status?: number; offline?: boolean };
 /** Serves the detail from mutable state so a POST or DELETE changes what the next GET returns. */
-function setup({ event = {}, evidences = [], role = 'Operator' }: S = {}) {
+function setup({ event = {}, evidences = [], role = 'Operator', offline = false }: S = {}) {
   const state = { event: { ...base, ...event }, evidences: [...evidences] as any[] };
   const calls = mockApi({
     role,
     handler: (u, i) => {
       const m = i?.method ?? 'GET';
+      if (offline && m !== 'GET') throw new TypeError('offline');
       if (u === '/api/events/s1/2026-11-03' && m === 'GET') return json({ today: '2026-11-04', event: { ...state.event, evidence_count: state.evidences.length }, evidences: state.evidences });
       if (u === '/api/events/s1/2026-11-03/evidence' && m === 'POST') {
         const e = evid({ id: `e${state.evidences.length + 1}`, filename: ((i!.body as FormData).get('file') as File).name });
@@ -278,5 +279,50 @@ describe('EventDetail', () => {
     setup();
     renderApp(URL);
     expect(await screen.findByRole('link', { name: 'Kembali ke Kalender' })).toBeInTheDocument();
+  });
+});
+
+
+describe('EventDetail offline', () => {
+  const QUEUED_PHOTO = 'Foto tersimpan di HP, menunggu sinyal';
+
+  it('a chosen file is queued: toast, a "Menunggu unggah" row, nothing lost', async () => {
+    setup({ offline: true });
+    renderApp(URL);
+    await pickFile('laporan.jpg');
+    expect(await screen.findByText(QUEUED_PHOTO)).toBeInTheDocument();
+    expect(await screen.findByText('laporan.jpg')).toBeInTheDocument();
+    expect(await screen.findByText('Menunggu unggah')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('Selesaikan event is enabled with only a queued photo and queues the completion', async () => {
+    setup({ offline: true });
+    renderApp(URL);
+    await pickFile('laporan.jpg');
+    await screen.findByText(QUEUED_PHOTO);
+    const done = screen.getByRole('button', { name: 'Selesaikan event' });
+    await waitFor(() => expect(done).toBeEnabled());
+    await userEvent.click(done);
+    expect(await screen.findByText('Penyelesaian tersimpan di HP, menunggu sinyal')).toBeInTheDocument();
+    expect(screen.getByText(/Penyelesaian menunggu unggah/)).toBeInTheDocument();
+  });
+
+  it('a camera photo taken offline closes the camera and is queued', async () => {
+    setup({ offline: true });
+    renderApp(URL);
+    await userEvent.click(await screen.findByRole('button', { name: /Ambil foto/ }));
+    await userEvent.click(screen.getByText('Gunakan foto (uji)'));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Kamera eviden' })).toBeNull());
+    expect(await screen.findByText(QUEUED_PHOTO)).toBeInTheDocument();
+  });
+
+  it('reloads the event after the queue has been uploaded', async () => {
+    const { calls } = setup();
+    renderApp(URL);
+    await screen.findByRole('heading', { name: 'Cek Saluran Inlet' });
+    const before = calls.filter((c) => c.url === '/api/events/s1/2026-11-03').length;
+    window.dispatchEvent(new Event('outbox:drained'));
+    await waitFor(() => expect(calls.filter((c) => c.url === '/api/events/s1/2026-11-03').length).toBe(before + 1));
   });
 });
