@@ -6,6 +6,7 @@ import { ToastProvider } from './components/Toast';
 import { App } from './App';
 import './styles/tokens.css';
 import './styles/base.css';
+import './styles/ui.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
