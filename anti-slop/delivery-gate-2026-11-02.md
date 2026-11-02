@@ -102,3 +102,19 @@ Bukti (Chrome nyata, kamera buatan `--use-fake-device-for-media-stream`, lokasi 
 - Tes: shared 58, API 223, web 301 lulus.
 
 Belum diuji: kamera dan GPS di HP sungguhan (butuh HTTPS setelah deploy) dan konteks tidak aman di peramban nyata (dicakup tes unit). Nama berkas foto kamera memakai jam UTC (`foto-202611020514.jpg`), sedangkan tampilan memakai WITA.
+
+---
+
+# Tambahan: Laporan, grafik, dan ekspor
+
+Bukti (Chrome nyata, data contoh satu tahun di pond SP-02, Manager, 360 dan 1200 px):
+- Layar Laporan memuat sembilan grafik berlabel data (86 label), tabel pratinjau dengan sel merah untuk pH outlet 5,8 dan TSS outlet 55, tanpa overflow horizontal dan tanpa target di bawah 44 px. Dashboard juga berlabel.
+- Excel dibuka ulang dengan `openpyxl`: lembar Ringkasan, Cuaca, Air Permukaan, Koagulan; judul dibekukan; angka bertipe angka; dua sel di luar baku mutu berwarna merah tebal.
+- PDF 7 halaman dengan 9 gambar grafik, legenda, sel merah, dan "Halaman x dari y"; halaman dirender dengan PDFKit dan dibaca.
+- Operator membuka `/laporan` mendarat di beranda; Auditor melihat Laporan.
+- Pustaka PDF berada di potongan terpisah (`jspdf.es.min`, `jspdf.plugin.autotable`) yang dirujuk hanya lewat `import()`; potongan utama 295 kB.
+- Tes: web 417, API 224, shared 58.
+
+Temuan yang diperbaiki selama verifikasi: label sumbu kiri terpotong untuk angka lima digit (debit), dua label bulan terakhir bertumpuk, pemilih Periode melebihi lebar 360 px. Catatan jujur: satu pengukuran awal menunjukkan overflow karena peramban menyajikan CSS lama dari cache service worker; setelah profil memuat versi baru, tidak ada overflow.
+
+Catatan: label di dekat titik abnormal merah pada grafik garis bisa menempel pada titik. Cache PWA mengunduh potongan PDF di latar belakang saat pemasangan.

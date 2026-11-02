@@ -52,8 +52,11 @@ File eviden disimpan di R2 (binding `EVIDENCE`). Saat pengembangan, `wrangler de
 
 **Kamera dan GPS peramban butuh HTTPS** (localhost dikecualikan). Di HP, kamera baru jalan setelah deploy ke alamat https; lewat `http://192.168.x.x` peramban menolak dan aplikasi menampilkan "Kamera butuh koneksi aman (HTTPS)" dengan jalur galeri tetap ada.
 
+## Laporan
+`/laporan` (Manager, Admin, Auditor): pilih Lokasi, Periode (7 hari awal, atau 30 hari, bulan ini, bulan lalu, atur sendiri sampai 366 hari) dan data (Cuaca, Air Permukaan, Koagulan, Event). Pratinjau tabel memakai baku mutu pond (sel merah). Sembilan grafik berlabel data: curah hujan (7 hari, rata-rata 5 minggu, rata-rata 12 bulan), pH, TSS, dan debit outlet (mengikuti periode, butuh satu lokasi), penggunaan koagulan per jenis, dan penggunaan tawas (Serbuk + Batu, kg) per minggu dan per bulan. "Ekspor Excel (.xlsx)" menghasilkan tabel (lembar Ringkasan plus satu lembar per data, tanpa grafik); "Ekspor PDF" (A4 lanskap) memuat tabel dan grafik. Keduanya dibuat di peramban tanpa API baru; pustaka PDF dimuat hanya saat tombol ditekan. Batas 20.000 baris per ekspor.
+
 ## Security note
 The login route has no built-in attempt limit. Before field use, add a Cloudflare rate-limiting rule for `POST /api/auth/login` in the dashboard.
 
 ## Not in this version
-Offline data queue, Excel/PDF export (Laporan). Offline now means the app shell opens without signal; saving needs a connection.
+Offline data queue. Offline now means the app shell opens without signal; saving needs a connection.
