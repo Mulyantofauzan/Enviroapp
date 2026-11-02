@@ -204,13 +204,19 @@ body { font-size: 15px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .ui-filters label { display: grid; gap: 6px; font-size: 14px; color: var(--text-sub); }
 .ui-filters input, .ui-filters select, .ui-text input, .ui-text select { min-height: 48px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: var(--radius-field); background: var(--surface); font: 500 15px var(--font); color: var(--text); }
 .ui-filters__wide { grid-column: 1 / -1; }
-.ui-hist { display: block; color: var(--text); text-decoration: none; }
-.ui-hist p { margin: 6px 0 0; font-size: 14px; }
-.ui-hist__head { display: flex; justify-content: space-between; gap: 8px; }
-.ui-hist__head span { color: var(--text-sub); font-size: 14px; }
-.ui-val { font-weight: 600; }
-.ui-val.is-bad { background: var(--danger-soft); color: var(--danger); border-radius: 6px; padding: 0 6px; }
-.ui-stale { display: block; color: var(--danger); font-style: normal; font-size: 13px; margin-top: 2px; }
+.ui-page--wide { max-width: 960px; }
+
+.ui-tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); }
+.ui-tablewrap:focus-visible { outline: 3px solid var(--water); outline-offset: 2px; }
+.ui-table { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+.ui-table th, .ui-table td { padding: 12px 14px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); background: var(--surface); }
+.ui-table thead th { background: var(--bg); color: var(--text-sub); font-weight: 600; position: sticky; top: 0; }
+.ui-table tbody tr:last-child td { border-bottom: 0; }
+.ui-table .is-right { text-align: right; }
+.ui-table .is-sticky { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--border); font-weight: 600; }
+.ui-table thead th.is-sticky { z-index: 2; }
+.ui-table td.is-bad { background: var(--danger-soft); color: var(--danger); font-weight: 700; }
+.ui-table .ui-iconbtn { width: 44px; height: 44px; }
 
 /* Master and users */
 .ui-text { display: grid; gap: 6px; font-size: 14px; color: var(--text-sub); min-width: 0; }

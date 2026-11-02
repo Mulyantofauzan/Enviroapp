@@ -1,30 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { canWrite, formatDateId, formatNumber, isOutOfLimit, type Threshold } from '@evo/shared';
+import { canWrite, formatNumber, isOutOfLimit, type Threshold } from '@evo/shared';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { Icon } from '../icons';
+import { dayMonth } from '../lib/dates';
 import type { Pond } from '../pond/PondContext';
+import { Badge } from '../ui/Badge';
+import { DataTable, type Column } from '../ui/DataTable';
+import { Segmented } from '../ui/Segmented';
 import { ScreenHeader } from '../ui/ScreenHeader';
 import { pondLabel } from '../ui/PondPicker';
 import { localToday } from './input/DayScope';
 
 type Water = { ph_inlet: number | null; ph_outlet: number | null; tss_inlet: number | null; tss_outlet: number | null; debit_inlet_m3d: number | null; debit_outlet_m3d: number | null };
-type Entry = {
-  date: string; sp_id: string | null;
-  weather: { rainfall_mm: number | null; rain_hours: number | null } | null;
-  water: Water | null;
-  coagulant: { type: string; stock_in: number | null; stock_out: number | null; stock_remaining: number | null; staleRemaining: boolean }[];
-};
+type Coag = { type: string; stock_in: number | null; stock_out: number | null; stock_remaining: number | null; staleRemaining: boolean };
+type Entry = { date: string; sp_id: string | null; weather: { rainfall_mm: number | null; rain_hours: number | null } | null; water: Water | null; coagulant: Coag[] };
+type View = 'air' | 'cuaca' | 'koagulan';
 
-const daysAgo = (n: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toLocaleDateString('en-CA');
-};
-
-function Val({ v, t, decimals = 3 }: { v: number | null; t?: Threshold; decimals?: number }) {
-  return <span className={`ui-val${isOutOfLimit(v, t) ? ' is-bad' : ''}`}>{formatNumber(v, decimals)}</span>;
-}
+const daysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toLocaleDateString('en-CA'); };
+const dateText = (iso: string) => `${dayMonth(iso)} ${iso.slice(0, 4)}`;
+const num = (v: number | null, decimals = 3) => formatNumber(v, decimals);
 
 export function Riwayat() {
   const { user } = useAuth();
@@ -32,6 +28,7 @@ export function Riwayat() {
   const [from, setFrom] = useState(daysAgo(14));
   const [to, setTo] = useState(localToday());
   const [sp, setSp] = useState('');
+  const [view, setView] = useState<View>('air');
   const [ponds, setPonds] = useState<Pond[]>([]);
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [error, setError] = useState('');
@@ -47,10 +44,64 @@ export function Riwayat() {
     return () => { live = false; };
   }, [from, to, sp]);
 
+  const pondText = (id: string | null) => { const p = id ? byId.get(id) : undefined; return p ? pondLabel(p) : id ? 'Pond' : '–'; };
+  const limit = (id: string | null, key: string): Threshold | undefined => (id ? byId.get(id)?.thresholds?.[key] : undefined);
+  const bad = (v: number | null, t: Threshold | undefined) => (isOutOfLimit(v, t) ? 'is-bad' : '');
+
+  const action = <R extends { date: string; sp_id: string | null }>(module: string, withPond: boolean): Column<R>[] =>
+    writer
+      ? [{
+          key: 'aksi', header: 'Aksi',
+          render: (r) => (
+            <Link className="ui-iconbtn" to={`/input/${module}?date=${r.date}${r.sp_id ? `&sp=${r.sp_id}` : ''}`}
+              aria-label={`Ubah ${dateText(r.date)}${withPond ? ` ${pondText(r.sp_id)}` : ''}`}><Icon name="pencil" /></Link>
+          ),
+        }]
+      : [];
+
+  const airRows = useMemo(() => (entries ?? []).filter((e) => e.water).map((e) => ({ ...e, water: e.water! })), [entries]);
+  const weatherRows = useMemo(() => {
+    const m = new Map<string, { date: string; sp_id: string | null; w: NonNullable<Entry['weather']> }>();
+    for (const e of entries ?? []) if (e.weather && !m.has(e.date)) m.set(e.date, { date: e.date, sp_id: null, w: e.weather });
+    return [...m.values()];
+  }, [entries]);
+  const coagRows = useMemo(() => (entries ?? []).flatMap((e) => e.coagulant.map((c) => ({ date: e.date, sp_id: e.sp_id, c }))), [entries]);
+
+  type Air = (typeof airRows)[number];
+  const airCols: Column<Air>[] = [
+    { key: 'date', header: 'Tanggal', sticky: true, render: (r) => dateText(r.date) },
+    { key: 'pond', header: 'Pond', render: (r) => pondText(r.sp_id) },
+    { key: 'phi', header: 'pH inlet', align: 'right', render: (r) => num(r.water.ph_inlet) },
+    { key: 'pho', header: 'pH outlet', align: 'right', render: (r) => num(r.water.ph_outlet), cellClass: (r) => bad(r.water.ph_outlet, limit(r.sp_id, 'ph_outlet')) },
+    { key: 'tssi', header: 'TSS inlet', align: 'right', render: (r) => num(r.water.tss_inlet) },
+    { key: 'tsso', header: 'TSS outlet', align: 'right', render: (r) => num(r.water.tss_outlet), cellClass: (r) => bad(r.water.tss_outlet, limit(r.sp_id, 'tss_outlet')) },
+    { key: 'di', header: 'Debit inlet (m³/d)', align: 'right', render: (r) => num(r.water.debit_inlet_m3d, 1) },
+    { key: 'do', header: 'Debit outlet (m³/d)', align: 'right', render: (r) => num(r.water.debit_outlet_m3d, 1) },
+    ...action<Air>('air', true),
+  ];
+  type Wx = (typeof weatherRows)[number];
+  const weatherCols: Column<Wx>[] = [
+    { key: 'date', header: 'Tanggal', sticky: true, render: (r) => dateText(r.date) },
+    { key: 'rain', header: 'Rainfall (mm)', align: 'right', render: (r) => num(r.w.rainfall_mm) },
+    { key: 'hours', header: 'Rain hours (jam)', align: 'right', render: (r) => num(r.w.rain_hours) },
+    ...action<Wx>('cuaca', false),
+  ];
+  type Cg = (typeof coagRows)[number];
+  const coagCols: Column<Cg>[] = [
+    { key: 'date', header: 'Tanggal', sticky: true, render: (r) => dateText(r.date) },
+    { key: 'pond', header: 'Pond', render: (r) => pondText(r.sp_id) },
+    { key: 'type', header: 'Jenis', render: (r) => r.c.type },
+    { key: 'in', header: 'Masuk', align: 'right', render: (r) => num(r.c.stock_in) },
+    { key: 'out', header: 'Keluar', align: 'right', render: (r) => num(r.c.stock_out) },
+    { key: 'left', header: 'Sisa', align: 'right', render: (r) => (r.c.staleRemaining ? <>{num(r.c.stock_remaining)} <Badge tone="warning">Selisih</Badge></> : num(r.c.stock_remaining)) },
+    ...action<Cg>('koagulan', true),
+  ];
+  const empty = 'Tidak ada data pada rentang ini.';
+
   return (
     <>
       <ScreenHeader title="Riwayat" subtitle="Data yang sudah dicatat" onProfile={() => nav('/akun')} />
-      <div className="ui-page">
+      <div className="ui-page ui-page--wide">
         <section className="ui-card ui-filters" aria-label="Filter">
           <label><span>Dari</span><input type="date" value={from} onChange={(e) => e.target.value && setFrom(e.target.value)} /></label>
           <label><span>Sampai</span><input type="date" value={to} onChange={(e) => e.target.value && setTo(e.target.value)} /></label>
@@ -61,37 +112,12 @@ export function Riwayat() {
             </select>
           </label>
         </section>
+        <Segmented label="Jenis data" options={[{ value: 'air', label: 'Air permukaan' }, { value: 'cuaca', label: 'Cuaca' }, { value: 'koagulan', label: 'Koagulan' }]} value={view} onChange={setView} />
         {error && <p className="ui-error" role="alert">{error}</p>}
         {!entries && !error && <p className="ui-muted">Memuat…</p>}
-        {entries?.length === 0 && <p className="ui-muted">Tidak ada data pada rentang ini.</p>}
-        {entries?.map((e) => {
-          const pond = e.sp_id ? byId.get(e.sp_id) : undefined;
-          const th = pond?.thresholds ?? {};
-          const module = e.water ? 'air' : e.weather ? 'cuaca' : 'koagulan';
-          const body = (
-            <>
-              <div className="ui-hist__head"><strong>{formatDateId(e.date)}</strong><span>{pond ? pondLabel(pond) : e.sp_id ? 'Pond' : 'Semua pond'}</span></div>
-              {e.weather && <p>Hujan <Val v={e.weather.rainfall_mm} /> mm, <Val v={e.weather.rain_hours} /> jam</p>}
-              {e.water && (
-                <>
-                  <p>pH inlet <Val v={e.water.ph_inlet} /> / outlet <Val v={e.water.ph_outlet} t={th.ph_outlet} /></p>
-                  <p>TSS inlet <Val v={e.water.tss_inlet} /> / outlet <Val v={e.water.tss_outlet} t={th.tss_outlet} /> mg/L</p>
-                  <p>Debit inlet <Val v={e.water.debit_inlet_m3d} decimals={1} /> / outlet <Val v={e.water.debit_outlet_m3d} decimals={1} /> m³/d</p>
-                </>
-              )}
-              {e.coagulant.map((c) => (
-                <p key={c.type}>
-                  {c.type}: masuk <Val v={c.stock_in} />, keluar <Val v={c.stock_out} />, sisa <Val v={c.stock_remaining} />
-                  {c.staleRemaining && <em className="ui-stale">Selisih hitungan stok dengan hari sebelumnya</em>}
-                </p>
-              ))}
-            </>
-          );
-          const key = `${e.date}|${e.sp_id}`;
-          return writer
-            ? <Link key={key} className="ui-card ui-hist" to={`/input/${module}?date=${e.date}${e.sp_id ? `&sp=${e.sp_id}` : ''}`}>{body}</Link>
-            : <div key={key} className="ui-card ui-hist">{body}</div>;
-        })}
+        {entries && view === 'air' && <DataTable caption="Air permukaan" columns={airCols} rows={airRows} rowKey={(r) => `${r.date}|${r.sp_id}`} emptyText={empty} />}
+        {entries && view === 'cuaca' && <DataTable caption="Cuaca" columns={weatherCols} rows={weatherRows} rowKey={(r) => r.date} emptyText={empty} />}
+        {entries && view === 'koagulan' && <DataTable caption="Koagulan" columns={coagCols} rows={coagRows} rowKey={(r) => `${r.date}|${r.sp_id}|${r.c.type}`} emptyText={empty} />}
       </div>
     </>
   );
