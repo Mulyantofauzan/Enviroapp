@@ -128,3 +128,22 @@ describe('schedules: change and stop', () => {
     expect(((await res.json()) as any).ended_on).toBe('2026-11-01');
   });
 });
+
+describe('GET /schedules/assignees', () => {
+  it('lists active users by name for Manager and Admin, without emails or hashes', async () => {
+    const mgr = await login('Manager');
+    const op = await login('Operator');
+    await env.DB.prepare('UPDATE users SET is_active = 0 WHERE id = ?').bind((await login('Auditor')).user.id).run();
+    const res = await call('/schedules/assignees', { cookie: mgr.cookie });
+    expect(res.status).toBe(200);
+    const list = await res.json() as any[];
+    expect(list.map((u) => u.name).sort()).toEqual(['Manager User', 'Operator User']);
+    expect(Object.keys(list[0]).sort()).toEqual(['id', 'name']);
+    expect(list.find((u) => u.name === 'Operator User').id).toBe(op.user.id);
+    expect((await call('/schedules/assignees', { cookie: (await login('Admin')).cookie })).status).toBe(200);
+  });
+  it('Operator and Auditor cannot', async () => {
+    expect((await call('/schedules/assignees', { cookie: (await login('Operator')).cookie })).status).toBe(403);
+    expect((await call('/schedules/assignees', { cookie: (await login('Auditor')).cookie })).status).toBe(403);
+  });
+});

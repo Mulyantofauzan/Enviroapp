@@ -62,6 +62,12 @@ scheduleRoutes.get('/', async (c) => {
   return c.json(results.map(present));
 });
 
+/** Names only, so a Manager can pick who a schedule is for without being able to list accounts. */
+scheduleRoutes.get('/assignees', requireScheduler, async (c) => {
+  const { results } = await c.env.DB.prepare('SELECT id, name FROM users WHERE is_active = 1 ORDER BY name').all<{ id: string; name: string }>();
+  return c.json(results);
+});
+
 scheduleRoutes.post('/', requireScheduler, async (c) => {
   const b: any = await c.req.json().catch(() => ({}));
   const f = readFields(c, b, false);

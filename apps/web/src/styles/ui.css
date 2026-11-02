@@ -304,3 +304,8 @@ body { font-size: 15px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .ui-file { cursor: pointer; }
 .ui-file:focus-within { outline: 3px solid var(--water); outline-offset: 2px; }
 .ui-file.is-busy { opacity: 0.55; }
+
+.ui-text textarea { padding: 12px; border: 1.5px solid var(--border); border-radius: var(--radius-field); background: var(--surface); font: 500 15px var(--font); color: var(--text); resize: vertical; width: 100%; }
+.ui-sched { display: grid; gap: 8px; }
+.ui-sched__actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+.ui-sched__actions .ui-btn { min-height: 44px; }
