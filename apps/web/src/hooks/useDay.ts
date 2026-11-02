@@ -16,6 +16,7 @@ export function useDay(date: string, sp: string | null) {
   const [data, setData] = useState<DayData | null>(null);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     if (!sp) return;
@@ -23,11 +24,11 @@ export function useDay(date: string, sp: string | null) {
     setData(null);
     setError('');
     api<DayData>(`/day?date=${date}&sp=${sp}`)
-      .then((d) => live && setData(d))
+      .then((d) => { if (live) { setData(d); setVersion((v) => v + 1); } })
       .catch((e) => live && setError(e.message));
     return () => { live = false; };
   }, [date, sp, reloadKey]);
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
-  return { data, error, reload };
+  return { data, error, reload, version };
 }

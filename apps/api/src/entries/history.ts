@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import { defaultRemaining, isValidDate } from '@evo/shared';
 import type { AppEnv } from '../types';
 import { requireAuth } from '../auth/guard';
-import { previousRemaining } from './coagulant';
 import { withDerivedFlow } from './day';
 
 export const historyRoutes = new Hono<AppEnv>();
@@ -25,8 +24,21 @@ historyRoutes.get('/', async (c) => {
   const weather = (await db.prepare('SELECT date,rainfall_mm,rain_hours FROM weather WHERE date BETWEEN ? AND ?').bind(from, to).all<any>()).results;
   const water = (await db.prepare(`SELECT date,sp_id,ph_inlet,ph_outlet,tss_inlet,tss_outlet,debit_inlet_m3s,debit_outlet_m3s FROM surface_water WHERE date BETWEEN ? AND ? ${spFilter}`)
     .bind(...args([from, to])).all<any>()).results;
-  const coag = (await db.prepare(`SELECT date,sp_id,type,stock_in,stock_out,stock_remaining FROM coagulant WHERE date BETWEEN ? AND ? ${spFilter}`)
-    .bind(...args([from, to])).all<any>()).results;
+  // Include rows before `from`: the latest earlier row is the "previous" for the first day in range.
+  const coagAll = (await db.prepare(`SELECT date,sp_id,type,stock_in,stock_out,stock_remaining FROM coagulant WHERE date <= ? ${spFilter} ORDER BY sp_id, type, date`)
+    .bind(...args([to])).all<any>()).results;
+  const coag: any[] = [];
+  let group = '';
+  let prev: number | null = null;
+  for (const r of coagAll) {
+    const g = `${r.sp_id}|${r.type}`;
+    if (g !== group) { group = g; prev = null; }
+    if (r.date >= from) {
+      const expected = defaultRemaining(prev, r.stock_in ?? 0, r.stock_out ?? 0);
+      coag.push({ ...r, staleRemaining: Math.abs((r.stock_remaining ?? 0) - expected) > 1e-9 });
+    }
+    prev = r.stock_remaining ?? null;
+  }
 
   const wByDate = new Map(weather.map((w) => [w.date, w]));
   const keys = new Map<string, { date: string; sp_id: string | null }>();
@@ -39,13 +51,7 @@ historyRoutes.get('/', async (c) => {
 
   const entries = [];
   for (const { date, sp_id } of keys.values()) {
-    const cRows = coag.filter((r) => r.date === date && r.sp_id === sp_id);
-    const coagulant = [];
-    for (const r of cRows) {
-      const prev = await previousRemaining(db, r.sp_id, r.type, date);
-      const expected = defaultRemaining(prev, r.stock_in ?? 0, r.stock_out ?? 0);
-      coagulant.push({ ...r, staleRemaining: Math.abs((r.stock_remaining ?? 0) - expected) > 1e-9 });
-    }
+    const coagulant = coag.filter((r) => r.date === date && r.sp_id === sp_id);
     entries.push({
       date, sp_id,
       weather: wByDate.get(date) ?? null,

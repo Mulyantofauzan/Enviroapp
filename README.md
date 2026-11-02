@@ -32,5 +32,8 @@ cd apps/api && npx wrangler d1 migrations apply evo --remote && npx wrangler dep
 ```
 The one Worker serves the API under `/api` and the built PWA for every other path.
 
+## Security note
+The login route has no built-in attempt limit. Before field use, add a Cloudflare rate-limiting rule for `POST /api/auth/login` in the dashboard.
+
 ## Not in this version
 Event calendar, evidence camera with GPS, offline data queue, dashboard charts, Excel/PDF export. Offline now means the app shell opens without signal; saving needs a connection.

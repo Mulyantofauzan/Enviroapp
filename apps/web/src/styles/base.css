@@ -94,3 +94,5 @@ h3 { font-size: 1rem; color: var(--peat-soft); font-weight: 500; }
 .row-card { display: grid; gap: 8px; background: var(--paper); border-radius: 22px; padding: 14px 18px; }
 .row-card select { background: var(--silt); border: 0; border-radius: var(--radius-chip); padding: 10px; min-height: 44px; }
 .inline-form { display: grid; gap: 8px; }
+
+.field-error { color: var(--overdue); font-size: 0.85rem; }

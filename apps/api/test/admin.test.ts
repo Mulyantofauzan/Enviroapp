@@ -31,12 +31,13 @@ describe('ponds', () => {
     expect((await (await call('/ponds', { cookie })).json() as any[]).length).toBe(0);
     expect((await (await call('/ponds?all=1', { cookie })).json() as any[]).length).toBe(1);
   });
-  it('all=1 ignored for non-admin', async () => {
+  it('all=1 lists switched-off ponds for any signed-in user', async () => {
     const admin = await login('Admin');
     const p = await (await call('/ponds', { method: 'POST', cookie: admin.cookie, body: json({ name: 'SP 3' }) })).json() as any;
     await call(`/ponds/${p.id}`, { method: 'PATCH', cookie: admin.cookie, body: json({ is_active: false }) });
     const op = await login('Operator');
-    expect((await (await call('/ponds?all=1', { cookie: op.cookie })).json() as any[]).length).toBe(0);
+    expect((await (await call('/ponds', { cookie: op.cookie })).json() as any[]).length).toBe(0);
+    expect((await (await call('/ponds?all=1', { cookie: op.cookie })).json() as any[]).length).toBe(1);
   });
 });
 

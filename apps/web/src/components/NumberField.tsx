@@ -22,7 +22,8 @@ export function NumberField({ label, unit, value, onChange, threshold, readOnly 
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const parsed = parseNumber(text);
-  const alert = parsed !== 'invalid' && isOutOfLimit(parsed, threshold);
+  const invalid = parsed === 'invalid';
+  const alert = !invalid && isOutOfLimit(parsed, threshold);
   const pulse = alert && !wasAlert.current;
   wasAlert.current = alert;
 
@@ -36,6 +37,7 @@ export function NumberField({ label, unit, value, onChange, threshold, readOnly 
           inputMode="decimal"
           value={text}
           readOnly={readOnly}
+          aria-invalid={invalid || undefined}
           onChange={(e) => {
             const raw = e.target.value.replace(',', '.');
             setText(raw);
@@ -43,6 +45,7 @@ export function NumberField({ label, unit, value, onChange, threshold, readOnly 
             if (p !== 'invalid') onChange(p);
           }}
         />
+        {invalid && <small className="field-error">Enter a number</small>}
       </label>
       {unit && <span className="unit">{unit}</span>}
     </div>

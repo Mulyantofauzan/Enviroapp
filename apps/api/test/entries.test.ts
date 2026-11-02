@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { env } from 'cloudflare:workers';
 import { addPond, call, login, json } from './helpers';
+import { app } from '../src/index';
 
 const D1 = '2026-11-01';
 const D2 = '2026-11-02';
@@ -170,5 +171,40 @@ describe('day and history', () => {
   it('history bad range is 400', async () => {
     const { cookie } = await login('Operator');
     expect((await call('/history?from=x&to=y', { cookie })).status).toBe(400);
+  });
+});
+
+describe('role gates', () => {
+  it('manager cannot write water', async () => {
+    const { cookie } = await login('Manager');
+    const sp = await addPond();
+    expect((await call(`/water/${D1}/${sp}`, { method: 'PUT', cookie, body: json({ ph_inlet: 7 }) })).status).toBe(403);
+  });
+  it('auditor cannot write coagulant', async () => {
+    const { cookie } = await login('Auditor');
+    const sp = await addPond();
+    expect((await call(`/coagulant/${D1}/${sp}/Kapur`, { method: 'PUT', cookie, body: json({ stock_in: 1, stock_out: 0 }) })).status).toBe(403);
+  });
+});
+
+describe('history query cost', () => {
+  it('uses a small fixed number of D1 queries however many rows exist', async () => {
+    const { cookie } = await login('Operator');
+    const a = await addPond('SP A');
+    const b = await addPond('SP B');
+    for (const sp of [a, b]) for (let d = 1; d <= 5; d++) for (const t of ['Kapur', 'Tawas Batu', 'Tawas Serbuk'])
+      await call(`/coagulant/2026-11-0${d}/${sp}/${encodeURIComponent(t)}`, { method: 'PUT', cookie, body: json({ stock_in: 1, stock_out: 0 }) });
+    let queries = 0;
+    const counting = new Proxy(env.DB, {
+      get(t, p) {
+        if (p === 'prepare') return (sql: string) => { queries++; return t.prepare(sql); };
+        const v = (t as any)[p];
+        return typeof v === 'function' ? v.bind(t) : v;
+      },
+    });
+    const res = await app.request('/api/history?from=2026-11-01&to=2026-11-09', { headers: { cookie } }, { DB: counting });
+    expect(res.status).toBe(200);
+    expect((await res.json() as any[]).length).toBe(10);
+    expect(queries).toBeLessThanOrEqual(8);
   });
 });

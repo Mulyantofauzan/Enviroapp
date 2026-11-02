@@ -1,9 +1,13 @@
 import { Hono } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import type { AppEnv } from '../types';
-import { verifyPassword } from './password';
+import { hashPassword, verifyPassword } from './password';
 import { createSession, deleteSession, SESSION_TTL_SECONDS } from './session';
 import { COOKIE, requireAuth } from './guard';
+
+// Verified against when the email is unknown, so known and unknown emails take the same time.
+let dummyHash: Promise<string> | undefined;
+const getDummyHash = () => (dummyHash ??= hashPassword('not-a-real-password'));
 
 export const authRoutes = new Hono<AppEnv>();
 
@@ -13,7 +17,7 @@ authRoutes.post('/login', async (c) => {
   const password = typeof body.password === 'string' ? body.password : '';
   const row = await c.env.DB.prepare('SELECT id, name, role, password_hash FROM users WHERE lower(email) = ?')
     .bind(email).first<{ id: string; name: string; role: string; password_hash: string }>();
-  const ok = row ? await verifyPassword(password, row.password_hash) : false;
+  const ok = await verifyPassword(password, row?.password_hash ?? (await getDummyHash()));
   if (!row || !ok) return c.json({ error: 'Wrong email or password.' }, 401);
   const sid = await createSession(c.env.DB, row.id);
   const secure = new URL(c.req.url).protocol === 'https:';
