@@ -23,3 +23,15 @@ export const requireAdmin = createMiddleware<AppEnv>(async (c, next) => {
   if (!isAdmin(c.get('user').role)) return c.json({ error: 'Hanya admin yang boleh melakukan ini.' }, 403);
   await next();
 });
+
+export const requireScheduler = createMiddleware<AppEnv>(async (c, next) => {
+  const r = c.get('user').role;
+  if (r !== 'Manager' && r !== 'Admin') return c.json({ error: 'Hanya Manager atau Admin yang boleh mengatur jadwal.' }, 403);
+  await next();
+});
+
+export const requireExecutor = createMiddleware<AppEnv>(async (c, next) => {
+  const r = c.get('user').role;
+  if (r !== 'Operator' && r !== 'Admin') return c.json({ error: 'Hanya Operator atau Admin yang boleh mengerjakan event.' }, 403);
+  await next();
+});

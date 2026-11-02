@@ -9,6 +9,7 @@ import { coagulantRoutes } from './entries/coagulant';
 import { dayRoutes } from './entries/day';
 import { historyRoutes } from './entries/history';
 import { dashboardRoutes } from './entries/dashboard';
+import { scheduleRoutes } from './events/schedules';
 
 export const app = new Hono<AppEnv>().basePath('/api');
 
@@ -21,6 +22,7 @@ app.route('/coagulant', coagulantRoutes);
 app.route('/day', dayRoutes);
 app.route('/history', historyRoutes);
 app.route('/dashboard', dashboardRoutes);
+app.route('/schedules', scheduleRoutes);
 
 app.onError((err, c) => {
   console.error(err);
