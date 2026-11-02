@@ -1,0 +1,17 @@
+:root {
+  --silt: #e4e8e1;
+  --silt-deep: #d3d9cf;
+  --paper: #f3f5f0;
+  --peat: #1e2b25;
+  --peat-soft: #4a5a51;
+  --moss: #3f6b45;
+  --moss-dark: #2f5335;
+  --pond: #2e6f73;
+  --alert: #f4c7cc;
+  --alert-ink: #7a1f2b;
+  --overdue: #b3261e;
+  --radius-field: 18px;
+  --radius-chip: 10px;
+  --font-head: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'Instrument Sans', system-ui, sans-serif;
+}
