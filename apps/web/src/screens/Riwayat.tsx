@@ -45,6 +45,7 @@ export function Riwayat() {
   }, [from, to, sp]);
 
   const pondText = (id: string | null) => { const p = id ? byId.get(id) : undefined; return p ? pondLabel(p) : id ? 'Pond' : '–'; };
+  const pondShort = (id: string | null) => { const p = id ? byId.get(id) : undefined; return p ? p.code ?? p.name : id ? 'Pond' : '–'; };
   const limit = (id: string | null, key: string): Threshold | undefined => (id ? byId.get(id)?.thresholds?.[key] : undefined);
   const bad = (v: number | null, t: Threshold | undefined) => (isOutOfLimit(v, t) ? 'is-bad' : '');
 
@@ -70,7 +71,7 @@ export function Riwayat() {
   type Air = (typeof airRows)[number];
   const airCols: Column<Air>[] = [
     { key: 'date', header: 'Tanggal', sticky: true, render: (r) => dateText(r.date) },
-    { key: 'pond', header: 'Pond', render: (r) => pondText(r.sp_id) },
+    { key: 'pond', header: 'Pond', render: (r) => pondShort(r.sp_id) },
     { key: 'phi', header: 'pH inlet', align: 'right', render: (r) => num(r.water.ph_inlet) },
     { key: 'pho', header: 'pH outlet', align: 'right', render: (r) => num(r.water.ph_outlet), cellClass: (r) => bad(r.water.ph_outlet, limit(r.sp_id, 'ph_outlet')) },
     { key: 'tssi', header: 'TSS inlet', align: 'right', render: (r) => num(r.water.tss_inlet) },
@@ -89,7 +90,7 @@ export function Riwayat() {
   type Cg = (typeof coagRows)[number];
   const coagCols: Column<Cg>[] = [
     { key: 'date', header: 'Tanggal', sticky: true, render: (r) => dateText(r.date) },
-    { key: 'pond', header: 'Pond', render: (r) => pondText(r.sp_id) },
+    { key: 'pond', header: 'Pond', render: (r) => pondShort(r.sp_id) },
     { key: 'type', header: 'Jenis', render: (r) => r.c.type },
     { key: 'in', header: 'Masuk', align: 'right', render: (r) => num(r.c.stock_in) },
     { key: 'out', header: 'Keluar', align: 'right', render: (r) => num(r.c.stock_out) },

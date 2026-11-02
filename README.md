@@ -42,6 +42,11 @@ cd apps/api && npx wrangler d1 migrations apply evo --remote && npx wrangler dep
 ```
 The one Worker serves the API under `/api` and the built PWA for every other path.
 
+## Kalender dan eviden
+Tab Kalender menampilkan jadwal berulang (harian sampai tahunan). Tanggal yang terlewat tanpa eviden tetap merah satu per tanggal. Manager dan Admin mengatur jadwal; Operator dan Admin mengunggah eviden (foto atau PDF, maksimal 10 MB) dan menyelesaikan event. Waktu situs: WITA.
+
+File eviden disimpan di R2 (binding `EVIDENCE`). Saat pengembangan, `wrangler dev` mensimulasikannya sendiri. Untuk deploy: `npx wrangler r2 bucket create evo-evidence`, lalu `npx wrangler d1 migrations apply evo --remote` (migrasi 0003).
+
 ## Security note
 The login route has no built-in attempt limit. Before field use, add a Cloudflare rate-limiting rule for `POST /api/auth/login` in the dashboard.
 

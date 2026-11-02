@@ -315,3 +315,16 @@ body { font-size: 15px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .ui-sched { display: grid; gap: 8px; }
 .ui-sched__actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
 .ui-sched__actions .ui-btn { min-height: 44px; }
+
+/* Spacing and touch targets found in the Chrome screenshots */
+.ui-page h2 { margin: 0; }
+.ui-seg button { font-size: 14px; padding: 0 6px; }
+.ui-week { padding: 12px 8px; }
+.ui-week__days { gap: 0; }
+.ui-ev { position: relative; }
+.ui-ev__head a::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius-card); }
+.ui-ev__head a:focus-visible { outline: none; }
+.ui-ev:has(.ui-ev__head a:focus-visible) { outline: 3px solid var(--water); outline-offset: 2px; }
+.ui-ev__act { position: relative; z-index: 1; }
+
+.ui-seg button { flex: 1 1 auto; white-space: nowrap; }

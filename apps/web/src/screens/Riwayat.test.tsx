@@ -40,11 +40,12 @@ describe('Riwayat table: Air permukaan', () => {
     expect(within(table).getByRole('cell', { name: '1.278,7' })).toBeInTheDocument();
     expect(within(table).getByRole('cell', { name: '–' })).toBeInTheDocument();
   });
-  it('shows pond code and name, and the date with its year', async () => {
+  it('shows the short pond code in the table (full name stays in the edit link), and the date with its year', async () => {
     mockApi({ ponds: [POND], handler: api([e1]) });
     renderApp('/riwayat');
     const table = await screen.findByRole('table', { name: 'Air permukaan' });
-    expect(within(table).getByRole('cell', { name: 'SP-02 Pit Selatan' })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: 'SP-02' })).toBeInTheDocument();
+    expect(within(table).getByRole('link', { name: 'Ubah 2 Nov 2026 SP-02 Pit Selatan' })).toBeInTheDocument();
     expect(within(table).getByRole('cell', { name: '2 Nov 2026' })).toBeInTheDocument();
   });
   it('a pond that is switched off still shows its history', async () => {

@@ -41,3 +41,23 @@ C-1 sampai C-5: tiap keputusan visual berasal dari Figma atau dicatat sebagai ke
 ## Belum dikerjakan atau belum terverifikasi
 
 Kalender, Bukti (kamera, GPS, R2), Laporan (Excel, PDF), mode luring: bagian 2 sampai 5. Uji di HP sungguhan (kamera tidak relevan di bagian ini), uji keyboard manual, dan keputusan warna R-25 menunggu pemilik produk.
+
+---
+
+# Tambahan: Bagian 2 (Kalender, Eviden, Atur jadwal, Riwayat tabel)
+
+Bukti: `npm test` (shared 58, api 179, web 176, semua lulus), `tsc` bersih, `vite build` berhasil, `wrangler dev` dengan D1 dan R2 lokal (migrasi 0003), Chrome headless 360px dan 1200px untuk 12 layar, dan unggah PNG sungguhan lewat `curl` multipart ke R2 lokal.
+
+| Aturan | Hasil | Bukti |
+|---|---|---|
+| R-02 em dash | PASS | `grep` pada `apps/*/src` dan `packages/shared/src` selain tes: kosong |
+| R-03 mobile | PASS dengan catatan | 12 layar pada 360px: `scrollWidth` 360, tanpa overflow horizontal. Tabel Riwayat menggulir ke samping di dalam wadahnya sendiri, kolom Tanggal menempel. Tombol hari di strip dan tombol aksi tabel 44px. Judul kartu event berupa tautan teks setinggi 20px; seluruh kartu dijadikan area tekan lewat elemen semu `::after`, yang tidak terukur oleh skrip pengukur, jadi tinggi area tekan sebenarnya belum terukur |
+| R-17, R-18, R-36, R-38 | PASS | Tidak ada angka, nama, atau eviden karangan. Eviden hanya yang diunggah. Data contoh di Figma tidak dibawa |
+| R-24 navigasi | PASS | Tab Kalender menuju `/kalender`; "Atur jadwal" menuju `/kalender/jadwal` (hanya Manager dan Admin); semua rute ada di `App.tsx`. Laporan dan Eviden belum ada dan tidak ditampilkan |
+| R-25 kontras | **FAIL (keputusan pemilik produk)** | Pasangan baru yang gagal untuk teks kecil: badge "Hari ini" dan tanggal (water `#1C7ED6` di `#E4F0FB`, 3,63); "Selesai terlambat" (warning di warning-soft, 2,85); teks keterangan kartu overdue dan sel tabel di luar baku mutu (danger `#D92D20` di `#FEE4E2`, 4,01). Lolos: badge "Overdue" putih di merah solid 4,83; tombol "Unggah eviden" putih di merah 4,83. Mitigasi: status selalu berisi kata, sel abnormal juga tebal |
+| R-26 kontrol | PASS | Setiap tombol dan tautan baru diuji dengan `userEvent` (unggah, hapus, selesaikan, hentikan dengan konfirmasi, simpan jadwal, filter, strip minggu, tab Riwayat, muat lebih banyak) |
+| R-27 keadaan | PASS | Kalender, Eksekusi event, Atur jadwal, dan Riwayat punya memuat, kosong, dan galat dengan pesan Indonesia yang menyebut sebab |
+| R-32 keyboard | SEBAGIAN | Elemen HTML asli. Input berkas disembunyikan secara visual (`ui-sr`) tetapi tetap bisa difokus; cincin fokus muncul di pembungkus label lewat `:focus-within`. Kartu event menampilkan cincin fokus lewat `:has(a:focus-visible)`. Wadah tabel berfokus (`tabindex=0`) agar bisa digulir dengan keyboard. Belum diuji manual dengan Tab di peramban sungguhan |
+| R-35 verifikasi | SEBAGIAN | Dijalankan: tes, build, server nyata, Chrome nyata untuk tampilan, unggah multipart nyata. Pemilih berkas di peramban nyata dan HP sungguhan belum dicoba (unggah diuji lewat jsdom dan `curl`) |
+
+Keamanan eviden yang diuji: tipe dari isi file (executable bernama `.jpg` ditolak), batas 10 MB tepat, file kosong, nama file berbahaya tidak bisa menyuntik header, unggah yang berbarengan dengan penyelesaian tidak masuk, unduhan butuh sesi, objek R2 hilang mengembalikan 404.
