@@ -16,6 +16,7 @@ import { ScreenHeader } from '../ui/ScreenHeader';
 import { Segmented } from '../ui/Segmented';
 import { pondLabel } from '../ui/PondPicker';
 import { api } from '../api/client';
+import { saveBlob } from '../lib/download';
 import { buildZip } from '../lib/zip';
 import { localToday } from './input/DayScope';
 
@@ -71,12 +72,7 @@ export function Eviden() {
         },
         (done, total) => setZip({ done, total }),
       );
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `eviden-${from}-${today}.zip`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      saveBlob(blob, `eviden-${from}-${today}.zip`);
     } catch (e) {
       setZipError((e as Error).message);
     } finally {
