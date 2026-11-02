@@ -22,6 +22,7 @@ import { localToday } from './input/DayScope';
 const SPANS = [{ value: '7', label: '7 hari' }, { value: '30', label: '30 hari' }, { value: '90', label: '90 hari' }] as const;
 type Span = (typeof SPANS)[number]['value'];
 const ZIP_MAX = 100;
+const ZIP_MAX_BYTES = 200 * 1024 * 1024;
 const PREVIEW = ['image/jpeg', 'image/png', 'image/webp'];
 
 export function Eviden() {
@@ -60,6 +61,7 @@ export function Eviden() {
       if (current) q.set('sp', current);
       const all = await api<{ total: number; items: EvidenceRow[] }>(`/evidence?${q}`);
       if (all.total > ZIP_MAX) throw new Error(`Ada ${all.total} eviden. Persempit rentang agar tidak lebih dari ${ZIP_MAX}.`);
+      if (all.items.reduce((n, x) => n + x.size, 0) > ZIP_MAX_BYTES) throw new Error('Ukuran semua eviden melebihi 200 MB. Persempit rentang atau pilih satu jadwal.');
       const blob = await buildZip(
         all.items.map((x) => ({ id: x.id, due_date: x.due_date!, title: x.title ?? 'eviden', filename: x.filename })),
         async (id) => {
@@ -126,7 +128,7 @@ export function Eviden() {
         <Button disabled={!!zip || list.loading || list.items.length === 0} onClick={downloadAll}>
           <Icon name="download" /> {zip ? `Menyiapkan ${zip.done} dari ${zip.total}` : 'Unduh semua eviden (ZIP)'}
         </Button>
-        {!list.loading && list.total > list.items.length && <Button variant="outline" onClick={list.more}>Muat lebih banyak</Button>}
+        {!list.loading && list.total > list.items.length && <Button variant="outline" disabled={list.loadingMore} onClick={list.more}>Muat lebih banyak</Button>}
       </div>
       {viewing && <EvidenceViewer item={viewing.item} onClose={closeViewer} />}
     </>

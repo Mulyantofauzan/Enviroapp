@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import type { ViewerItem } from '../components/EvidenceViewer';
 
@@ -12,6 +12,9 @@ export function useEvidenceList(opts: { from: string | null; to: string | null; 
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [loadingMore, setLoadingMore] = useState(false);
+  const gen = useRef(0);
+  const busy = useRef(false);
 
   const query = useCallback((offset: number) => {
     const q = new URLSearchParams({ from: from!, to: to!, limit: String(PAGE), offset: String(offset) });
@@ -23,6 +26,9 @@ export function useEvidenceList(opts: { from: string | null; to: string | null; 
   useEffect(() => {
     if (!ready || !from || !to) return;
     let live = true;
+    gen.current++;
+    busy.current = false;
+    setLoadingMore(false);
     setLoading(true);
     setError('');
     setItems([]);
@@ -33,13 +39,25 @@ export function useEvidenceList(opts: { from: string | null; to: string | null; 
   }, [ready, from, to, query]);
 
   const more = useCallback(async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setLoadingMore(true);
+    const mine = gen.current;
     setError('');
     try {
       const r = await query(items.length);
-      setItems((cur) => [...cur, ...r.items]);
+      if (mine !== gen.current) return;
+      setItems((cur) => {
+        const have = new Set(cur.map((x) => x.id));
+        return [...cur, ...r.items.filter((x) => !have.has(x.id))];
+      });
       setTotal(r.total);
-    } catch (e) { setError((e as Error).message); }
+    } catch (e) {
+      if (mine === gen.current) setError((e as Error).message);
+    } finally {
+      if (mine === gen.current) { busy.current = false; setLoadingMore(false); }
+    }
   }, [query, items.length]);
 
-  return { items, total, loading, error, more };
+  return { items, total, loading, loadingMore, error, more };
 }

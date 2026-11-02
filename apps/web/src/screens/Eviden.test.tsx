@@ -140,6 +140,52 @@ describe('Eviden', () => {
   });
 });
 
+describe('Eviden load more', () => {
+  it('a double tap asks for the next page once', async () => {
+    const calls = mockApi({
+      role: 'Auditor',
+      handler: (url) => {
+        if (url.startsWith('/api/evidence?')) {
+          const off = Number(new URL(url, 'http://x').searchParams.get('offset') ?? 0);
+          return json({ total: 3, items: off === 0 ? [item(1), item(2)] : [item(3)] });
+        }
+        if (url.startsWith('/api/schedules')) return json(SCHEDULES);
+        return undefined;
+      },
+    });
+    renderApp('/eviden');
+    await screen.findByAltText('foto-1.jpg');
+    await userEvent.dblClick(screen.getByRole('button', { name: 'Muat lebih banyak' }));
+    await screen.findByAltText('foto-3.jpg');
+    expect(listCalls(calls).filter((c) => new URL(c.url, 'http://x').searchParams.get('offset') === '2').length).toBe(1);
+    expect(screen.getAllByAltText('foto-3.jpg').length).toBe(1);
+  });
+  it('a page that arrives after the filter changed is dropped', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    mockApi({
+      role: 'Auditor',
+      handler: (url) => {
+        if (url.startsWith('/api/evidence?')) {
+          const q = new URL(url, 'http://x').searchParams;
+          if (q.get('offset') === '2') return gate.then(() => json({ total: 3, items: [item(9)] }));
+          return json({ total: q.get('schedule') === 's2' ? 1 : 3, items: q.get('schedule') === 's2' ? [item(5, { schedule_id: 's2' })] : [item(1), item(2)] });
+        }
+        if (url.startsWith('/api/schedules')) return json(SCHEDULES);
+        return undefined;
+      },
+    });
+    renderApp('/eviden');
+    await screen.findByAltText('foto-1.jpg');
+    await userEvent.click(screen.getByRole('button', { name: 'Muat lebih banyak' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Kuras kolam' }));
+    await screen.findByAltText('foto-5.jpg');
+    release();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByAltText('foto-9.jpg')).toBeNull();
+  });
+});
+
 describe('Eviden ZIP', () => {
   const three = [item(1), item(2), item(3)];
   function zipSetup(opts: { total?: number; failId?: string; gate?: Promise<void> } = {}) {
@@ -212,5 +258,24 @@ describe('Eviden ZIP', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Unduh semua eviden (ZIP)' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('foto-2.jpg');
     expect(downloads).toEqual([]);
+  });
+
+  it('refuses a download whose files add up to more than 200 MB, without fetching any', async () => {
+    const big = [item(1, { size: 150 * 1024 * 1024 }), item(2, { size: 150 * 1024 * 1024 })];
+    const fileCalls: string[] = [];
+    mockApi({
+      role: 'Auditor',
+      handler: (url) => {
+        if (url.startsWith('/api/evidence?')) return json({ total: 2, items: big });
+        if (url.startsWith('/api/schedules')) return json(SCHEDULES);
+        if (/^\/api\/evidence\/\w+\/file$/.test(url)) { fileCalls.push(url); return new Response('x'); }
+        return undefined;
+      },
+    });
+    renderApp('/eviden');
+    await screen.findByAltText('foto-1.jpg');
+    await userEvent.click(screen.getByRole('button', { name: 'Unduh semua eviden (ZIP)' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('200 MB');
+    expect(fileCalls).toEqual([]);
   });
 });

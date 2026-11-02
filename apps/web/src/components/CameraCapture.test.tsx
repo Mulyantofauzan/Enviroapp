@@ -132,6 +132,18 @@ describe('CameraCapture: taking a photo', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Gunakan foto' }));
     expect(props.onUse.mock.calls[0][0]).toMatchObject({ lat: null, lng: null, accuracy: null });
   });
+  it('cannot be closed while the photo is uploading, so a failure is never lost', async () => {
+    let finish!: () => void;
+    const onUse = vi.fn(() => new Promise<void>((r) => { finish = r; }));
+    const { props } = setup({ onUse });
+    await live();
+    await userEvent.click(screen.getByRole('button', { name: 'Ambil foto' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Gunakan foto' }));
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Tutup kamera' })).toBeDisabled();
+    expect(props.onClose).not.toHaveBeenCalled();
+    await act(async () => finish());
+  });
   it('pressing "Gunakan foto" twice uploads once, and the button waits while it works', async () => {
     let finish!: () => void;
     const onUse = vi.fn(() => new Promise<void>((r) => { finish = r; }));

@@ -60,6 +60,7 @@ evidenceRoutes.post('/events/:scheduleId/:date/evidence', requireAuth, requireEx
   const data = new Uint8Array(await file.arrayBuffer());
   const mime = sniffMime(data);
   if (!mime) return c.json({ error: 'Jenis berkas tidak didukung. Gunakan foto atau PDF.' }, 400);
+  if (meta.source === 'camera' && mime !== 'image/jpeg') return c.json({ error: 'Foto dari kamera harus berformat JPEG.' }, 400);
 
   const id = crypto.randomUUID();
   const key = `evidence/${s.id}/${date}/${id}`;

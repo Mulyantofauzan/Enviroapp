@@ -128,6 +128,16 @@ describe('camera uploads', () => {
 });
 
 describe('source', () => {
+  it('a camera claim needs a JPEG, since the app camera only produces JPEG', async () => {
+    const { op, sid } = await setup();
+    const pdf = new Uint8Array(64); pdf.set([0x25, 0x50, 0x44, 0x46, 0x2d]);
+    const f = new FormData();
+    f.append('file', new File([pdf], 'surat.pdf', { type: 'application/pdf' }));
+    for (const [k, v] of Object.entries(cam())) f.append(k, v);
+    const res = await call(`/events/${sid}/${d(0)}/evidence`, { method: 'POST', cookie: op.cookie, body: f });
+    expect(res.status).toBe(400);
+    expect(await errOf(res)).toBe('Foto dari kamera harus berformat JPEG.');
+  });
   it('only camera or gallery', async () => {
     const { op, sid } = await setup();
     const res = await send(op.cookie, sid, { source: 'drone' });

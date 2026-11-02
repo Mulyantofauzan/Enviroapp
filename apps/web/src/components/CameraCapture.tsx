@@ -45,6 +45,8 @@ export function CameraCapture({ title, onClose, onUse, onGallery }: Props) {
   const geoRef = useRef(geo);
   geoRef.current = geo;
   const previewing = photo !== null;
+  const uploadingRef = useRef(false);
+  uploadingRef.current = busy === 'upload';
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -81,7 +83,7 @@ export function CameraCapture({ title, onClose, onUse, onGallery }: Props) {
 
   useEffect(() => {
     closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !uploadingRef.current) onClose(); };
     document.addEventListener('keydown', onKey);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -144,7 +146,7 @@ export function CameraCapture({ title, onClose, onUse, onGallery }: Props) {
     <div className="ui-cam" role="dialog" aria-modal="true" aria-label="Kamera eviden">
       <header className="ui-cam__head">
         <div><h2>Kamera eviden</h2><p>{title}</p></div>
-        <button type="button" ref={closeRef} className="ui-cam__close" aria-label="Tutup kamera" onClick={onClose}><Icon name="x" /></button>
+        <button type="button" ref={closeRef} className="ui-cam__close" aria-label="Tutup kamera" disabled={busy === 'upload'} onClick={onClose}><Icon name="x" /></button>
       </header>
 
       <div className="ui-cam__view">
