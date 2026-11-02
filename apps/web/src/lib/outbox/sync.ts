@@ -71,9 +71,9 @@ export function runSync(owner: string, now: number = Date.now()): Promise<SyncRe
   if (running) return running;
   const skipped = async (): Promise<SyncResult> => ({ sent: 0, failed: 0, remaining: (await listItems(owner)).length, paused: null });
   const locks = (navigator as Navigator & { locks?: LockManager }).locks;
-  const go: Promise<SyncResult> = locks
-    ? locks.request('evo-outbox-sync', { ifAvailable: true }, async (lock) => (lock ? round(owner, now) : skipped()))
-    : round(owner, now);
+  const go: Promise<SyncResult> = (async () => (locks
+    ? await locks.request('evo-outbox-sync', { ifAvailable: true }, (lock) => (lock ? round(owner, now) : skipped()))
+    : await round(owner, now)))();
   running = go.finally(() => { running = null; });
   return running;
 }
