@@ -467,3 +467,8 @@ a.ui-btn { text-decoration: none; }
 .ui-evcard p { margin: 0; font-size: 14px; }
 .ui-evcard__acts { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-top: 6px; }
 .ui-evcard__acts .ui-btn { text-decoration: none; }
+
+/* Data labels on charts */
+.ui-chart__label { fill: var(--text); font: 600 11px var(--font); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.ui-chart__label--inlet { fill: var(--text-sub); }
+.ui-chart__label--bad { fill: var(--danger); font-weight: 700; }

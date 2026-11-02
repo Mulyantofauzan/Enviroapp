@@ -46,4 +46,40 @@ describe('TrendChart (TSS)', () => {
     const { container } = render(<TrendChart name="TSS" unit="mg/L" series={[d(1, null, null)]} limit={undefined} floorZero />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  describe('data labels', () => {
+    const lab = (c: HTMLElement) => [...c.querySelectorAll('text.ui-chart__label')];
+    it('labels every outlet and inlet point when there are few, in id-ID format', () => {
+      const { container } = render(<TrendChart name="TSS" unit="mg/L" series={tss} limit={undefined} floorZero decimals={1} />);
+      expect(lab(container)).toHaveLength(10);
+      expect(lab(container).map((t) => t.textContent)).toContain('38');
+    });
+    it('beyond 14 points per line only four are labelled', () => {
+      const long = Array.from({ length: 20 }, (_, i) => ({ date: `2026-10-${String(i + 1).padStart(2, '0')}`, inlet: null, outlet: 10 + (i % 5) }));
+      const { container } = render(<TrendChart name="pH" unit="" series={long} limit={undefined} />);
+      expect(lab(container).length).toBeLessThanOrEqual(4);
+      expect(lab(container).length).toBeGreaterThanOrEqual(2);
+    });
+    it('outlet labels sit above the point and inlet labels below it', () => {
+      const { container } = render(<TrendChart name="TSS" unit="mg/L" series={[d(1, 20, 40), d(2, 22, 42)]} limit={undefined} />);
+      const out = container.querySelector('circle.ui-chart__dot')!;
+      const outLabel = lab(container).find((t) => t.textContent === '40')!;
+      expect(Number(outLabel.getAttribute('y'))).toBeLessThan(Number(out.getAttribute('cy')));
+      const inLabel = lab(container).find((t) => t.textContent === '20')!;
+      const outAtSameDay = lab(container).find((t) => t.textContent === '40')!;
+      expect(Number(inLabel.getAttribute('y'))).toBeGreaterThan(Number(outAtSameDay.getAttribute('y')));
+    });
+    it('abnormal outlet labels are marked', () => {
+      const { container } = render(<TrendChart name="TSS" unit="mg/L" series={tss} limit={{ min: null, max: 40 }} floorZero />);
+      expect(container.querySelectorAll('text.ui-chart__label--bad')).toHaveLength(2);
+    });
+    it('hide="inlet" drops the inlet line, label, legend entry and table column', () => {
+      const { container } = render(<TrendChart name="Curah hujan" unit="mm" series={tss} limit={undefined} hide="inlet" outletLabel="Curah hujan" />);
+      expect(container.querySelector('[data-line="inlet"]')).toBeNull();
+      expect(lab(container)).toHaveLength(5);
+      expect(screen.queryByText('Inlet')).toBeNull();
+      expect(screen.getByText('Curah hujan', { selector: 'li' })).toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: /inlet/i })).toBeNull();
+    });
+  });
 });

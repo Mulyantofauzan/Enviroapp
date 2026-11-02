@@ -1,4 +1,5 @@
 import { formatNumber, isOutOfLimit, type Threshold } from '@evo/shared';
+import { labelAnchor, labeledIndexes } from '../lib/labels';
 
 export type TrendPoint = { date: string; inlet: number | null; outlet: number | null };
 
@@ -29,10 +30,16 @@ function bandLabel(b: Threshold) {
   return b.max !== null ? `Baku mutu (maks. ${formatNumber(b.max)})` : `Baku mutu (min. ${formatNumber(b.min)})`;
 }
 
-type Props = { name: string; unit?: string; series: TrendPoint[]; limit: Threshold | undefined; floorZero?: boolean };
+type Props = {
+  name: string; unit?: string; series: TrendPoint[]; limit: Threshold | undefined; floorZero?: boolean;
+  /** Decimals shown on data labels (trailing zeros are dropped). */
+  decimals?: number;
+  hide?: 'inlet'; outletLabel?: string; inletLabel?: string;
+};
 
-export function TrendChart({ name, series, limit, floorZero }: Props) {
-  const values = series.flatMap((s) => [s.inlet, s.outlet]).filter((v): v is number => v !== null);
+export function TrendChart({ name, series, limit, floorZero, decimals = 1, hide, outletLabel = 'Outlet', inletLabel = 'Inlet' }: Props) {
+  const showInlet = hide !== 'inlet';
+  const values = series.flatMap((s) => (showInlet ? [s.inlet, s.outlet] : [s.outlet])).filter((v): v is number => v !== null);
   if (values.length === 0) return null;
   const hasBand = !!limit && (limit.min !== null || limit.max !== null);
   const lows = [...values, ...(hasBand && limit!.min !== null ? [limit!.min] : [])];
@@ -56,7 +63,15 @@ export function TrendChart({ name, series, limit, floorZero }: Props) {
       r.length > 1 ? <path key={`${key}${k}`} data-line={key} className={cls} fill="none" d={r.map((p, j) => `${j ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')} /> : null);
 
   const lastOut = [...series].reverse().find((s) => s.outlet !== null)?.outlet ?? null;
-  const label = `Grafik ${name} inlet dan outlet, ${n} hari.${lastOut !== null ? ` Nilai outlet terakhir ${formatNumber(lastOut)}.` : ''}`;
+  const label = showInlet
+    ? `Grafik ${name} inlet dan outlet, ${n} hari.${lastOut !== null ? ` Nilai outlet terakhir ${formatNumber(lastOut)}.` : ''}`
+    : `Grafik ${name}, ${n} hari.${lastOut !== null ? ` Nilai terakhir ${formatNumber(lastOut)}.` : ''}`;
+  const outIdx = labeledIndexes(series.map((s) => s.outlet));
+  const inIdx = showInlet ? labeledIndexes(series.map((s) => s.inlet)) : new Set<number>();
+  const text = (v: number, xi: number, yy: number, key: string, cls: string) => {
+    const t = formatNumber(v, decimals);
+    return <text key={key} className={cls} x={xi} y={yy} textAnchor={labelAnchor(xi, L, W - R, t.length * 6.5)}>{t}</text>;
+  };
 
   return (
     <figure className="ui-chart">
@@ -74,9 +89,9 @@ export function TrendChart({ name, series, limit, floorZero }: Props) {
         {series.map((s, i) => (i % every === 0 || i === n - 1) && (
           <text key={s.date} className="ui-chart__tick" x={x(i)} y={H - 8} textAnchor="middle">{Number(s.date.slice(8))}</text>
         ))}
-        {line('inlet', 'ui-chart__inlet')}
+        {showInlet && line('inlet', 'ui-chart__inlet')}
         {line('outlet', 'ui-chart__outlet')}
-        {series.map((s, i) => {
+        {showInlet && series.map((s, i) => {
           const v = s.inlet;
           if (v === null || series[i - 1]?.inlet != null || series[i + 1]?.inlet != null) return null;
           return <circle key={`i${s.date}`} data-inlet-dot className="ui-chart__idot" cx={x(i)} cy={y(v)} r={3.5} />;
@@ -88,19 +103,23 @@ export function TrendChart({ name, series, limit, floorZero }: Props) {
             ? <circle key={s.date} data-abnormal className="ui-chart__bad" cx={x(i)} cy={y(s.outlet)} r={6} />
             : <circle key={s.date} className="ui-chart__dot" cx={x(i)} cy={y(s.outlet)} r={4} />;
         })}
+        {series.map((s, i) => outIdx.has(i) && s.outlet !== null
+          && text(s.outlet, x(i), y(s.outlet) - 9, `lo${s.date}`, `ui-chart__label${hasBand && isOutOfLimit(s.outlet, limit) ? ' ui-chart__label--bad' : ''}`))}
+        {series.map((s, i) => inIdx.has(i) && s.inlet !== null
+          && text(s.inlet, x(i), y(s.inlet) + 16, `li${s.date}`, 'ui-chart__label ui-chart__label--inlet'))}
       </svg>
       <ul className="ui-legend">
-        <li><i className="ui-legend__line ui-legend__line--outlet" />Outlet</li>
-        <li><i className="ui-legend__line ui-legend__line--inlet" />Inlet</li>
+        <li><i className="ui-legend__line ui-legend__line--outlet" />{outletLabel}</li>
+        {showInlet && <li><i className="ui-legend__line ui-legend__line--inlet" />{inletLabel}</li>}
         {hasBand && <li><i className="ui-legend__band" />{bandLabel(limit!)}</li>}
         {hasBand && <li><i className="ui-legend__bad" />Abnormal</li>}
       </ul>
       <table className="ui-sr">
         <caption>Data {name} per hari</caption>
-        <thead><tr><th>Tanggal</th><th>{name} inlet</th><th>{name} outlet</th></tr></thead>
+        <thead><tr><th>Tanggal</th>{showInlet && <th>{name} inlet</th>}<th>{outletLabel === 'Outlet' ? `${name} outlet` : outletLabel}</th></tr></thead>
         <tbody>
           {series.map((s) => (
-            <tr key={s.date}><td>{s.date}</td><td>{formatNumber(s.inlet)}</td><td>{formatNumber(s.outlet)}</td></tr>
+            <tr key={s.date}><td>{s.date}</td>{showInlet && <td>{formatNumber(s.inlet)}</td>}<td>{formatNumber(s.outlet)}</td></tr>
           ))}
         </tbody>
       </table>
