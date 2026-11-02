@@ -9,8 +9,7 @@ import { Icon } from '../icons';
 import { addDays, addMonths, dateText, monthRange } from '../lib/dates';
 import { reportFilename, saveBlob } from '../lib/download';
 import { buildReport, cellText, reportRowCount, type ReportKind, type ReportRow } from '../lib/report';
-import { serializeChart, svgToPng } from '../lib/chartImage';
-import { buildPdf, type PdfChart } from '../lib/pdf';
+import { buildPdfReport } from '../lib/pdf/export';
 import { witaStamp } from '../lib/stamp';
 import { validatePeriod } from '../lib/windows';
 import { buildXlsx, type ReportMeta } from '../lib/xlsx';
@@ -105,22 +104,8 @@ export function Laporan() {
     if (total > MAX_ROWS) { setExportError(`Ada ${formatNumber(total, 0)} baris. Persempit periode agar tidak lebih dari 20.000.`); return; }
     setBusy('pdf');
     try {
-      // Capture every chart from the page first, in one synchronous pass: a filter change while images render must not leak into this file.
-      const snapshots = Array.from(document.querySelectorAll<HTMLElement>('[data-report-chart-card]')).flatMap((card) => {
-        const svg = card.querySelector<SVGSVGElement>('svg[role="img"]');
-        if (!svg) return [];
-        const legend = Array.from(card.querySelectorAll('.ui-legend li')).map((li) => {
-          const mark = li.querySelector('i');
-          return { label: li.textContent ?? '', color: mark ? getComputedStyle(mark).backgroundColor : '' };
-        });
-        return [{ section: card.dataset.section as ReportKind, title: card.querySelector('h2')?.textContent ?? '', legend, chart: serializeChart(svg) }];
-      });
-      const charts: PdfChart[] = [];
-      for (const snap of snapshots) {
-        const img = await svgToPng(snap.chart);
-        charts.push({ section: snap.section, title: snap.title, legend: snap.legend, ...img });
-      }
-      saveBlob(await buildPdf(meta(), sections, charts), reportFilename(lokasi, from, to, 'pdf'));
+      const blob = await buildPdfReport({ to, sp, kinds, ponds, eventSection: sections.find((x) => x.id === 'event') ?? null });
+      saveBlob(blob, reportFilename(lokasi, from, to, 'pdf'));
     } catch (e) {
       setExportError((e as Error).message || 'Berkas tidak bisa dibuat. Coba lagi.');
     } finally {

@@ -5,13 +5,8 @@ import { unzipSync } from 'fflate';
 import type { Role } from '@evo/shared';
 import { mockApi, renderApp, json, POND } from '../test-utils';
 
-vi.mock('../lib/chartImage', () => ({
-  serializeChart: vi.fn(() => ({ xml: '<svg/>', width: 340, height: 220 })),
-  svgToPng: vi.fn(async () => ({ dataUrl: 'data:image/png;base64,AAAA', width: 340, height: 220 })),
-}));
-vi.mock('../lib/pdf', () => ({ buildPdf: vi.fn(async () => new Blob(['%PDF-'], { type: 'application/pdf' })) }));
-import { serializeChart, svgToPng } from '../lib/chartImage';
-import { buildPdf } from '../lib/pdf';
+vi.mock('../lib/pdf/slides', () => ({ buildSlidePdf: vi.fn(async () => new Blob(['%PDF-'], { type: 'application/pdf' })) }));
+import { buildSlidePdf } from '../lib/pdf/slides';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); try { localStorage.clear(); } catch { /* ignore */ } });
 
@@ -24,6 +19,7 @@ function setup(role: Role = 'Manager', history: unknown[] = [entry('2026-11-02',
   return mockApi({
     role,
     handler: (url) => {
+      if (url.startsWith('/api/history/coagulant-total')) return json({ ponds: [{ sp_id: 'p1', first_date: '2026-01-01', 'Tawas Serbuk': 400, 'Tawas Batu': 100, Kapur: 0 }] });
       if (url.startsWith('/api/history')) return json(history);
       if (url.startsWith('/api/events?')) return json({ today: '2026-11-02', events });
       return undefined;
@@ -196,71 +192,66 @@ describe('Laporan: Excel export', () => {
 });
 
 describe('Laporan: PDF export', () => {
-  it('turns each chart into an image, builds the PDF and downloads it under the right name', async () => {
-    setup();
+  const stubDownload = () => {
     const names: string[] = [];
     URL.createObjectURL = vi.fn(() => 'blob:x');
     URL.revokeObjectURL = vi.fn();
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download); });
+    return names;
+  };
+
+  it('fetches a year of history ending at the period end, builds slide pages and downloads under the right name', async () => {
+    const calls = setup();
+    const names = stubDownload();
     renderApp('/laporan');
     await ready();
     await screen.findByRole('heading', { name: 'pH harian' });
+    calls.length = 0;
     await userEvent.click(screen.getByRole('button', { name: 'Ekspor PDF' }));
     await waitFor(() => expect(names).toEqual(['laporan-evo-SP-02_Pit_Selatan-2026-10-27-2026-11-02.pdf']));
-    const charts = vi.mocked(buildPdf).mock.calls.at(-1)![2];
-    expect(charts.length).toBeGreaterThanOrEqual(7);
-    expect(new Set(charts.map((c) => c.section))).toEqual(new Set(['cuaca', 'air', 'koagulan']));
-    expect(charts.find((c) => c.title === 'pH harian')!.legend.map((l) => l.label)).toContain('Outlet');
-    expect(vi.mocked(svgToPng)).toHaveBeenCalled();
+    const q = hist(calls).find((p) => p.get('from') === '2025-11-02')!;
+    expect(q.get('to')).toBe('2026-11-02');
+    expect(calls.some((c) => c.url.startsWith('/api/history/coagulant-total'))).toBe(true);
+    const input = vi.mocked(buildSlidePdf).mock.calls.at(-1)![0];
+    expect(input.weather?.title).toBe('WEATHER MONITORING');
+    expect(input.ponds).toHaveLength(1);
   });
-  it('a failed chart image shows a message and downloads nothing', async () => {
-    setup();
-    vi.mocked(svgToPng).mockRejectedValueOnce(new Error('Grafik tidak bisa dibuat menjadi gambar.'));
-    const names: string[] = [];
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download); });
+  it('a failed request shows a message and downloads nothing', async () => {
+    mockApi({
+      role: 'Manager',
+      handler: (url) => {
+        if (url.startsWith('/api/history/coagulant-total')) return json({ error: 'Basis data sibuk.' }, 500);
+        if (url.startsWith('/api/history')) return json([entry('2026-11-02'), entry('2026-11-01')]);
+        if (url.startsWith('/api/events?')) return json({ today: '2026-11-02', events: [] });
+        return undefined;
+      },
+    });
+    const names = stubDownload();
     renderApp('/laporan');
     await ready();
     await screen.findByRole('heading', { name: 'pH harian' });
     await userEvent.click(screen.getByRole('button', { name: 'Ekspor PDF' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Grafik tidak bisa dibuat menjadi gambar.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Basis data sibuk.');
     expect(names).toEqual([]);
   });
   it('both export buttons wait while a file is being prepared', async () => {
     setup();
     let release!: () => void;
-    vi.mocked(buildPdf).mockImplementationOnce(() => new Promise((r) => { release = () => r(new Blob(['x'])); }));
-    URL.createObjectURL = vi.fn(() => 'blob:x');
-    URL.revokeObjectURL = vi.fn();
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    vi.mocked(buildSlidePdf).mockImplementationOnce(() => new Promise((r) => { release = () => r(new Blob(['x'])); }));
+    stubDownload();
     renderApp('/laporan');
     await ready();
     await screen.findByRole('heading', { name: 'pH harian' });
     await userEvent.click(screen.getByRole('button', { name: 'Ekspor PDF' }));
     expect(await screen.findByRole('button', { name: 'Menyiapkan…' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Ekspor Excel (.xlsx)' })).toBeDisabled();
+    await waitFor(() => expect(release).toBeTypeOf('function'));
     release();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Ekspor PDF' })).toBeEnabled());
   });
 });
 
 describe('Laporan: export consistency', () => {
-  it('every chart is captured from the page before the first image is rendered, so a filter change cannot mix old tables with new charts', async () => {
-    setup();
-    URL.createObjectURL = vi.fn(() => 'blob:x');
-    URL.revokeObjectURL = vi.fn();
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    renderApp('/laporan');
-    await ready();
-    await screen.findByRole('heading', { name: 'pH harian' });
-    vi.mocked(serializeChart).mockClear();
-    vi.mocked(svgToPng).mockClear();
-    await userEvent.click(screen.getByRole('button', { name: 'Ekspor PDF' }));
-    await waitFor(() => expect(vi.mocked(svgToPng).mock.calls.length).toBeGreaterThan(5));
-    const lastSerialize = Math.max(...vi.mocked(serializeChart).mock.invocationCallOrder);
-    const firstRaster = Math.min(...vi.mocked(svgToPng).mock.invocationCallOrder);
-    expect(lastSerialize).toBeLessThan(firstRaster);
-  });
-
   it('a failed one-year fetch only affects the long charts: tables can still be exported', async () => {
     mockApi({
       role: 'Manager',

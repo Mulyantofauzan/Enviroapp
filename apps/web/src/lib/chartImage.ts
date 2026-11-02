@@ -1,29 +1,3 @@
-/** Style properties copied onto each element: a standalone svg cannot see the page stylesheet or its variables. */
-const PROPS = ['fill', 'stroke', 'stroke-width', 'stroke-linejoin', 'stroke-linecap', 'stroke-dasharray', 'opacity', 'font-family', 'font-size', 'font-weight', 'paint-order', 'text-anchor'];
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-type StyleOf = (el: Element) => Pick<CSSStyleDeclaration, 'getPropertyValue'>;
-
-export function serializeChart(svg: SVGSVGElement, styleOf: StyleOf = (el) => getComputedStyle(el)): { xml: string; width: number; height: number } {
-  const clone = svg.cloneNode(true) as SVGSVGElement;
-  const from = [svg, ...Array.from(svg.querySelectorAll('*'))];
-  const to = [clone, ...Array.from(clone.querySelectorAll('*'))];
-  from.forEach((el, i) => {
-    if (el.tagName.toLowerCase() === 'svg' || el.tagName.toLowerCase() === 'g') return;
-    const cs = styleOf(el);
-    for (const p of PROPS) {
-      const v = cs.getPropertyValue(p);
-      if (v) to[i].setAttribute(p, v);
-    }
-  });
-  const [, , w, h] = (svg.getAttribute('viewBox') ?? '0 0 340 220').split(/\s+/).map(Number);
-  clone.setAttribute('width', String(w));
-  clone.setAttribute('height', String(h));
-  let xml = new XMLSerializer().serializeToString(clone);
-  if (!xml.includes(`xmlns="${SVG_NS}"`)) xml = xml.replace('<svg', `<svg xmlns="${SVG_NS}"`);
-  return { xml, width: w, height: h };
-}
-
 export type SerializedChart = { xml: string; width: number; height: number };
 
 /** Draws a serialized chart on a white canvas at `scale` times its size and returns it as a PNG data URL. */
@@ -50,4 +24,3 @@ export function svgToPng({ xml, width, height }: SerializedChart, scale = 2): Pr
   });
 }
 
-export const chartToPng = (svg: SVGSVGElement, scale = 2) => svgToPng(serializeChart(svg), scale);
