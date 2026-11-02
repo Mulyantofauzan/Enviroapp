@@ -3,6 +3,7 @@ import { isDueDate, isLate, isValidDate, todayInSite } from '@evo/shared';
 import type { AppEnv } from '../types';
 import { requireAuth, requireExecutor } from '../auth/guard';
 import { safeFilename, sniffMime } from './sniff';
+import { readCameraMeta } from './evidence-meta';
 
 export const evidenceRoutes = new Hono<AppEnv>();
 
@@ -54,6 +55,8 @@ evidenceRoutes.post('/events/:scheduleId/:date/evidence', requireAuth, requireEx
   if (!file || typeof file === 'string') return c.json({ error: 'Pilih berkas untuk diunggah.' }, 400);
   if (file.size === 0) return c.json({ error: 'Berkas kosong.' }, 400);
   if (file.size > MAX_BYTES) return tooBig;
+  const meta = readCameraMeta(form!, new Date());
+  if ('error' in meta) return c.json({ error: meta.error }, 400);
   const data = new Uint8Array(await file.arrayBuffer());
   const mime = sniffMime(data);
   if (!mime) return c.json({ error: 'Jenis berkas tidak didukung. Gunakan foto atau PDF.' }, 400);
@@ -64,14 +67,15 @@ evidenceRoutes.post('/events/:scheduleId/:date/evidence', requireAuth, requireEx
   await c.env.EVIDENCE.put(key, data, { httpMetadata: { contentType: mime } });
   // Written as one statement so an event completed a moment ago cannot receive a new file.
   const res = await db.prepare(
-    `INSERT INTO evidences (id,schedule_id,due_date,r2_key,filename,mime,size,uploaded_by,uploaded_at)
-     SELECT ?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM event_completions WHERE schedule_id = ? AND due_date = ?)`,
-  ).bind(id, s.id, date, key, filename, mime, data.length, c.get('user').id, new Date().toISOString(), s.id, date).run();
+    `INSERT INTO evidences (id,schedule_id,due_date,r2_key,filename,mime,size,uploaded_by,uploaded_at,source,gps_lat,gps_lng,gps_accuracy,taken_at)
+     SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM event_completions WHERE schedule_id = ? AND due_date = ?)`,
+  ).bind(id, s.id, date, key, filename, mime, data.length, c.get('user').id, new Date().toISOString(),
+    meta.source, meta.gps_lat, meta.gps_lng, meta.gps_accuracy, meta.taken_at, s.id, date).run();
   if (res.meta.changes === 0) {
     await c.env.EVIDENCE.delete(key);
     return c.json({ error: LOCKED }, 409);
   }
-  return c.json({ id, filename, mime, size: data.length }, 201);
+  return c.json({ id, filename, mime, size: data.length, ...meta }, 201);
 });
 
 evidenceRoutes.delete('/evidence/:id', requireAuth, requireExecutor, async (c) => {

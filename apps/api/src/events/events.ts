@@ -131,7 +131,7 @@ eventRoutes.get('/:scheduleId/:date', async (c) => {
   const today = todayInSite();
   const done = await db.prepare(`${COMPLETIONS} WHERE c.schedule_id = ? AND c.due_date = ?`).bind(s.id, date).first<Completion>();
   const evidences = (await db.prepare(
-    `SELECT e.id, e.filename, e.mime, e.size, e.uploaded_at, u.name AS uploaded_by_name, e.uploaded_by
+    `SELECT e.id, e.filename, e.mime, e.size, e.uploaded_at, u.name AS uploaded_by_name, e.uploaded_by, e.source, e.gps_lat, e.gps_lng, e.gps_accuracy, e.taken_at
      FROM evidences e JOIN users u ON u.id = e.uploaded_by WHERE e.schedule_id = ? AND e.due_date = ? ORDER BY e.uploaded_at`,
   ).bind(s.id, date).all<any>()).results;
   return c.json({ today, event: occurrence(s, date, today, done ?? undefined, evidences.length), evidences });
