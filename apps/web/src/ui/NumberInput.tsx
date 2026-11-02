@@ -12,6 +12,7 @@ type Props = {
   hint?: string;
   /** Unique accessible name when several fields share one visible label (e.g. "In"). */
   ariaLabel?: string;
+  placeholder?: string;
 };
 
 const editText = (v: number | null) => (v === null ? '' : String(v).replace('.', ','));
@@ -22,7 +23,7 @@ function limitText(t: Threshold): string {
   return `Di luar baku mutu (min. ${formatNumber(t.min)})`;
 }
 
-export function NumberInput({ label, unit, value, onChange, threshold, auto, readOnly, hint, ariaLabel }: Props) {
+export function NumberInput({ label, unit, value, onChange, threshold, auto, readOnly, hint, ariaLabel, placeholder }: Props) {
   const showFormatted = !!(auto && readOnly);
   const [text, setText] = useState(editText(value));
   const wasAlert = useRef(false);
@@ -49,6 +50,7 @@ export function NumberInput({ label, unit, value, onChange, threshold, auto, rea
         <input
           id={id}
           aria-label={ariaLabel}
+          placeholder={placeholder}
           className={`${alert ? 'is-alert' : ''}${pulse ? ' pulse' : ''}`.trim()}
           type="text"
           inputMode="decimal"
