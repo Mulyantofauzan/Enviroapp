@@ -156,6 +156,37 @@ describe('runSync', () => {
   });
 });
 
+describe('retry timing', () => {
+  it('a network error is retried after 5 s, 15 s, then never waits longer than 30 s', async () => {
+    await data('weather|2026-11-02');
+    stubFetch(() => new TypeError('offline'));
+    const waits: number[] = [];
+    let now = 1_000_000;
+    for (let i = 0; i < 5; i++) {
+      await runSync('u1', now);
+      const [item] = await listItems('u1');
+      waits.push(item.nextAt - now);
+      now = item.nextAt;
+    }
+    expect(waits).toEqual([5000, 15000, 30000, 30000, 30000]);
+  });
+
+  it('coming back online retries at once, ignoring the wait', async () => {
+    await data('weather|2026-11-02');
+    const calls = stubFetch(() => new TypeError('offline'));
+    await runSync('u1');
+    expect((await listItems('u1'))[0].nextAt).toBeGreaterThan(Date.now());
+    calls.length = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => ok()));
+    const stop = startSync(() => 'u1');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(await listItems('u1')).toHaveLength(1); // a plain round respects the wait
+    window.dispatchEvent(new Event('online'));
+    await vi.waitFor(async () => expect(await listItems('u1')).toEqual([]));
+    stop();
+  });
+});
+
 describe('startSync', () => {
   it('runs on the online event and stops after cleanup', async () => {
     const calls = stubFetch(() => ok());
