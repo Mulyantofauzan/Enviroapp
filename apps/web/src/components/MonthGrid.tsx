@@ -1,12 +1,12 @@
 import { Icon } from '../icons';
 import { monthRange } from '../lib/dates';
-import type { Mark } from '../lib/marks';
+import { DAY_STATUS_WORDS, type DayStatus } from '../lib/marks';
 
 const NAMES = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const monthName = (iso: string) => new Intl.DateTimeFormat('id-ID', { timeZone: 'UTC', month: 'long' }).format(new Date(`${iso}T00:00:00Z`));
 
 type Props = {
-  month: string; today: string; marks: Record<string, Mark>;
+  month: string; today: string; marks: Record<string, DayStatus[]>;
   selected?: string; onSelect?: (iso: string) => void; onPrev?: () => void; onNext?: () => void;
 };
 
@@ -27,22 +27,28 @@ export function MonthGrid({ month, today, marks, selected, onSelect, onPrev, onN
         {NAMES.map((n) => <span key={n} data-testid="weekday" className="ui-month__wd">{n}</span>)}
         {Array.from({ length: count }, (_, i) => {
           const iso = `${month}-${String(i + 1).padStart(2, '0')}`;
-          const mark = marks[iso];
-          const words = mark ? (mark === 'overdue' ? 'ada overdue' : 'terjadwal') : '';
+          const kinds = marks[iso] ?? [];
+          const words = kinds.map((k) => DAY_STATUS_WORDS[k]).join(', ');
+          const dataMarks = kinds.length ? kinds.join(' ') : undefined;
           const cls = `ui-mday${iso === selected ? ' is-on' : ''}${iso === today ? ' is-today' : ''}`;
           const style = { gridColumnStart: ((offset + i) % 7) + 1 };
-          const inner = (<><b>{i + 1}</b><i className={`ui-day__dot${mark ? ` is-${mark}` : ''}`} /></>);
+          const inner = (<><b>{i + 1}</b><span className="ui-dots" aria-hidden="true">{kinds.map((k) => <i key={k} className={`ui-dot is-${k}`} />)}</span></>);
           return onSelect ? (
-            <button key={iso} type="button" style={style} data-testid={`day-${iso}`} data-mark={mark} className={cls}
+            <button key={iso} type="button" style={style} data-testid={`day-${iso}`} data-marks={dataMarks} className={cls}
               aria-label={`${i + 1} ${mname}${words ? `, ${words}` : ''}`} aria-pressed={iso === selected} aria-current={iso === today ? 'date' : undefined}
               onClick={() => onSelect(iso)}>{inner}</button>
           ) : (
-            <div key={iso} style={style} data-testid={`day-${iso}`} data-mark={mark} className={cls} aria-current={iso === today ? 'date' : undefined}>
+            <div key={iso} style={style} data-testid={`day-${iso}`} data-marks={dataMarks} className={cls} aria-current={iso === today ? 'date' : undefined}>
               {inner}{words && <span className="ui-sr">, {words}</span>}
             </div>
           );
         })}
       </div>
+      <ul className="ui-legend ui-month__legend" aria-label="Arti titik">
+        <li><i className="ui-dot is-overdue" />Overdue</li>
+        <li><i className="ui-dot is-pending" />Menunggu</li>
+        <li><i className="ui-dot is-done" />Selesai</li>
+      </ul>
     </section>
   );
 }

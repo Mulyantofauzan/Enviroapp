@@ -405,3 +405,12 @@ button.ui-mday { cursor: pointer; }
 @media (hover: none) and (pointer: coarse) { input, select, textarea { font-size: 16px; } }
 
 a.ui-btn { text-decoration: none; }
+
+/* Day dots: red overdue, yellow waiting, green finished (Figma status colours) */
+.ui-dots { display: flex; justify-content: center; gap: 3px; min-height: 6px; }
+.ui-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex: none; }
+.ui-dot.is-overdue { background: var(--danger); }
+.ui-dot.is-pending { background: var(--warning); }
+.ui-dot.is-done { background: var(--success); }
+.ui-month__legend { justify-content: center; margin-top: 10px; }
+.ui-month__legend .ui-dot { width: 8px; height: 8px; }

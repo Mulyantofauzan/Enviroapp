@@ -153,7 +153,8 @@ describe('Dashboard: TSS, rainfall and calendar overview', () => {
     expect(within(card).getByText('2 event overdue')).toBeInTheDocument();
     expect(within(card).getByText('1 event hari ini')).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: 'Buka Kalender' })).toHaveAttribute('href', '/kalender');
-    expect(within(card).getByTestId('day-2026-11-10')).toHaveAttribute('data-mark', 'scheduled');
+    expect(within(card).getByTestId('day-2026-11-10')).toHaveAttribute('data-marks', 'pending');
+    expect(within(card).getByTestId('day-2026-11-01')).toHaveAttribute('data-marks', 'overdue');
     expect(within(card).queryAllByRole('button')).toHaveLength(0);
   });
   it('a failing calendar summary hides the card without breaking the dashboard', async () => {

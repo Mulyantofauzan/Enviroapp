@@ -83,3 +83,9 @@ Catatan jujur: skrip ukur sempat memotret halaman login pada putaran panjang (se
 - **Dashboard Admin:** beranda Admin kini dashboard yang sama dengan Manager, dengan tambahan grafik TSS inlet/outlet (garis baku mutu per pond), grafik curah hujan (batang per hari), dan kartu "Kalender bulan ini". Dashboard Manager ikut mendapat grafik dan kartu itu. API dashboard mengirim TSS dan curah hujan per hari (tanpa query tambahan, maksimal 6 per permintaan).
 - **Kalender:** strip minggu diganti kisi sebulan penuh (Senin pertama), panah bulan, tanda merah/biru per hari; "hari ini" dan hari terpilih ditandai. Data dimuat untuk satu bulan penuh (<= 31 hari).
 - Bukti: shared 58, api 189, web 204 tes lulus; Chrome nyata 360 dan 1200 px tanpa overflow dan tanpa target < 44 px.
+
+---
+
+# Tambahan: titik hijau, kuning, merah di kalender
+
+Setiap hari menampilkan satu titik untuk tiap jenis event di hari itu: merah = overdue, kuning = menunggu (belum selesai, hari ini atau mendatang), hijau = selesai (termasuk selesai terlambat). Beberapa jenis dalam satu hari tampil berdampingan, urutan merah, kuning, hijau; titik biru yang lama dihapus. Warna mengikuti token status Figma (danger, warning, success). Warna bukan satu-satunya penanda: label tombol hari menyebutnya ("3 November, ada overdue, menunggu, selesai"), ada keterangan warna tertulis di bawah kisi ("Arti titik"), dan ringkasan kalender di dashboard memakai komponen yang sama. Titik adalah grafik kecil, bukan teks; kuning Figma `#D97706` berupa kuning tua/amber (rasio 3,2:1 terhadap putih).

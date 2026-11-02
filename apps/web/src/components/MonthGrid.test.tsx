@@ -34,11 +34,29 @@ describe('MonthGrid', () => {
     expect(screen.getByRole('button', { name: /^4 November/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: /^5 November/ })).toHaveAttribute('aria-pressed', 'false');
   });
-  it('red for overdue, blue for scheduled, none otherwise, and the label says so', () => {
-    render(<MonthGrid {...base} marks={{ '2026-11-03': 'overdue', '2026-11-05': 'scheduled' }} />);
-    expect(screen.getByRole('button', { name: '3 November, ada overdue' })).toHaveAttribute('data-mark', 'overdue');
-    expect(screen.getByRole('button', { name: '5 November, terjadwal' })).toHaveAttribute('data-mark', 'scheduled');
-    expect(screen.getByRole('button', { name: '6 November' })).not.toHaveAttribute('data-mark');
+  it('shows one dot per kind of event that day and says so in words', () => {
+    render(<MonthGrid {...base} marks={{ '2026-11-03': ['overdue', 'pending', 'done'], '2026-11-05': ['pending'], '2026-11-06': ['done'] }} />);
+    const three = screen.getByRole('button', { name: '3 November, ada overdue, menunggu, selesai' });
+    expect(three).toHaveAttribute('data-marks', 'overdue pending done');
+    expect(three.querySelectorAll('.ui-dot')).toHaveLength(3);
+    expect(three.querySelector('.ui-dot.is-overdue')).not.toBeNull();
+    expect(three.querySelector('.ui-dot.is-pending')).not.toBeNull();
+    expect(three.querySelector('.ui-dot.is-done')).not.toBeNull();
+    expect(screen.getByRole('button', { name: '5 November, menunggu' })).toHaveAttribute('data-marks', 'pending');
+    expect(screen.getByRole('button', { name: '6 November, selesai' })).toHaveAttribute('data-marks', 'done');
+  });
+  it('a day with nothing has no dot and no mark', () => {
+    render(<MonthGrid {...base} marks={{}} />);
+    const b = screen.getByRole('button', { name: '9 November' });
+    expect(b).not.toHaveAttribute('data-marks');
+    expect(b.querySelectorAll('.ui-dot')).toHaveLength(0);
+  });
+  it('explains the three colours in words, so colour is not the only signal', () => {
+    render(<MonthGrid {...base} />);
+    const legend = screen.getByRole('list', { name: 'Arti titik' });
+    expect(within(legend).getByText('Overdue')).toBeInTheDocument();
+    expect(within(legend).getByText('Menunggu')).toBeInTheDocument();
+    expect(within(legend).getByText('Selesai')).toBeInTheDocument();
   });
   it('reports the chosen day and the month arrows', async () => {
     const sel = vi.fn(); const prev = vi.fn(); const next = vi.fn();
@@ -51,10 +69,11 @@ describe('MonthGrid', () => {
     expect(next).toHaveBeenCalled();
   });
   it('read-only overview: no day buttons or arrows, but the marks are still said in words', () => {
-    render(<MonthGrid month="2026-11" today="2026-11-02" marks={{ '2026-11-03': 'overdue' }} />);
+    render(<MonthGrid month="2026-11" today="2026-11-02" marks={{ '2026-11-03': ['overdue', 'done'] }} />);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     const cell = screen.getByTestId('day-2026-11-03');
-    expect(within(cell).getByText(/ada overdue/)).toBeInTheDocument();
-    expect(cell).toHaveAttribute('data-mark', 'overdue');
+    expect(within(cell).getByText(/ada overdue, selesai/)).toBeInTheDocument();
+    expect(cell).toHaveAttribute('data-marks', 'overdue done');
+    expect(cell.querySelectorAll('.ui-dot')).toHaveLength(2);
   });
 });

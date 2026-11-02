@@ -27,16 +27,24 @@ function api({ week = [], overdue = [], total, urls = [], role = 'Operator', fai
 }
 
 describe('Kalender', () => {
-  it('shows the whole month of today with a mark on days that have events', async () => {
-    api({ week: [ev({ due_date: '2026-11-02', status: 'overdue' }), ev({ due_date: '2026-11-04' }), ev({ due_date: '2026-11-20', status: 'upcoming' })], overdue: [ev({ due_date: '2026-11-02', status: 'overdue' })] });
+  it('shows the whole month of today, with a dot for each kind of event on a day', async () => {
+    api({
+      week: [
+        ev({ due_date: '2026-11-02', status: 'overdue' }), ev({ due_date: '2026-11-04' }), ev({ due_date: '2026-11-05', status: 'done' }),
+        ev({ due_date: '2026-11-20', status: 'upcoming' }), ev({ schedule_id: 's2', due_date: '2026-11-20', status: 'done' }),
+      ],
+      overdue: [ev({ due_date: '2026-11-02', status: 'overdue' })],
+    });
     renderApp('/kalender');
     expect(await screen.findByText('November 2026')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^\d+ November/ })).toHaveLength(30);
-    expect(await screen.findByRole('button', { name: /^2 November, ada overdue/ })).toHaveAttribute('data-mark', 'overdue');
+    expect(await screen.findByRole('button', { name: /^2 November, ada overdue/ })).toHaveAttribute('data-marks', 'overdue');
     expect(screen.getByRole('button', { name: /^4 November/ })).toHaveAttribute('aria-current', 'date');
-    expect(screen.getByRole('button', { name: /^4 November/ })).toHaveAttribute('data-mark', 'scheduled');
-    expect(screen.getByRole('button', { name: /^20 November/ })).toHaveAttribute('data-mark', 'scheduled');
-    expect(screen.getByRole('button', { name: '3 November' })).not.toHaveAttribute('data-mark');
+    expect(screen.getByRole('button', { name: /^4 November/ })).toHaveAttribute('data-marks', 'pending');
+    expect(screen.getByRole('button', { name: /^5 November/ })).toHaveAttribute('data-marks', 'done');
+    expect(screen.getByRole('button', { name: '20 November, menunggu, selesai' })).toHaveAttribute('data-marks', 'pending done');
+    expect(screen.getByRole('button', { name: '3 November' })).not.toHaveAttribute('data-marks');
+    expect(screen.getByRole('list', { name: 'Arti titik' })).toBeInTheDocument();
   });
   it('overdue cards come first, with a way to upload for operators', async () => {
     api({ overdue: [ev({ due_date: '2026-11-03', status: 'overdue' })], week: [ev({ due_date: T, title: 'Kalibrasi pH Meter', frequency: 'Weekly' })] });
@@ -59,8 +67,10 @@ describe('Kalender', () => {
   it('a finished event shows Selesai, or Selesai terlambat', async () => {
     api({ week: [ev({ status: 'done' }), ev({ schedule_id: 's2', title: 'Uji Air', status: 'done', late: true })] });
     renderApp('/kalender');
-    expect(await screen.findByText('Selesai')).toBeInTheDocument();
-    expect(screen.getByText('Selesai terlambat')).toBeInTheDocument();
+    const onTime = await screen.findByRole('article', { name: 'Cek Saluran Inlet' });
+    expect(within(onTime).getByText('Selesai')).toBeInTheDocument();
+    const late = screen.getByRole('article', { name: 'Uji Air' });
+    expect(within(late).getByText('Selesai terlambat')).toBeInTheDocument();
   });
   it('the frequency chip filters both requests', async () => {
     const urls: string[] = [];
