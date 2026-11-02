@@ -3,6 +3,11 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-09-01",
   "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "../web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
   "d1_databases": [
     { "binding": "DB", "database_name": "evo", "database_id": "local-dev-placeholder", "migrations_dir": "migrations" }
   ]
