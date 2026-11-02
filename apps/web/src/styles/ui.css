@@ -414,3 +414,27 @@ a.ui-btn { text-decoration: none; }
 .ui-dot.is-done { background: var(--success); }
 .ui-month__legend { justify-content: center; margin-top: 10px; }
 .ui-month__legend .ui-dot { width: 8px; height: 8px; }
+
+/* Camera dialog (Figma 08): dark, full screen */
+.ui-cam { position: fixed; inset: 0; z-index: 60; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; background: var(--camera); color: #fff; }
+.ui-cam__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; }
+.ui-cam__head h2 { margin: 0; font: 700 17px var(--font); }
+.ui-cam__head p { margin: 2px 0 0; font-size: 12px; opacity: 0.8; }
+.ui-cam__close { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.16); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.ui-cam__view { position: relative; min-height: 0; background: #1b2420; display: grid; place-items: center; overflow: hidden; }
+.ui-cam__view video, .ui-cam__view img { width: 100%; height: 100%; object-fit: contain; }
+.ui-cam__error { position: absolute; left: 14px; right: 14px; top: 50%; transform: translateY(-50%); padding: 14px; border-radius: 14px; background: rgba(0, 0, 0, 0.72); color: #fff; text-align: center; }
+.ui-cam__error--low { top: auto; bottom: 14px; transform: none; background: var(--danger); }
+.ui-cam__info { display: grid; gap: 4px; margin: 10px 14px 0; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.1); font-size: 14px; }
+.ui-cam__info span { display: flex; align-items: center; gap: 8px; }
+.ui-cam__info small { opacity: 0.8; font-size: 12px; }
+.ui-cam__bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px calc(14px + env(safe-area-inset-bottom)); }
+.ui-cam__bar > .ui-btn { flex: 1; }
+.ui-cam__side { width: 48px; height: 48px; border-radius: 14px; border: 0; background: rgba(255, 255, 255, 0.16); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.ui-cam__side:has(input:focus-visible) { outline: 3px solid #fff; outline-offset: 2px; }
+.ui-cam__side:disabled { opacity: 0.4; cursor: default; }
+.ui-cam__shutter { width: 72px; height: 72px; border-radius: 50%; border: 4px solid #fff; background: transparent; padding: 4px; cursor: pointer; display: grid; place-items: center; }
+.ui-cam__shutter span { width: 100%; height: 100%; border-radius: 50%; background: #fff; display: block; }
+.ui-cam__shutter:disabled { opacity: 0.5; cursor: default; }
+.ui-cam :focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.ui-cam__again { color: #fff; border-color: #fff; background: transparent; }
