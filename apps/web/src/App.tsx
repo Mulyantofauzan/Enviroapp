@@ -1,31 +1,51 @@
+import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { isAdmin } from '@evo/shared';
+import type { Role } from '@evo/shared';
 import { useAuth } from './auth/AuthContext';
+import { PondProvider } from './pond/PondContext';
+import { homeFor } from './nav/nav';
+import { useWide } from './hooks/useWide';
 import { TabBar } from './components/TabBar';
+import { SideRail } from './components/SideRail';
+import { ConnectionChip } from './ui/ConnectionChip';
 import { Login } from './screens/Login';
-import { Today } from './screens/Today';
-import { History } from './screens/History';
-import { Admin } from './screens/Admin';
+import { Akun } from './screens/Akun';
+import { BerandaOperator } from './screens/BerandaOperator';
+import { BerandaManager } from './screens/BerandaManager';
+import { InputHub } from './screens/InputHub';
+import { Riwayat } from './screens/Riwayat';
+import { Pengguna } from './screens/Pengguna';
+import { Master } from './screens/Master';
+
+function RequireRole({ role, allow, children }: { role: Role; allow: Role[]; children: ReactNode }) {
+  return allow.includes(role) ? <>{children}</> : <Navigate to={homeFor(role)} replace />;
+}
 
 export function App() {
-  const { user, loading, logout } = useAuth();
-  if (loading) return <p className="muted center">Loading…</p>;
+  const { user, loading } = useAuth();
+  const wide = useWide();
+  if (loading) return <p className="ui-loading">Memuat…</p>;
   if (!user) return <Login />;
+  const role = user.role;
+  const writers: Role[] = ['Operator', 'Admin'];
   return (
-    <div className="shell">
-      <header className="topbar">
-        <span className="brand-sm">EVO</span>
-        <button className="link" onClick={logout}>Sign out ({user.name})</button>
-      </header>
-      <div className="content">
-        <Routes>
-          <Route path="/" element={<Today />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/admin" element={isAdmin(user.role) ? <Admin /> : <Navigate to="/" replace />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+    <PondProvider>
+      <div className={`ui-shell${wide ? ' ui-shell--wide' : ''}`}>
+        {wide && <SideRail role={role} />}
+        <main className="ui-main">
+          <div className="ui-conn-slot"><ConnectionChip /></div>
+          <Routes>
+            <Route path="/" element={role === 'Auditor' ? <Navigate to="/riwayat" replace /> : role === 'Manager' ? <BerandaManager /> : <BerandaOperator />} />
+            <Route path="/input/*" element={<RequireRole role={role} allow={writers}><InputHub /></RequireRole>} />
+            <Route path="/riwayat" element={<Riwayat />} />
+            <Route path="/akun" element={<Akun />} />
+            <Route path="/pengguna" element={<RequireRole role={role} allow={['Admin']}><Pengguna /></RequireRole>} />
+            <Route path="/master" element={<RequireRole role={role} allow={['Admin']}><Master /></RequireRole>} />
+            <Route path="*" element={<Navigate to={homeFor(role)} replace />} />
+          </Routes>
+        </main>
+        {!wide && <TabBar role={role} />}
       </div>
-      <TabBar />
-    </div>
+    </PondProvider>
   );
 }

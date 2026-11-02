@@ -1,19 +1,15 @@
 import { NavLink } from 'react-router-dom';
-import { isAdmin } from '@evo/shared';
-import { useAuth } from '../auth/AuthContext';
+import type { Role } from '@evo/shared';
+import { Icon } from '../icons';
+import { navFor } from '../nav/nav';
 
-export function TabBar() {
-  const { user } = useAuth();
-  const tabs = [
-    { to: '/', label: 'Today', end: true },
-    { to: '/history', label: 'History', end: false },
-    ...(user && isAdmin(user.role) ? [{ to: '/admin', label: 'Admin', end: false }] : []),
-  ];
+export function TabBar({ role }: { role: Role }) {
   return (
-    <nav className="tabbar" aria-label="Main">
-      {tabs.map((t) => (
-        <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => (isActive ? 'tab is-active' : 'tab')}>
-          {t.label}
+    <nav className="ui-tabbar" aria-label="Menu utama">
+      {navFor(role).tabs.map((t) => (
+        <NavLink key={t.to} to={t.to} end={t.to === '/'} className={({ isActive }) => (isActive ? 'ui-tab is-on' : 'ui-tab')}>
+          <Icon name={t.icon} />
+          <span>{t.label}</span>
         </NavLink>
       ))}
     </nav>

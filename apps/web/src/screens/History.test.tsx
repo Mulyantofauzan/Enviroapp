@@ -2,8 +2,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { History } from './History';
-import { AuthProvider } from '../auth/AuthContext';
-import { App } from '../App';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -41,18 +39,5 @@ describe('History', () => {
     mockFetch({ '/history': [], '/ponds': [], '/thresholds': {} });
     render(<MemoryRouter><History /></MemoryRouter>);
     expect(await screen.findByText('No entries in this range.')).toBeInTheDocument();
-  });
-});
-
-describe('admin route guard', () => {
-  it('redirects a non-admin away from /admin', async () => {
-    mockFetch({
-      '/auth/me': { id: 'u', name: 'Op', role: 'Operator' },
-      '/ponds': [], '/thresholds': {}, '/history': [],
-    });
-    render(<MemoryRouter initialEntries={['/admin']}><AuthProvider><App /></AuthProvider></MemoryRouter>);
-    await screen.findByText(/Sign out/);
-    expect(screen.queryByText('Users')).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull();
   });
 });

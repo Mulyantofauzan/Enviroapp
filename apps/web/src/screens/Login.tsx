@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../auth/AuthContext';
+import { Button } from '../ui/Button';
 
 export function Login() {
   const { login } = useAuth();
@@ -22,20 +23,20 @@ export function Login() {
   }
 
   return (
-    <main className="login">
-      <h1 className="brand">EVO</h1>
-      <p className="muted">Environment operations</p>
-      <form onSubmit={submit} className="stack">
-        <label className="field">
+    <main className="ui-login">
+      <h1>EVO</h1>
+      <p>Environment Operations</p>
+      <form onSubmit={submit} className="ui-login__form">
+        <label>
           <span>Email</span>
           <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
-        <label className="field">
-          <span>Password</span>
+        <label>
+          <span>Kata sandi</span>
           <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
-        <button className="btn-primary" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-        {error && <p className="form-error" role="alert">{error}</p>}
+        <Button type="submit" block disabled={busy}>{busy ? 'Memproses…' : 'Masuk'}</Button>
+        {error && <p className="ui-login__error" role="alert">{error}</p>}
       </form>
     </main>
   );
