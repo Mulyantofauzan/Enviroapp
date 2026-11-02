@@ -89,3 +89,16 @@ Catatan jujur: skrip ukur sempat memotret halaman login pada putaran panjang (se
 # Tambahan: titik hijau, kuning, merah di kalender
 
 Setiap hari menampilkan satu titik untuk tiap jenis event di hari itu: merah = overdue, kuning = menunggu (belum selesai, hari ini atau mendatang), hijau = selesai (termasuk selesai terlambat). Beberapa jenis dalam satu hari tampil berdampingan, urutan merah, kuning, hijau; titik biru yang lama dihapus. Warna mengikuti token status Figma (danger, warning, success). Warna bukan satu-satunya penanda: label tombol hari menyebutnya ("3 November, ada overdue, menunggu, selesai"), ada keterangan warna tertulis di bawah kisi ("Arti titik"), dan ringkasan kalender di dashboard memakai komponen yang sama. Titik adalah grafik kecil, bukan teks; kuning Figma `#D97706` berupa kuning tua/amber (rasio 3,2:1 terhadap putih).
+
+---
+
+# Tambahan: Bukti (kamera, geotag, layar Eviden)
+
+Bukti (Chrome nyata, kamera buatan `--use-fake-device-for-media-stream`, lokasi buatan lewat CDP, 360 dan 1200 px):
+- Kamera terbuka, video 640x480 berjalan, bilah info menampilkan `GPS -3.78421, 115.60214 ± 8 m` dan waktu WITA. Foto diambil dan diunggah; dibaca ulang dari server sebagai JPEG dengan cap `GPS -3.78421, 115.60214 - 2 Nov 2026 13:14 WITA` tertanam di gambar; koordinat, akurasi, dan waktu ambil tersimpan.
+- Izin lokasi ditolak: dialog menampilkan "Lokasi tidak tersedia", foto tetap tersimpan, bercap "Tanpa lokasi", ditandai lencana "Tanpa lokasi".
+- API: koordinat di luar rentang, waktu lama, waktu masa depan, lintang tanpa bujur, sumber tidak dikenal ditolak 400 berpesan Indonesia; sumber galeri membuang koordinat; Auditor ditolak mengunggah (403); rentang lebih dari satu tahun ditolak.
+- Layar Eviden sebagai Auditor: kartu, filter, pratinjau (Escape menutup), ZIP terunduh (`eviden-2026-10-04-2026-11-02.zip`, 8 berkas, nama unik). Tanpa overflow horizontal dan tanpa target di bawah 44 px pada kamera, penampil, Eksekusi event, dan layar Eviden di 360 dan 1200 px.
+- Tes: shared 58, API 223, web 301 lulus.
+
+Belum diuji: kamera dan GPS di HP sungguhan (butuh HTTPS setelah deploy) dan konteks tidak aman di peramban nyata (dicakup tes unit). Nama berkas foto kamera memakai jam UTC (`foto-202611020514.jpg`), sedangkan tampilan memakai WITA.

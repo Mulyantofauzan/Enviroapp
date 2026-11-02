@@ -45,10 +45,15 @@ The one Worker serves the API under `/api` and the built PWA for every other pat
 ## Kalender dan eviden
 Tab Kalender menampilkan jadwal berulang (harian sampai tahunan). Tanggal yang terlewat tanpa eviden tetap merah satu per tanggal. Manager dan Admin mengatur jadwal; Operator dan Admin mengunggah eviden (foto atau PDF, maksimal 10 MB) dan menyelesaikan event. Waktu situs: WITA.
 
-File eviden disimpan di R2 (binding `EVIDENCE`). Saat pengembangan, `wrangler dev` mensimulasikannya sendiri. Untuk deploy: `npx wrangler r2 bucket create evo-evidence`, lalu `npx wrangler d1 migrations apply evo --remote` (migrasi 0003).
+File eviden disimpan di R2 (binding `EVIDENCE`). Saat pengembangan, `wrangler dev` mensimulasikannya sendiri. Untuk deploy: `npx wrangler r2 bucket create evo-evidence`, lalu `npx wrangler d1 migrations apply evo --remote` (migrasi 0003 dan 0004).
+
+## Kamera eviden dan layar Eviden
+"Ambil foto" di Eksekusi event membuka kamera langsung; koordinat GPS dan waktu WITA ditempel ke dalam gambar, lalu disimpan dengan akurasi dan waktu ambil. Tanpa lokasi foto tetap tersimpan dengan tanda "Tanpa lokasi". Foto dari galeri tidak membawa lokasi. Layar Eviden (`/eviden`, semua peran, baca saja untuk Auditor) memuat daftar lintas event dengan filter jadwal dan rentang 7/30/90 hari, pratinjau, unduh satu per satu, dan "Unduh semua eviden (ZIP)" (maksimal 100 berkas).
+
+**Kamera dan GPS peramban butuh HTTPS** (localhost dikecualikan). Di HP, kamera baru jalan setelah deploy ke alamat https; lewat `http://192.168.x.x` peramban menolak dan aplikasi menampilkan "Kamera butuh koneksi aman (HTTPS)" dengan jalur galeri tetap ada.
 
 ## Security note
 The login route has no built-in attempt limit. Before field use, add a Cloudflare rate-limiting rule for `POST /api/auth/login` in the dashboard.
 
 ## Not in this version
-Event calendar, evidence camera with GPS, offline data queue, dashboard charts, Excel/PDF export. Offline now means the app shell opens without signal; saving needs a connection.
+Offline data queue, Excel/PDF export (Laporan). Offline now means the app shell opens without signal; saving needs a connection.
