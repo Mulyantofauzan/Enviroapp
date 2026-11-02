@@ -82,4 +82,18 @@ describe('TrendChart (TSS)', () => {
       expect(screen.queryByRole('columnheader', { name: /inlet/i })).toBeNull();
     });
   });
+
+  describe('wide axis labels', () => {
+    it('makes room on the left for five-digit values so tick labels are not cut off', () => {
+      const big = [d(1, null, 38102.4), d(2, null, 43200)];
+      const { container } = render(<TrendChart name="Debit outlet" unit="m³/d" series={big} limit={undefined} hide="inlet" floorZero />);
+      const x1 = Number(container.querySelector('line.ui-chart__grid')!.getAttribute('x1'));
+      const longest = Math.max(...[...container.querySelectorAll('text.ui-chart__tick')].filter((t) => t.getAttribute('text-anchor') === 'end').map((t) => (t.textContent ?? '').length));
+      expect(x1).toBeGreaterThanOrEqual(longest * 6 + 6);
+    });
+    it('small values keep the compact margin', () => {
+      const { container } = render(<TrendChart name="pH" unit="" series={[d(1, 6, 7), d(2, 6, 8)]} limit={undefined} />);
+      expect(Number(container.querySelector('line.ui-chart__grid')!.getAttribute('x1'))).toBe(38);
+    });
+  });
 });

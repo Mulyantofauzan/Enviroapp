@@ -51,4 +51,10 @@ describe('BarChart', () => {
     expect(screen.getByText('Kapur', { selector: 'li' })).toBeInTheDocument();
     expect(screen.getByText('Tawas Batu', { selector: 'li' })).toBeInTheDocument();
   });
+  it('twelve categories never print the last two labels on top of each other', () => {
+    const { container } = render(<BarChart name="x" unit="kg" categories={cats(12)} series={[{ name: 'x', values: Array.from({ length: 12 }, (_, i) => i + 1) }]} />);
+    const ticks = [...container.querySelectorAll('text.ui-chart__tick')].map((t) => t.textContent);
+    expect(ticks).toContain('L11');
+    expect(ticks).not.toContain('L10');
+  });
 });

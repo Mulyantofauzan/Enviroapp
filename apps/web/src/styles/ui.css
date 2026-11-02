@@ -485,3 +485,7 @@ a.ui-btn { text-decoration: none; }
 @media (min-width: 760px) { .ui-report-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ui-chart__note { margin: 8px 0 0; font-size: 13px; }
 .ui-report-note { font-size: 13px; color: var(--text-sub); margin: 0; }
+
+/* Laporan: five period options must wrap instead of pushing the page sideways at 360 px */
+.ui-filters .ui-seg { flex-wrap: wrap; }
+.ui-filters .ui-seg button { flex: 1 1 auto; min-width: 0; }

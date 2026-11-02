@@ -3,7 +3,8 @@ import { labelAnchor, labeledIndexes } from '../lib/labels';
 
 export type TrendPoint = { date: string; inlet: number | null; outlet: number | null };
 
-const W = 340, H = 220, L = 38, R = 12, T = 12, B = 28;
+const W = 340, H = 220, R = 12, T = 12, B = 28;
+const L_MIN = 38;
 
 /** Runs of consecutive non-null values, so a missing day breaks the line instead of drawing zero. */
 function runs(pts: { x: number; y: number | null }[]) {
@@ -51,11 +52,13 @@ export function TrendChart({ name, series, limit, floorZero, decimals = 1, hide,
   if (floorZero && lo < 0) lo = 0;
   if (hi - lo < step * 2) hi = clean(lo + step * 2);
   const n = series.length;
+  const ticks: number[] = [];
+  for (let t = lo; t <= hi + 1e-9; t = clean(t + step)) ticks.push(t);
+  // Wide numbers (five digits) need more room on the left, or the axis labels are cut off.
+  const L = Math.max(L_MIN, Math.max(...ticks.map((t) => formatNumber(t).length)) * 6 + 10);
   const iw = W - L - R, ih = H - T - B;
   const x = (i: number) => (n === 1 ? L + iw / 2 : L + (i * iw) / (n - 1));
   const y = (v: number) => T + ih - ((v - lo) / (hi - lo)) * ih;
-  const ticks: number[] = [];
-  for (let t = lo; t <= hi + 1e-9; t = clean(t + step)) ticks.push(t);
   const every = Math.ceil(n / 7);
 
   const line = (key: 'inlet' | 'outlet', cls: string) =>
