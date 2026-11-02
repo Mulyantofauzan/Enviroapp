@@ -26,3 +26,6 @@ export function addMonths(month: string, n: number): string {
   const t = y * 12 + (m - 1) + n;
   return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`;
 }
+
+/** "2 Nov 2026" */
+export const dateText = (iso: string) => `${dayMonth(iso)} ${iso.slice(0, 4)}`;

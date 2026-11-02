@@ -4,7 +4,8 @@ import { canWrite, formatNumber, isOutOfLimit, type Threshold } from '@evo/share
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Icon } from '../icons';
-import { dayMonth } from '../lib/dates';
+import { dateText } from '../lib/dates';
+import type { HistoryEntry } from '../lib/report';
 import type { Pond } from '../pond/PondContext';
 import { Badge } from '../ui/Badge';
 import { DataTable, type Column } from '../ui/DataTable';
@@ -13,13 +14,12 @@ import { ScreenHeader } from '../ui/ScreenHeader';
 import { pondLabel } from '../ui/PondPicker';
 import { localToday } from './input/DayScope';
 
-type Water = { ph_inlet: number | null; ph_outlet: number | null; tss_inlet: number | null; tss_outlet: number | null; debit_inlet_m3d: number | null; debit_outlet_m3d: number | null };
-type Coag = { type: string; stock_in: number | null; stock_out: number | null; stock_remaining: number | null; staleRemaining: boolean };
-type Entry = { date: string; sp_id: string | null; weather: { rainfall_mm: number | null; rain_hours: number | null } | null; water: Water | null; coagulant: Coag[] };
+type Water = NonNullable<HistoryEntry['water']>;
+type Coag = HistoryEntry['coagulant'][number];
+type Entry = HistoryEntry;
 type View = 'air' | 'cuaca' | 'koagulan';
 
 const daysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toLocaleDateString('en-CA'); };
-const dateText = (iso: string) => `${dayMonth(iso)} ${iso.slice(0, 4)}`;
 const num = (v: number | null, decimals = 3) => formatNumber(v, decimals);
 
 export function Riwayat() {
