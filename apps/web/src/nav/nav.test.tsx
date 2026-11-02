@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Role } from '@evo/shared';
-import { navFor, homeFor } from './nav';
+import { navFor, homeFor, railFor } from './nav';
 import { AuthProvider } from '../auth/AuthContext';
 import { ToastProvider } from '../components/Toast';
 import { App } from '../App';
@@ -15,8 +15,8 @@ const labels = (r: Role) => navFor(r).tabs.map((t) => t.label);
 describe('navFor', () => {
   it('tabs per role', () => {
     expect(labels('Operator')).toEqual(['Beranda', 'Input', 'Kalender', 'Akun']);
-    expect(labels('Manager')).toEqual(['Beranda', 'Kalender', 'Akun']);
-    expect(labels('Auditor')).toEqual(['Kalender', 'Riwayat', 'Eviden', 'Akun']);
+    expect(labels('Manager')).toEqual(['Beranda', 'Kalender', 'Laporan', 'Akun']);
+    expect(labels('Auditor')).toEqual(['Kalender', 'Riwayat', 'Eviden', 'Laporan', 'Akun']);
     expect(labels('Admin')).toEqual(['Beranda', 'Input', 'Kalender', 'Akun']);
   });
   it('admin manages users and master data, others do not', () => {
@@ -47,6 +47,25 @@ function mock(role: Role, ponds: unknown[] = [{ id: 'p1', code: 'SP-02', name: '
 }
 const open = (path: string) =>
   render(<MemoryRouter initialEntries={[path]}><AuthProvider><ToastProvider><App /></ToastProvider></AuthProvider></MemoryRouter>);
+
+describe('Laporan access', () => {
+  it('admin gets it as a link in Akun, operator gets it nowhere', () => {
+    expect(navFor('Admin').more.map((m) => m.label)).toContain('Laporan');
+    for (const part of ['tabs', 'more', 'manage'] as const) expect(navFor('Operator')[part].map((m) => m.label)).not.toContain('Laporan');
+    expect(railFor('Operator').map((m) => m.label)).not.toContain('Laporan');
+    expect(railFor('Manager').map((m) => m.label)).toContain('Laporan');
+  });
+  it('operator opening /laporan lands on home', async () => {
+    mock('Operator');
+    open('/laporan');
+    expect(await screen.findByRole('heading', { name: /Halo, Rudi/ })).toBeInTheDocument();
+  });
+  it('auditor opening /laporan sees the report screen', async () => {
+    mock('Auditor');
+    open('/laporan');
+    expect(await screen.findByRole('heading', { name: 'Laporan' })).toBeInTheDocument();
+  });
+});
 
 describe('App routing', () => {
   it('manager opening /input lands on the dashboard', async () => {
