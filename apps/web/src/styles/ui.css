@@ -438,3 +438,22 @@ a.ui-btn { text-decoration: none; }
 .ui-cam__shutter:disabled { opacity: 0.5; cursor: default; }
 .ui-cam :focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .ui-cam__again { color: #fff; border-color: #fff; background: transparent; }
+
+/* Evidence thumbnails, meta and the big preview */
+.ui-evrow__thumb { padding: 0; border: 0; background: none; border-radius: 12px; cursor: pointer; flex: none; width: 48px; height: 48px; }
+.ui-evrow__thumb img { width: 48px; height: 48px; }
+.ui-evrow__thumb:focus-visible { outline: 3px solid var(--water); outline-offset: 2px; }
+.ui-evrow__main .ui-geo, .ui-evrow__main .ui-badge { justify-self: start; margin-top: 2px; }
+.ui-geo { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--primary-dark); font-weight: 600; }
+.ui-evactions { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; }
+.ui-evactions > * { min-width: 0; }
+@media (max-width: 380px) { .ui-evactions { grid-template-columns: 1fr; } }
+.ui-viewer { position: fixed; inset: 0; z-index: 70; background: rgba(16, 22, 20, 0.86); display: grid; place-items: center; padding: 12px; overflow-y: auto; }
+.ui-viewer__panel { width: min(100%, 560px); background: var(--surface); border-radius: var(--radius-card); padding: 14px; display: grid; gap: 12px; max-height: 100%; overflow-y: auto; }
+.ui-viewer__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.ui-viewer__head h3 { margin: 0; font: 700 16px var(--font); }
+.ui-viewer__head p { margin: 2px 0 0; font-size: 13px; color: var(--text-sub); }
+.ui-viewer__img { background: var(--camera); border-radius: 12px; display: grid; place-items: center; overflow: hidden; }
+.ui-viewer__img img { max-width: 100%; max-height: 60dvh; object-fit: contain; display: block; }
+.ui-viewer__meta { margin: 0; display: grid; gap: 4px; font-size: 14px; }
+.ui-viewer .ui-btn { text-decoration: none; }

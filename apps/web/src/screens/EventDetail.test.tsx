@@ -3,6 +3,17 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { json, mockApi, renderApp } from '../test-utils';
 
+vi.mock('../components/CameraCapture', () => ({
+  CameraCapture: (p: any) => (
+    <div role="dialog" aria-label="Kamera eviden">
+      <button onClick={() => p.onUse({ blob: new Blob(['j'], { type: 'image/jpeg' }), lat: -3.78421, lng: 115.60214, accuracy: 9, takenAt: '2026-11-04T01:00:00.000Z' }).catch?.(() => {})}>Gunakan foto (uji)</button>
+      <button onClick={() => p.onUse({ blob: new Blob(['j'], { type: 'image/jpeg' }), lat: null, lng: null, accuracy: null, takenAt: '2026-11-04T01:00:00.000Z' })}>Foto tanpa lokasi (uji)</button>
+      <button onClick={() => p.onGallery(new File(['g'], 'dari-galeri.jpg', { type: 'image/jpeg' }))}>Galeri (uji)</button>
+      <button onClick={p.onClose}>Tutup (uji)</button>
+    </div>
+  ),
+}));
+
 afterEach(() => vi.unstubAllGlobals());
 
 const URL = '/kalender/s1/2026-11-03';
@@ -140,6 +151,122 @@ describe('EventDetail', () => {
     setup({ role: 'Admin', evidences: [evid({ id: 'e2', filename: 'orang-lain.jpg', uploaded_by: 'u9' })] });
     renderApp(URL);
     expect(await screen.findByRole('button', { name: 'Hapus orang-lain.jpg' })).toBeInTheDocument();
+  });
+  it('offers the camera next to the gallery, only to those who can add evidence on an open event', async () => {
+    setup();
+    const { unmount } = renderApp(URL);
+    expect(await screen.findByRole('button', { name: 'Ambil foto' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Unggah galeri')).toBeInTheDocument();
+    unmount();
+    for (const role of ['Manager', 'Auditor'] as const) {
+      setup({ role, evidences: [evid()] });
+      const r = renderApp(URL);
+      await screen.findByText('foto.jpg');
+      expect(screen.queryByRole('button', { name: 'Ambil foto' })).toBeNull();
+      r.unmount();
+    }
+    setup({ event: { status: 'done' } });
+    renderApp(URL);
+    await screen.findByRole('heading', { name: 'Cek Saluran Inlet' });
+    expect(screen.queryByRole('button', { name: 'Ambil foto' })).toBeNull();
+  });
+  it('uploads a camera photo with its position, accuracy and time, then closes the camera', async () => {
+    const { calls } = setup();
+    renderApp(URL);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ambil foto' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gunakan foto (uji)' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/evidence'))).toBe(true));
+    const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/evidence'))!;
+    expect(post.body.formData).toMatchObject({ source: 'camera', gps_lat: '-3.78421', gps_lng: '115.60214', gps_accuracy: '9', taken_at: '2026-11-04T01:00:00.000Z' });
+    expect(post.body.formData.file).toMatchObject({ type: 'image/jpeg' });
+    expect(post.body.formData.file.name).toMatch(/^foto-.*\.jpg$/);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Kamera eviden' })).toBeNull());
+    expect(await screen.findByText('Eviden diunggah')).toBeInTheDocument();
+    expect(await screen.findByText('Eviden (1)')).toBeInTheDocument();
+  });
+  it('a photo with no fix is sent as a camera photo without coordinates', async () => {
+    const { calls } = setup();
+    renderApp(URL);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ambil foto' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Foto tanpa lokasi (uji)' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/evidence'))).toBe(true));
+    const f = calls.find((c) => c.method === 'POST' && c.url.endsWith('/evidence'))!.body.formData;
+    expect(f.source).toBe('camera');
+    expect(f.taken_at).toBeTruthy();
+    expect(f).not.toHaveProperty('gps_lat');
+    expect(f).not.toHaveProperty('gps_lng');
+    expect(f).not.toHaveProperty('gps_accuracy');
+  });
+  it('when the server refuses a camera photo the camera stays open so it can be retried', async () => {
+    mockApi({
+      handler: (u, i) => {
+        if (u === '/api/events/s1/2026-11-03' && (i?.method ?? 'GET') === 'GET') return json({ today: '2026-11-04', event: base, evidences: [] });
+        if (i?.method === 'POST') return json({ error: 'Waktu foto tidak boleh di masa depan.' }, 400);
+        return undefined;
+      },
+    });
+    renderApp(URL);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ambil foto' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gunakan foto (uji)' }));
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Kamera eviden' })).toBeInTheDocument());
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByRole('dialog', { name: 'Kamera eviden' })).toBeInTheDocument();
+  });
+  it('a file chosen inside the camera dialog goes up as a gallery file and closes the camera', async () => {
+    const { calls } = setup();
+    renderApp(URL);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ambil foto' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Galeri (uji)' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/evidence'))).toBe(true));
+    const f = calls.find((c) => c.method === 'POST' && c.url.endsWith('/evidence'))!.body.formData;
+    expect(f.source).toBe('gallery');
+    expect(f).not.toHaveProperty('gps_lat');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Kamera eviden' })).toBeNull());
+  });
+  it('closing the camera without a photo uploads nothing', async () => {
+    const { calls } = setup();
+    renderApp(URL);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ambil foto' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Tutup (uji)' }));
+    expect(screen.queryByRole('dialog', { name: 'Kamera eviden' })).toBeNull();
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+  });
+  it('the gallery button sends source=gallery', async () => {
+    const { calls } = setup();
+    renderApp(URL);
+    await pickFile('baru.png', 2048, 'image/png');
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/evidence'))).toBe(true));
+    expect(calls.find((c) => c.method === 'POST' && c.url.endsWith('/evidence'))!.body.formData.source).toBe('gallery');
+  });
+  it('each evidence row says where it came from: coordinates, "Tanpa lokasi" or "Galeri"', async () => {
+    setup({ evidences: [
+      evid({ id: 'a', filename: 'kamera.jpg', source: 'camera', gps_lat: -3.78421, gps_lng: 115.60214 }),
+      evid({ id: 'b', filename: 'gelap.jpg', source: 'camera', gps_lat: null, gps_lng: null }),
+      evid({ id: 'c', filename: 'lama.jpg', source: 'gallery' }),
+    ] });
+    renderApp(URL);
+    expect(await screen.findByText('GPS -3.78421, 115.60214')).toBeInTheDocument();
+    expect(screen.getByText('Tanpa lokasi')).toBeInTheDocument();
+    expect(screen.getByText('Galeri')).toBeInTheDocument();
+  });
+  it('tapping a picture opens the big preview, Escape closes it and focus goes back to the picture', async () => {
+    setup({ evidences: [evid({ source: 'camera', gps_lat: -3.78421, gps_lng: 115.60214, taken_at: '2026-11-03T00:21:00.000Z' })] });
+    renderApp(URL);
+    const thumb = await screen.findByRole('button', { name: 'Lihat foto.jpg' });
+    await userEvent.click(thumb);
+    const dlg = await screen.findByRole('dialog', { name: 'Pratinjau eviden' });
+    expect(dlg).toHaveTextContent('Cek Saluran Inlet');
+    expect(dlg).toHaveTextContent('GPS -3.78421, 115.60214');
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Pratinjau eviden' })).toBeNull();
+    expect(thumb).toHaveFocus();
+  });
+  it('a PDF has no preview dialog, only the download link', async () => {
+    setup({ evidences: [evid({ id: 'p', filename: 'laporan.pdf', mime: 'application/pdf' })] });
+    renderApp(URL);
+    expect(await screen.findByText('laporan.pdf')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Lihat laporan.pdf' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Unduh laporan.pdf' })).toBeInTheDocument();
   });
   it('an unknown event says so and links back to the calendar', async () => {
     mockApi({ handler: (u) => (u.startsWith('/api/events/s1/') ? json({ error: 'Event tidak ditemukan.' }, 404) : undefined) });

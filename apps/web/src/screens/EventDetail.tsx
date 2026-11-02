@@ -9,12 +9,18 @@ import { Icon } from '../icons';
 import { dayMonth } from '../lib/dates';
 import { usePond } from '../pond/PondContext';
 import { Badge } from '../ui/Badge';
+import { CameraCapture, type CameraPhoto } from '../components/CameraCapture';
+import { EvidenceMeta } from '../components/EvidenceMeta';
+import { EvidenceViewer } from '../components/EvidenceViewer';
 import { Banner } from '../ui/Banner';
 import { Button } from '../ui/Button';
 import { pondLabel } from '../ui/PondPicker';
 import { ScreenHeader } from '../ui/ScreenHeader';
 
-type Evidence = { id: string; filename: string; mime: string; size: number; uploaded_at: string; uploaded_by_name: string; uploaded_by: string };
+type Evidence = {
+  id: string; filename: string; mime: string; size: number; uploaded_at: string; uploaded_by_name: string; uploaded_by: string;
+  source?: 'camera' | 'gallery'; gps_lat?: number | null; gps_lng?: number | null; gps_accuracy?: number | null; taken_at?: string | null;
+};
 type Detail = { today: string; event: EventOccurrence; evidences: Evidence[] };
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -34,6 +40,8 @@ export function EventDetail() {
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [camera, setCamera] = useState(false);
+  const [viewing, setViewing] = useState<{ item: Evidence; opener: HTMLElement | null } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -65,14 +73,45 @@ export function EventDetail() {
     setBusy(true);
     try { await fn(); toast(ok); await load(); } catch (err) { toast((err as Error).message); } finally { setBusy(false); }
   }
+  function send(file: File, photo?: CameraPhoto) {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('source', photo ? 'camera' : 'gallery');
+    if (photo) {
+      form.append('taken_at', photo.takenAt);
+      if (photo.lat !== null && photo.lng !== null) {
+        form.append('gps_lat', String(photo.lat));
+        form.append('gps_lng', String(photo.lng));
+        if (photo.accuracy !== null) form.append('gps_accuracy', String(photo.accuracy));
+      }
+    }
+    return api(`/events/${e.schedule_id}/${e.due_date}/evidence`, { method: 'POST', body: form });
+  }
+  function checkSize(file: File) {
+    if (file.size > MAX_BYTES) { toast('Berkas terlalu besar. Maksimal 10 MB.'); return false; }
+    return true;
+  }
   function choose(ev: ChangeEvent<HTMLInputElement>) {
     const file = ev.target.files?.[0];
     ev.target.value = '';
-    if (!file) return;
-    if (file.size > MAX_BYTES) { toast('Berkas terlalu besar. Maksimal 10 MB.'); return; }
-    const form = new FormData();
-    form.append('file', file);
-    run(() => api(`/events/${e.schedule_id}/${e.due_date}/evidence`, { method: 'POST', body: form }), 'Eviden diunggah');
+    if (!file || !checkSize(file)) return;
+    run(() => send(file), 'Eviden diunggah');
+  }
+  /** Throws when the server refuses, so the camera stays open and the photo can be tried again. */
+  async function useCameraPhoto(photo: CameraPhoto) {
+    const stamp = photo.takenAt.slice(0, 16).replace(/[-:T]/g, '');
+    await send(new File([photo.blob], `foto-${stamp}.jpg`, { type: 'image/jpeg' }), photo);
+    setCamera(false);
+    toast('Eviden diunggah');
+    await load();
+  }
+  function galleryFromCamera(file: File) {
+    setCamera(false);
+    if (checkSize(file)) run(() => send(file), 'Eviden diunggah');
+  }
+  function closeViewer() {
+    viewing?.opener?.focus();
+    setViewing(null);
   }
 
   return (
@@ -97,11 +136,16 @@ export function EventDetail() {
             {evidences.map((x) => (
               <li key={x.id} className="ui-evrow">
                 {PREVIEW.includes(x.mime)
-                  ? <img src={`/api/evidence/${x.id}/file`} alt={x.filename} loading="lazy" />
+                  ? (
+                    <button type="button" className="ui-evrow__thumb" aria-label={`Lihat ${x.filename}`} onClick={(ev) => setViewing({ item: x, opener: ev.currentTarget })}>
+                      <img src={`/api/evidence/${x.id}/file`} alt={x.filename} loading="lazy" />
+                    </button>
+                  )
                   : <span className="ui-bubble ui-bubble--primary"><Icon name="file" /></span>}
                 <div className="ui-evrow__main">
                   <strong>{x.filename}</strong>
                   <small>{sizeText(x.size)} - {x.uploaded_by_name} - {whenText(x.uploaded_at)}</small>
+                  <EvidenceMeta e={x} />
                 </div>
                 <a className="ui-evrow__dl" href={`/api/evidence/${x.id}/file`} download={x.filename} aria-label={`Unduh ${x.filename}`}><Icon name="upload" /></a>
                 {canDelete(x) && (
@@ -113,10 +157,13 @@ export function EventDetail() {
             ))}
           </ul>
           {canUse && (
-            <label className={`ui-btn ui-btn--primary ui-file${busy ? ' is-busy' : ''}`}>
-              <Icon name="upload" /> Unggah galeri
-              <input type="file" className="ui-sr" accept="image/*,application/pdf" disabled={busy} onChange={choose} />
-            </label>
+            <div className="ui-evactions">
+              <Button disabled={busy} onClick={() => setCamera(true)}><Icon name="camera" /> Ambil foto</Button>
+              <label className={`ui-btn ui-btn--outline ui-file${busy ? ' is-busy' : ''}`}>
+                <Icon name="upload" /> Unggah galeri
+                <input type="file" className="ui-sr" accept="image/*,application/pdf" disabled={busy} onChange={choose} />
+              </label>
+            </div>
           )}
         </section>
 
@@ -133,6 +180,8 @@ export function EventDetail() {
           </>
         )}
       </div>
+      {camera && <CameraCapture title={`${e.title}${pond ? ` - ${pondLabel(pond)}` : ''}`} onClose={() => setCamera(false)} onUse={useCameraPhoto} onGallery={galleryFromCamera} />}
+      {viewing && <EvidenceViewer item={{ ...viewing.item, title: e.title, due_date: e.due_date }} onClose={closeViewer} />}
     </>
   );
 }
