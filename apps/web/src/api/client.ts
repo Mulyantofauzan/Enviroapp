@@ -18,12 +18,12 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
       headers: { ...(init.body ? { 'content-type': 'application/json' } : {}), ...init.headers },
     });
   } catch {
-    throw new ApiError('No connection. Try again.', 0);
+    throw new ApiError('Tidak ada koneksi. Coba lagi.', 0);
   }
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     if (res.status === 401) onUnauthorized();
-    throw new ApiError(data?.error ?? 'Something went wrong. Try again.', res.status);
+    throw new ApiError(data?.error ?? 'Terjadi kesalahan. Coba lagi.', res.status);
   }
   return data as T;
 }

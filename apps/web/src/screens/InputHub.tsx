@@ -3,6 +3,7 @@ import { COAGULANT_TYPES, formatDateId } from '@evo/shared';
 import { Icon, type IconName } from '../icons';
 import { useDay } from '../hooks/useDay';
 import { usePond } from '../pond/PondContext';
+import { PondsUnavailable } from '../pond/PondsUnavailable';
 import { ScreenHeader } from '../ui/ScreenHeader';
 import { PondPicker, pondLabel } from '../ui/PondPicker';
 import { Badge } from '../ui/Badge';
@@ -26,9 +27,7 @@ export function InputHub() {
     <>
       <ScreenHeader title="Input" subtitle={`${pond ? pondLabel(pond) : 'Pilih pond'} - ${formatDateId(today)}`} onProfile={() => nav('/akun')} />
       <div className="ui-page">
-        {!loading && ponds.length === 0 ? (
-          <p className="ui-muted">Belum ada settling pond aktif. Minta admin menambahkannya di menu Master.</p>
-        ) : (
+        {!loading && ponds.length === 0 ? <PondsUnavailable /> : (
           <>
             <section className="ui-card"><PondPicker ponds={ponds} value={current} onChange={setCurrent} /></section>
             {error && <p className="ui-error" role="alert">{error}</p>}

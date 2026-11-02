@@ -52,6 +52,7 @@ dashboardRoutes.get('/', async (c) => {
     const rows = coag.filter((r) => r.type === t);
     const last = rows[rows.length - 1];
     const inRange = rows.filter((r) => r.date >= start && r.stock_remaining !== null).map((r) => r.stock_remaining as number);
+    if (last?.stock_remaining != null) inRange.push(last.stock_remaining);
     return [t, {
       remaining: last?.stock_remaining ?? null,
       max: inRange.length ? Math.max(...inRange) : null,

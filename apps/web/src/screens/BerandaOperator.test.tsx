@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { screen, within } from '@testing-library/react';
-import { json, mockApi, renderApp, emptyDay, POND } from '../test-utils';
+import { pondsFailOnce, json, mockApi, renderApp, emptyDay, POND } from '../test-utils';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -58,5 +59,16 @@ describe('Beranda Operator', () => {
     mockApi({ handler: (u) => (u.startsWith('/api/day') ? json({ error: 'Terjadi kesalahan. Coba lagi.' }, 500) : undefined) });
     renderApp('/');
     expect(await screen.findByText('Terjadi kesalahan. Coba lagi.')).toBeInTheDocument();
+  });
+});
+
+describe('BerandaOperator when the pond list fails to load', () => {
+  it('names the failure and offers a retry instead of saying there are no ponds', async () => {
+    mockApi({ role: 'Operator', handler: pondsFailOnce() });
+    renderApp('/');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Terjadi kesalahan. Coba lagi.');
+    expect(screen.queryByText(/Belum ada settling pond aktif/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Coba lagi' }));
+    expect(await screen.findByRole('combobox', { name: /Settling Pond/ })).toBeInTheDocument();
   });
 });

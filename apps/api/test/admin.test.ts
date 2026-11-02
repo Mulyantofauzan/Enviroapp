@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { env } from 'cloudflare:workers';
 import { call, login, json } from './helpers';
+import { app } from '../src/index';
 
 describe('ponds', () => {
   it('operator cannot create', async () => {
@@ -201,5 +203,39 @@ describe('user active status', () => {
     const { cookie } = await login('Admin');
     const u = await make(cookie);
     expect((await call(`/users/${u.id}`, { method: 'PATCH', cookie, body: json({ is_active: 'false' }) })).status).toBe(400);
+  });
+});
+
+describe('last admin race', () => {
+  it('a concurrent change that leaves no other active admin makes the write fail, not succeed', async () => {
+    const a = await login('Admin');
+    const b = await (await call('/users', { method: 'POST', cookie: a.cookie, body: json({ name: 'Admin B', email: 'b@x.id', password: 'secret-123', role: 'Admin' }) })).json() as any;
+    const me = (await (await call('/users', { cookie: a.cookie })).json() as any[]).find((u) => u.email === a.user.email);
+    // Simulate another admin request landing between our check and our write: it deactivates the caller (A).
+    const racing = new Proxy(env.DB, {
+      get(t, p) {
+        if (p !== 'prepare') { const v = (t as any)[p]; return typeof v === 'function' ? v.bind(t) : v; }
+        return (sql: string) => {
+          const stmt = t.prepare(sql);
+          if (!/^SELECT COUNT\(\*\)/.test(sql) || !sql.includes("'Admin'")) return stmt;
+          return new Proxy(stmt, {
+            get(s, k) {
+              if (k !== 'first') { const v = (s as any)[k]; return typeof v === 'function' ? v.bind(s) : v; }
+              return async () => {
+                const r = await s.first();
+                await t.prepare('UPDATE users SET is_active = 0 WHERE id = ?').bind(me.id).run();
+                return r;
+              };
+            },
+          });
+        };
+      },
+    });
+    const res = await app.request(`/api/users/${b.id}`, {
+      method: 'PATCH', headers: { cookie: a.cookie, 'content-type': 'application/json' }, body: JSON.stringify({ is_active: false }),
+    }, { DB: racing });
+    expect(res.status).toBe(409);
+    const row = await env.DB.prepare('SELECT is_active FROM users WHERE id = ?').bind(b.id).first<any>();
+    expect(row.is_active).toBe(1);
   });
 });

@@ -264,3 +264,4 @@ body { font-size: 15px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .ui-kpi strong.is-empty, .ui-stat strong.is-empty { font: 500 14px var(--font); color: var(--text-sub); }
 /* Toggle keeps Figma's 52x30 look, with a 44px tall tap area. */
 .ui-toggle::after { content: ''; position: absolute; inset: -7px -4px; }
+.ui-chart__idot { fill: var(--water); stroke: var(--surface); stroke-width: 1.5; }

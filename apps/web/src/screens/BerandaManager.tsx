@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { COAGULANT_TYPES, formatNumber, isOutOfLimit, type Threshold } from '@evo/shared';
 import { useDashboard } from '../hooks/useDashboard';
 import { usePond } from '../pond/PondContext';
+import { PondsUnavailable } from '../pond/PondsUnavailable';
 import { ScreenHeader } from '../ui/ScreenHeader';
 import { PondPicker } from '../ui/PondPicker';
 import { Segmented } from '../ui/Segmented';
@@ -45,9 +46,7 @@ export function BerandaManager() {
     <>
       <ScreenHeader title="Dashboard" subtitle={`Manager${range ? ` - ${range}` : ''}`} onProfile={() => nav('/akun')} />
       <div className="ui-page">
-        {!loading && ponds.length === 0 ? (
-          <p className="ui-muted">Belum ada settling pond aktif. Minta admin menambahkannya di menu Master.</p>
-        ) : (
+        {!loading && ponds.length === 0 ? <PondsUnavailable /> : (
           <>
             <PondPicker ponds={ponds} value={current} onChange={setCurrent} label="Settling Pond" />
             <Segmented label="Rentang waktu" options={[{ value: '7', label: '7 hari' }, { value: '30', label: '30 hari' }, { value: '90', label: '90 hari' }]} value={days} onChange={setDays} />

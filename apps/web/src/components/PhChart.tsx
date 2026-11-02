@@ -64,6 +64,11 @@ export function PhChart({ series, band }: { series: PhPoint[]; band: Threshold |
         {line('ph_inlet', 'inlet', 'ui-chart__inlet')}
         {line('ph_outlet', 'outlet', 'ui-chart__outlet')}
         {series.map((s, i) => {
+          const v = s.ph_inlet;
+          if (v === null || series[i - 1]?.ph_inlet != null || series[i + 1]?.ph_inlet != null) return null;
+          return <circle key={`i${s.date}`} data-inlet-dot className="ui-chart__idot" cx={x(i)} cy={y(v)} r={3.5} />;
+        })}
+        {series.map((s, i) => {
           if (s.ph_outlet === null) return null;
           const bad = hasBand && isOutOfLimit(s.ph_outlet, band);
           return bad

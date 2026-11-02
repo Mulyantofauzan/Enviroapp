@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Icon, type IconName } from '../icons';
 import { useDay } from '../hooks/useDay';
 import { usePond } from '../pond/PondContext';
+import { PondsUnavailable } from '../pond/PondsUnavailable';
 import { ScreenHeader } from '../ui/ScreenHeader';
 import { PondPicker, pondLabel } from '../ui/PondPicker';
 import { Badge } from '../ui/Badge';
@@ -48,12 +49,7 @@ export function BerandaOperator() {
     <>
       <ScreenHeader title={`Halo, ${user.name.split(' ')[0]}`} subtitle={`${ROLE_LABEL[user.role]} - ${formatDateId(today)}`} onProfile={() => nav('/akun')} />
       <div className="ui-page">
-        {!loading && ponds.length === 0 ? (
-          <section className="ui-card">
-            <p className="ui-muted">Belum ada settling pond aktif. Minta admin menambahkannya di menu Master.</p>
-            {user.role === 'Admin' && <Link to="/master" className="ui-link">Buka Master</Link>}
-          </section>
-        ) : (
+        {!loading && ponds.length === 0 ? <PondsUnavailable /> : (
           <>
             <section className="ui-card"><PondPicker ponds={ponds} value={current} onChange={setCurrent} label="Settling Pond aktif" /></section>
             <div className="ui-tiles">

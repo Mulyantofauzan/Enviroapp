@@ -46,3 +46,9 @@ export function renderApp(path: string) {
     </MemoryRouter>,
   );
 }
+
+/** /api/ponds fails the first time, then works. Returns a handler for mockApi. */
+export function pondsFailOnce(): Handler {
+  let n = 0;
+  return (url) => (url.startsWith('/api/ponds') && n++ === 0 ? json({ error: 'Terjadi kesalahan. Coba lagi.' }, 500) : undefined);
+}

@@ -34,6 +34,11 @@ describe('PhChart', () => {
     expect(screen.getByRole('img', { name: /5,6/ })).toBeInTheDocument();
     expect(screen.getAllByRole('row')).toHaveLength(week.length + 1);
   });
+  it('an inlet value with no neighbouring day is still drawn as a dot', () => {
+    const sparse = [day(1, 6.1, 7.2), day(2, null, null), day(3, 5.9, 6.9), day(4, null, null), day(5, 5.8, 6.8)];
+    const { container } = render(<PhChart series={sparse} band={{ min: 6, max: 9 }} />);
+    expect(container.querySelectorAll('circle[data-inlet-dot]')).toHaveLength(3);
+  });
   it('renders nothing when there is no pH at all', () => {
     const { container } = render(<PhChart series={[day(1, null, null), day(2, null, null)]} band={{ min: 6, max: 9 }} />);
     expect(container).toBeEmptyDOMElement();

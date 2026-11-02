@@ -40,20 +40,26 @@ userRoutes.patch('/:id', async (c) => {
   if (!name) return c.json({ error: 'Nama wajib diisi.' }, 400);
   if (b.role !== undefined && !isRole(b.role)) return c.json({ error: 'Pilih peran yang benar.' }, 400);
   const role = b.role ?? row.role;
-  if (b.password !== undefined) {
-    if (typeof b.password !== 'string' || b.password.length < MIN_PW) return c.json({ error: `Kata sandi minimal ${MIN_PW} karakter.` }, 400);
-    await c.env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(await hashPassword(b.password), row.id).run();
-    await c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(row.id).run();
-  }
+  if (b.password !== undefined && (typeof b.password !== 'string' || b.password.length < MIN_PW)) return c.json({ error: `Kata sandi minimal ${MIN_PW} karakter.` }, 400);
   if (b.is_active !== undefined && typeof b.is_active !== 'boolean') return c.json({ error: 'Status aktif tidak valid.' }, 400);
   const active = b.is_active === undefined ? !!row.is_active : b.is_active;
   if (!active && c.get('user').id === row.id) return c.json({ error: 'Anda tidak bisa menonaktifkan akun sendiri.' }, 409);
   const losesAdmin = row.role === 'Admin' && row.is_active && (role !== 'Admin' || !active);
+  const LAST_ADMIN = 'Harus ada minimal satu admin aktif.';
   if (losesAdmin) {
     const n = await c.env.DB.prepare("SELECT COUNT(*) c FROM users WHERE role = 'Admin' AND is_active = 1").first<{ c: number }>();
-    if ((n?.c ?? 0) <= 1) return c.json({ error: 'Harus ada minimal satu admin aktif.' }, 409);
+    if ((n?.c ?? 0) <= 1) return c.json({ error: LAST_ADMIN }, 409);
   }
-  await c.env.DB.prepare('UPDATE users SET name = ?, role = ?, is_active = ? WHERE id = ?').bind(name, role, active ? 1 : 0, row.id).run();
+  // The check is repeated inside the write so two admins acting at once cannot both succeed.
+  const res = await c.env.DB.prepare(
+    `UPDATE users SET name = ?, role = ?, is_active = ?
+     WHERE id = ? AND (? = 0 OR (SELECT COUNT(*) FROM users WHERE role = 'Admin' AND is_active = 1 AND id <> ?) >= 1)`,
+  ).bind(name, role, active ? 1 : 0, row.id, losesAdmin ? 1 : 0, row.id).run();
+  if (res.meta.changes === 0) return c.json({ error: LAST_ADMIN }, 409);
+  if (b.password !== undefined) {
+    await c.env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(await hashPassword(b.password), row.id).run();
+    await c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(row.id).run();
+  }
   if (!active) await c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(row.id).run();
   return c.json({ id: row.id, name, email: row.email, role, is_active: active });
 });

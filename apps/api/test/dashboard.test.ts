@@ -63,6 +63,13 @@ describe('GET /dashboard', () => {
     expect(d.coagulant.Kapur).toEqual({ remaining: 260, max: 300, updated: D });
     expect(d.coagulant['Tawas Batu']).toEqual({ remaining: null, max: null, updated: null });
   });
+  it('stock entered before the range still gets a full bar scale', async () => {
+    const { cookie } = await login('Operator');
+    const sp = await addPond();
+    await call(`/coagulant/2026-10-20/${sp}/Kapur`, { method: 'PUT', cookie, body: json({ stock_in: 300, stock_out: 0 }) });
+    const d = await (await call(`/dashboard?sp=${sp}&days=7&date=${D}`, { cookie })).json() as any;
+    expect(d.coagulant.Kapur).toEqual({ remaining: 300, max: 300, updated: '2026-10-20' });
+  });
   it('returns the pond thresholds', async () => {
     const admin = await login('Admin');
     const created = await (await call('/ponds', { method: 'POST', cookie: admin.cookie, body: json({ name: 'SP-02', thresholds: { ph_outlet: { min: 6, max: 9 } } }) })).json() as any;
