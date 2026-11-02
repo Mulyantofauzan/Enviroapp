@@ -66,3 +66,23 @@ historyRoutes.get('/', async (c) => {
   entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   return c.json(entries);
 });
+
+const COAG_TYPES = ['Tawas Serbuk', 'Tawas Batu', 'Kapur'] as const;
+
+historyRoutes.get('/coagulant-total', async (c) => {
+  const to = c.req.query('to') ?? '';
+  const sp = c.req.query('sp') || null;
+  if (!isValidDate(to) || (Date.parse(to) - Date.now()) / 86_400_000 > MAX_DAYS)
+    return c.json({ error: 'Tanggal akhir tidak sah.' }, 400);
+  const rows = (await c.env.DB
+    .prepare(`SELECT sp_id, type, SUM(COALESCE(stock_out, 0)) AS total, MIN(date) AS first_date FROM coagulant WHERE date <= ? ${sp ? 'AND sp_id = ?' : ''} GROUP BY sp_id, type`)
+    .bind(...(sp ? [to, sp] : [to])).all<{ sp_id: string; type: string; total: number; first_date: string }>()).results;
+  const ponds = new Map<string, { sp_id: string; first_date: string | null; 'Tawas Serbuk': number; 'Tawas Batu': number; Kapur: number }>();
+  for (const r of rows) {
+    const p = ponds.get(r.sp_id) ?? { sp_id: r.sp_id, first_date: null, 'Tawas Serbuk': 0, 'Tawas Batu': 0, Kapur: 0 };
+    if (!p.first_date || r.first_date < p.first_date) p.first_date = r.first_date;
+    if ((COAG_TYPES as readonly string[]).includes(r.type)) p[r.type as (typeof COAG_TYPES)[number]] = r.total;
+    ponds.set(r.sp_id, p);
+  }
+  return c.json({ ponds: [...ponds.values()] });
+});
