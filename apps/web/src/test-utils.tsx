@@ -25,7 +25,11 @@ export type Call = { url: string; method: string; body: any };
 export function mockApi(opts: { role?: Role; name?: string; ponds?: unknown[]; handler?: Handler } = {}) {
   const calls: Call[] = [];
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
-    calls.push({ url, method: init?.method ?? 'GET', body: init?.body ? JSON.parse(String(init.body)) : undefined });
+    const raw = init?.body;
+    const body = raw instanceof FormData
+      ? { formData: Object.fromEntries([...raw.entries()].map(([k, v]) => [k, typeof v === 'string' ? v : { name: v.name, size: v.size, type: v.type }])) }
+      : raw ? JSON.parse(String(raw)) : undefined;
+    calls.push({ url, method: init?.method ?? 'GET', body });
     const custom = opts.handler?.(url, init);
     if (custom) return custom;
     if (url.startsWith('/api/auth/me')) return new Response(JSON.stringify({ id: 'u1', name: opts.name ?? 'Rudi Hartono', role: opts.role ?? 'Operator' }));

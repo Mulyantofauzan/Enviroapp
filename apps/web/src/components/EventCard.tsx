@@ -3,7 +3,7 @@ import { FREQUENCY_LABEL, type EventOccurrence } from '@evo/shared';
 import { dayMonth } from '../lib/dates';
 import { Badge } from '../ui/Badge';
 
-function StatusBadge({ e }: { e: EventOccurrence }) {
+export function StatusBadge({ e }: { e: EventOccurrence }) {
   if (e.status === 'overdue') return <Badge tone="danger-solid">Overdue</Badge>;
   if (e.status === 'today') return <Badge tone="water">Hari ini</Badge>;
   if (e.status === 'done') return e.late ? <Badge tone="warning">Selesai terlambat</Badge> : <Badge tone="success">Selesai</Badge>;

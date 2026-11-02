@@ -287,3 +287,20 @@ body { font-size: 15px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .ui-ev__meta { margin: 0; font-size: 13px; color: var(--text-sub); }
 .ui-ev--overdue .ui-ev__meta { color: var(--danger); }
 .ui-ev__act { justify-self: end; min-height: 44px; text-decoration: none; }
+
+/* Event detail */
+.ui-back { display: inline-flex; align-items: center; gap: 4px; color: var(--primary); font-weight: 600; text-decoration: none; min-height: 44px; }
+.ui-evbox { display: grid; gap: 8px; }
+.ui-evbox.is-overdue { background: var(--danger-soft); border-color: var(--danger); }
+.ui-evbox p { margin: 0; }
+.ui-evlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.ui-evrow { display: flex; align-items: center; gap: 12px; }
+.ui-evrow img { width: 56px; height: 56px; object-fit: cover; border-radius: 12px; flex: none; background: var(--bg); }
+.ui-evrow__main { flex: 1; min-width: 0; display: grid; }
+.ui-evrow__main strong { overflow-wrap: anywhere; }
+.ui-evrow__main small { color: var(--text-sub); }
+.ui-evrow__dl { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--bg); color: var(--text); flex: none; }
+.ui-evrow__dl .ui-icon { transform: rotate(180deg); }
+.ui-file { cursor: pointer; }
+.ui-file:focus-within { outline: 3px solid var(--water); outline-offset: 2px; }
+.ui-file.is-busy { opacity: 0.55; }
