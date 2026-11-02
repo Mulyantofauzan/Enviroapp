@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { COAGULANT_TYPES, formatNumber, isOutOfLimit, type Threshold } from '@evo/shared';
+import { COAGULANT_TYPES, ROLE_LABEL, formatNumber, isOutOfLimit, type Threshold } from '@evo/shared';
+import { useAuth } from '../auth/AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
 import { usePond } from '../pond/PondContext';
 import { PondsUnavailable } from '../pond/PondsUnavailable';
@@ -9,6 +10,9 @@ import { PondPicker } from '../ui/PondPicker';
 import { Segmented } from '../ui/Segmented';
 import { Badge } from '../ui/Badge';
 import { PhChart } from '../components/PhChart';
+import { TrendChart } from '../components/TrendChart';
+import { RainChart } from '../components/RainChart';
+import { CalendarOverview } from '../components/CalendarOverview';
 import { StockBars } from '../components/StockBars';
 import { localToday } from './input/DayScope';
 
@@ -33,6 +37,7 @@ const judge = (v: number | null, t: Threshold | undefined): 'abnormal' | 'normal
   v === null || !t || (t.min === null && t.max === null) ? null : isOutOfLimit(v, t) ? 'abnormal' : 'normal';
 
 export function BerandaManager() {
+  const { user } = useAuth();
   const nav = useNavigate();
   const { ponds, current, setCurrent, loading } = usePond();
   const [days, setDays] = useState<Days>('7');
@@ -41,10 +46,12 @@ export function BerandaManager() {
   const t = data?.today ?? null;
   const range = data && data.series.length ? `${dayMonth(data.series[0].date)} s/d ${full(data.series[data.series.length - 1].date)}` : '';
   const hasPh = !!data?.series.some((s) => s.ph_inlet !== null || s.ph_outlet !== null);
+  const hasTss = !!data?.series.some((s) => (s.tss_inlet ?? null) !== null || (s.tss_outlet ?? null) !== null);
+  const hasRain = !!data?.series.some((s) => (s.rainfall_mm ?? null) !== null);
 
   return (
     <>
-      <ScreenHeader title="Dashboard" subtitle={`Manager${range ? ` - ${range}` : ''}`} onProfile={() => nav('/akun')} />
+      <ScreenHeader title="Dashboard" subtitle={`${user ? ROLE_LABEL[user.role] : ''}${range ? ` - ${range}` : ''}`} onProfile={() => nav('/akun')} />
       <div className="ui-page ui-page--wide">
         {!loading && ponds.length === 0 ? <PondsUnavailable /> : (
           <>
@@ -64,15 +71,28 @@ export function BerandaManager() {
                 ) : (
                   <section className="ui-card"><p className="ui-muted">Belum ada data hari ini.</p></section>
                 )}
-                <div className="ui-dash-cols">
-                <section className="ui-card">
-                  <h2>pH Inlet vs Outlet</h2>
-                  {hasPh ? <PhChart series={data.series} band={th.ph_outlet} /> : <p className="ui-muted">Belum ada data pH pada rentang ini.</p>}
-                </section>
-                <section className="ui-card">
-                  <h2>Sisa stok koagulan (kg)</h2>
-                  <StockBars items={COAGULANT_TYPES.map((c) => ({ type: c, ...data.coagulant[c] }))} />
-                </section>
+                <div className="ui-dash-grid">
+                  <section className="ui-card">
+                    <h2>pH Inlet vs Outlet</h2>
+                    {hasPh ? <PhChart series={data.series} band={th.ph_outlet} /> : <p className="ui-muted">Belum ada data pH pada rentang ini.</p>}
+                  </section>
+                  <section className="ui-card">
+                    <h2>TSS Inlet vs Outlet</h2>
+                    {hasTss
+                      ? <TrendChart name="TSS" unit="mg/L" floorZero limit={th.tss_outlet} series={data.series.map((s) => ({ date: s.date, inlet: s.tss_inlet ?? null, outlet: s.tss_outlet ?? null }))} />
+                      : <p className="ui-muted">Belum ada data TSS pada rentang ini.</p>}
+                  </section>
+                  <section className="ui-card">
+                    <h2>Curah hujan (mm)</h2>
+                    {hasRain
+                      ? <RainChart series={data.series.map((s) => ({ date: s.date, value: s.rainfall_mm ?? null }))} />
+                      : <p className="ui-muted">Belum ada data curah hujan pada rentang ini.</p>}
+                  </section>
+                  <section className="ui-card">
+                    <h2>Sisa stok koagulan (kg)</h2>
+                    <StockBars items={COAGULANT_TYPES.map((c) => ({ type: c, ...data.coagulant[c] }))} />
+                  </section>
+                  <div className="ui-dash-grid__wide"><CalendarOverview /></div>
                 </div>
               </>
             )}

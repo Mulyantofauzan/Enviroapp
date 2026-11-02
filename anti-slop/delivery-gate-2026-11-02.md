@@ -73,3 +73,13 @@ Layar lebar (≥ 760 px): kartu modul dan angka dashboard 4 kolom, grafik dan st
 Bukti (Chrome nyata, tinggi dokumen di 360 px, layar yang panjang): 10.183 px menjadi 9.203 px (-10%); Input Air 1.427 menjadi 1.272 (-11%); Atur jadwal berformulir 1.614 menjadi 1.470 (-9%); Pengguna 1.421 menjadi 1.252 (-12%). Tanpa overflow horizontal di 360, 390, 768, dan 1200 px. Tidak ada kontrol berinteraksi di bawah 44 px (saklar tetap 52x30 dengan area sentuh 44 px lewat `::after`).
 
 Catatan jujur: skrip ukur sempat memotret halaman login pada putaran panjang (sesi tidak terbawa); kini skrip mendeteksi dan melaporkan hal itu, dan tiap layar yang dipakai sebagai bukti sudah dipastikan bukan halaman login. Penyebab kemacetan itu ada di skrip ukur, tidak terlihat di aplikasi.
+
+---
+
+# Tambahan: perbaikan permintaan pemilik produk (dropdown, form air, dashboard Admin, kalender bulan)
+
+- **Dropdown Settling Pond:** ikon pin dan panah berada di luar elemen `<select>`, jadi ketukan di sana tidak membuka daftar (diukur di Chrome nyata: elemen penerima ketukan adalah `circle`, `svg`, dan `span`, bukan `select`). Sekarang seluruh kotak adalah `select` (ikon meneruskan ketukan); pengukuran ulang: `select` di semua titik. Kolom tanggal memakai pola yang sama. Di layar sentuh, huruf kolom 16 px agar iOS tidak memperbesar halaman saat fokus.
+- **Form Air Permukaan:** tombol pemilih Inlet/Outlet dihapus; kedua blok ("Titik Inlet", "Titik Outlet") memang sudah tampil bersamaan karena atribut `hidden` kalah oleh CSS. Judul blok dipertahankan agar kolom pH dan TSS tidak ambigu.
+- **Dashboard Admin:** beranda Admin kini dashboard yang sama dengan Manager, dengan tambahan grafik TSS inlet/outlet (garis baku mutu per pond), grafik curah hujan (batang per hari), dan kartu "Kalender bulan ini". Dashboard Manager ikut mendapat grafik dan kartu itu. API dashboard mengirim TSS dan curah hujan per hari (tanpa query tambahan, maksimal 6 per permintaan).
+- **Kalender:** strip minggu diganti kisi sebulan penuh (Senin pertama), panah bulan, tanda merah/biru per hari; "hari ini" dan hari terpilih ditandai. Data dimuat untuk satu bulan penuh (<= 31 hari).
+- Bukti: shared 58, api 189, web 204 tes lulus; Chrome nyata 360 dan 1200 px tanpa overflow dan tanpa target < 44 px.

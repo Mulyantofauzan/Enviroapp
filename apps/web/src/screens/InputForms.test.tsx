@@ -54,11 +54,20 @@ describe('Input Cuaca', () => {
 });
 
 describe('Input Air Permukaan', () => {
+  it('shows inlet and outlet together, with no Inlet/Outlet switcher', async () => {
+    mockApi();
+    renderApp(`/input/air?date=${D}&sp=p1`);
+    expect(await screen.findByRole('heading', { name: /Titik Inlet/ })).toBeVisible();
+    expect(screen.getByRole('heading', { name: /Titik Outlet/ })).toBeVisible();
+    expect(screen.queryByRole('tab', { name: 'Inlet' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Outlet' })).toBeNull();
+    expect(screen.getByLabelText('pH inlet')).toBeVisible();
+    expect(screen.getByLabelText('pH outlet')).toBeVisible();
+  });
   it('one save sends inlet and outlet together', async () => {
     const calls = mockApi();
     renderApp(`/input/air?date=${D}&sp=p1`);
     await userEvent.type(await screen.findByLabelText('pH inlet'), '6,8');
-    await userEvent.click(screen.getByRole('tab', { name: 'Outlet' }));
     await userEvent.type(screen.getByLabelText('pH outlet'), '7,1');
     await userEvent.click(screen.getByRole('button', { name: 'Simpan data air' }));
     await waitFor(() => expect(puts(calls)).toHaveLength(1));
@@ -69,15 +78,13 @@ describe('Input Air Permukaan', () => {
   it('daily flow is calculated from m3/s', async () => {
     mockApi();
     renderApp(`/input/air?date=${D}&sp=p1`);
-    await userEvent.click(await screen.findByRole('tab', { name: 'Outlet' }));
-    await userEvent.type(screen.getByLabelText('Debit outlet per detik'), '0,0148');
+    await userEvent.type(await screen.findByLabelText('Debit outlet per detik'), '0,0148');
     expect(screen.getByLabelText('Debit harian outlet')).toHaveValue('1.278,7');
   });
   it('outlet pH below the pond limit is highlighted but still saves', async () => {
     const calls = mockApi();
     renderApp(`/input/air?date=${D}&sp=p1`);
-    await userEvent.click(await screen.findByRole('tab', { name: 'Outlet' }));
-    await userEvent.type(screen.getByLabelText('pH outlet'), '5,8');
+    await userEvent.type(await screen.findByLabelText('pH outlet'), '5,8');
     expect(screen.getByText('Di luar baku mutu 6-9')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Simpan data air' }));
     await waitFor(() => expect(puts(calls)).toHaveLength(1));
@@ -89,15 +96,13 @@ describe('Input Air Permukaan', () => {
     await userEvent.type(await screen.findByLabelText('pH inlet'), '3');
     expect(screen.queryByText(/Di luar baku mutu/)).toBeNull();
   });
-  it('text in the hidden tab blocks the save and brings that tab back', async () => {
+  it('text in either section blocks the save and says so', async () => {
     const calls = mockApi();
     renderApp(`/input/air?date=${D}&sp=p1`);
     await userEvent.type(await screen.findByLabelText('pH inlet'), 'abc');
-    await userEvent.click(screen.getByRole('tab', { name: 'Outlet' }));
     await userEvent.click(screen.getByRole('button', { name: 'Simpan data air' }));
     expect(await screen.findByText('Perbaiki angka yang ditandai dulu.')).toBeInTheDocument();
     expect(puts(calls)).toHaveLength(0);
-    expect(screen.getByRole('tab', { name: 'Inlet' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('Masukkan angka')).toBeVisible();
   });
   it('shows the abnormal-values banner', async () => {

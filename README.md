@@ -23,10 +23,10 @@ Migrations: `npx wrangler d1 migrations apply evo --local` (0001 schema, 0002 re
 ## Peran dan layar
 | Peran | Tab | Catatan |
 |---|---|---|
-| Operator | Beranda, Input, Akun | Isi cuaca, air, koagulan; Riwayat lewat Akun |
-| Manager | Beranda (Dashboard), Akun | Baca saja |
-| Auditor | Riwayat, Akun | Baca saja |
-| Admin | Beranda, Input, Akun | Akses penuh; Pengguna dan Master lewat Akun |
+| Operator | Beranda, Input, Kalender, Akun | Isi cuaca, air, koagulan; Riwayat lewat Akun |
+| Manager | Beranda (Dashboard), Kalender, Akun | Grafik pH, TSS, curah hujan, stok koagulan, ringkasan kalender; baca saja |
+| Auditor | Kalender, Riwayat, Akun | Baca saja |
+| Admin | Beranda (Dashboard), Input, Kalender, Akun | Akses penuh; dashboard sama dengan Manager; Pengguna, Master, Atur jadwal lewat Akun |
 
 Setelah masuk sebagai Admin: tambah settling pond di Master (isi kode, koordinat, baku mutu pH dan TSS), lalu tambah pengguna di Kelola Pengguna. Desain acuan ada di `design/`.
 

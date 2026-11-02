@@ -88,3 +88,78 @@ describe('BerandaManager when the pond list fails to load', () => {
     expect(await screen.findByRole('combobox', { name: /Settling Pond/ })).toBeInTheDocument();
   });
 });
+
+describe('Dashboard: TSS, rainfall and calendar overview', () => {
+  const DATES = ['2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02'];
+  const days = (fill = true) => DATES.map((date, i) => ({
+    date,
+    ph_inlet: fill ? 6.2 : null, ph_outlet: fill ? 7.1 : null,
+    tss_inlet: fill ? 120 : null, tss_outlet: fill ? (i === 6 ? 55 : 30) : null, rainfall_mm: fill ? (i === 6 ? 12.5 : 2) : null,
+  }));
+  const payload = (fill = true) => ({ ...base, series: days(fill), thresholds: { ph_outlet: { min: 6, max: 9 }, tss_outlet: { min: null, max: 40 } } });
+  const handler = (fill = true, extra?: (u: string) => Response | undefined) => (u: string) =>
+    extra?.(u) ?? (u.startsWith('/api/dashboard') ? json(payload(fill)) : undefined);
+
+  it('shows pH, TSS, rainfall and stock together', async () => {
+    mockApi({ role: 'Manager', handler: handler() });
+    renderApp('/');
+    expect(await screen.findByRole('img', { name: /Grafik pH inlet dan outlet/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Grafik TSS inlet dan outlet/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Grafik curah hujan/ })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Kapur' })).toBeInTheDocument();
+  });
+  it('TSS above the pond limit is marked on the chart', async () => {
+    mockApi({ role: 'Manager', handler: handler() });
+    const { container } = renderApp('/');
+    await screen.findByRole('img', { name: /Grafik TSS inlet dan outlet/ });
+    expect(container.querySelectorAll('circle[data-abnormal]').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Baku mutu (maks. 40)')).toBeInTheDocument();
+  });
+  it('each chart has its own honest empty message', async () => {
+    mockApi({ role: 'Manager', handler: handler(false) });
+    renderApp('/');
+    expect(await screen.findByText('Belum ada data pH pada rentang ini.')).toBeInTheDocument();
+    expect(screen.getByText('Belum ada data TSS pada rentang ini.')).toBeInTheDocument();
+    expect(screen.getByText('Belum ada data curah hujan pada rentang ini.')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Grafik/ })).toBeNull();
+  });
+  it('the Admin home is the same dashboard, titled for the Admin', async () => {
+    mockApi({ role: 'Admin', handler: handler() });
+    renderApp('/');
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByText(/Admin System/)).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /Grafik TSS inlet dan outlet/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Grafik curah hujan/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Air Permukaan/ })).toBeNull();
+  });
+  it('the Operator home is still the shortcuts, not the dashboard', async () => {
+    mockApi({ role: 'Operator', handler: handler() });
+    renderApp('/');
+    expect(await screen.findByRole('heading', { name: /Halo, Rudi/ })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Grafik/ })).toBeNull();
+  });
+  it('shows this month\'s calendar with the overdue count and a way into the calendar', async () => {
+    const events = [{ schedule_id: 's1', title: 'Cek', description: null, frequency: 'Daily', sp_id: null, assigned_to_name: null, due_date: '2026-11-01', status: 'overdue', late: false, evidence_count: 0, completed_at: null, completed_by_name: null },
+      { schedule_id: 's1', title: 'Cek', description: null, frequency: 'Daily', sp_id: null, assigned_to_name: null, due_date: '2026-11-10', status: 'upcoming', late: false, evidence_count: 0, completed_at: null, completed_by_name: null }];
+    mockApi({
+      role: 'Admin',
+      handler: handler(true, (u) => (u.startsWith('/api/events/summary') ? json({ today: '2026-11-02', overdue: 2, due_today: 1 })
+        : u.startsWith('/api/events?') ? json({ today: '2026-11-02', events }) : undefined)),
+    });
+    renderApp('/');
+    const card = await screen.findByRole('region', { name: 'Kalender bulan ini' });
+    expect(within(card).getByText('November 2026')).toBeInTheDocument();
+    expect(await within(card).findByText(/2026-11-01|ada overdue/)).toBeInTheDocument();
+    expect(within(card).getByText('2 event overdue')).toBeInTheDocument();
+    expect(within(card).getByText('1 event hari ini')).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: 'Buka Kalender' })).toHaveAttribute('href', '/kalender');
+    expect(within(card).getByTestId('day-2026-11-10')).toHaveAttribute('data-mark', 'scheduled');
+    expect(within(card).queryAllByRole('button')).toHaveLength(0);
+  });
+  it('a failing calendar summary hides the card without breaking the dashboard', async () => {
+    mockApi({ role: 'Manager', handler: handler(true, (u) => (u.startsWith('/api/events') ? json({ error: 'x' }, 500) : undefined)) });
+    renderApp('/');
+    expect(await screen.findByRole('img', { name: /Grafik pH inlet dan outlet/ })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Kalender bulan ini' })).toBeNull();
+  });
+});

@@ -41,7 +41,7 @@ export function App() {
         <main className="ui-main">
           <div className="ui-conn-slot"><ConnectionChip /></div>
           <Routes>
-            <Route path="/" element={role === 'Auditor' ? <Navigate to="/kalender" replace /> : role === 'Manager' ? <BerandaManager /> : <BerandaOperator />} />
+            <Route path="/" element={role === 'Auditor' ? <Navigate to="/kalender" replace /> : role === 'Manager' || role === 'Admin' ? <BerandaManager /> : <BerandaOperator />} />
             <Route path="/input" element={<RequireRole role={role} allow={writers}><InputHub /></RequireRole>} />
             <Route path="/input/cuaca" element={<RequireRole role={role} allow={writers}><InputCuaca /></RequireRole>} />
             <Route path="/input/air" element={<RequireRole role={role} allow={writers}><InputAir /></RequireRole>} />

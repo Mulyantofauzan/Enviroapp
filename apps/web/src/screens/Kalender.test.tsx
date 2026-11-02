@@ -5,7 +5,7 @@ import { json, mockApi, renderApp } from '../test-utils';
 
 afterEach(() => vi.unstubAllGlobals());
 
-const T = '2026-11-04'; // a Wednesday; its week is Mon 2 to Sun 8 Nov
+const T = '2026-11-04'; // a Wednesday in November 2026
 const ev = (over: Record<string, unknown> = {}) => ({
   schedule_id: 's1', title: 'Cek Saluran Inlet', description: null, frequency: 'Daily', sp_id: null, assigned_to_name: null,
   due_date: T, status: 'today', late: false, evidence_count: 0, completed_at: null, completed_by_name: null, ...over,
@@ -27,14 +27,16 @@ function api({ week = [], overdue = [], total, urls = [], role = 'Operator', fai
 }
 
 describe('Kalender', () => {
-  it('shows the week of today with a mark on days that have events', async () => {
-    api({ week: [ev({ due_date: '2026-11-02', status: 'overdue' }), ev({ due_date: '2026-11-04' }), ev({ due_date: '2026-11-06', status: 'upcoming' })], overdue: [ev({ due_date: '2026-11-02', status: 'overdue' })] });
+  it('shows the whole month of today with a mark on days that have events', async () => {
+    api({ week: [ev({ due_date: '2026-11-02', status: 'overdue' }), ev({ due_date: '2026-11-04' }), ev({ due_date: '2026-11-20', status: 'upcoming' })], overdue: [ev({ due_date: '2026-11-02', status: 'overdue' })] });
     renderApp('/kalender');
-    expect(await screen.findByRole('button', { name: /^Sen 2, ada overdue/ })).toHaveAttribute('data-mark', 'overdue');
-    expect(screen.getByRole('button', { name: /^Rab 4/ })).toHaveAttribute('data-mark', 'scheduled');
-    expect(screen.getByRole('button', { name: /^Rab 4/ })).toHaveAttribute('aria-current', 'date');
-    expect(screen.getByRole('button', { name: /^Jum 6/ })).toHaveAttribute('data-mark', 'scheduled');
-    expect(screen.getByRole('button', { name: /^Sel 3$/ })).not.toHaveAttribute('data-mark');
+    expect(await screen.findByText('November 2026')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^\d+ November/ })).toHaveLength(30);
+    expect(await screen.findByRole('button', { name: /^2 November, ada overdue/ })).toHaveAttribute('data-mark', 'overdue');
+    expect(screen.getByRole('button', { name: /^4 November/ })).toHaveAttribute('aria-current', 'date');
+    expect(screen.getByRole('button', { name: /^4 November/ })).toHaveAttribute('data-mark', 'scheduled');
+    expect(screen.getByRole('button', { name: /^20 November/ })).toHaveAttribute('data-mark', 'scheduled');
+    expect(screen.getByRole('button', { name: '3 November' })).not.toHaveAttribute('data-mark');
   });
   it('overdue cards come first, with a way to upload for operators', async () => {
     api({ overdue: [ev({ due_date: '2026-11-03', status: 'overdue' })], week: [ev({ due_date: T, title: 'Kalibrasi pH Meter', frequency: 'Weekly' })] });
@@ -67,25 +69,41 @@ describe('Kalender', () => {
     await screen.findByRole('tab', { name: 'Harian' });
     await userEvent.click(screen.getByRole('tab', { name: 'Harian' }));
     await screen.findByRole('tab', { name: 'Harian', selected: true });
-    expect(urls.some((u) => u.startsWith('/api/events?') && u.includes('frequency=Daily'))).toBe(true);
+    expect(urls.some((u) => u.startsWith('/api/events?') && u.includes('frequency=Daily') && u.includes('from=2026-11-01') && u.includes('to=2026-11-30'))).toBe(true);
     expect(urls.some((u) => u.startsWith('/api/events/overdue') && u.includes('frequency=Daily'))).toBe(true);
   });
   it('picking another day shows that day\'s events', async () => {
-    api({ week: [ev({ due_date: T }), ev({ schedule_id: 's2', title: 'Pembersihan Pond', due_date: '2026-11-06', status: 'upcoming', frequency: 'Quarterly' })] });
+    api({ week: [ev({ due_date: T }), ev({ schedule_id: 's2', title: 'Pembersihan Pond', due_date: '2026-11-20', status: 'upcoming', frequency: 'Quarterly' })] });
     renderApp('/kalender');
     await screen.findByText('Cek Saluran Inlet');
     expect(screen.queryByText('Pembersihan Pond')).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: /^Jum 6/ }));
+    await userEvent.click(screen.getByRole('button', { name: /^20 November/ }));
     expect(await screen.findByText('Pembersihan Pond')).toBeInTheDocument();
     expect(screen.queryByText('Cek Saluran Inlet')).toBeNull();
   });
-  it('next week asks for the following Monday to Sunday', async () => {
+  it('next month asks for the whole of December and shows its days', async () => {
     const urls: string[] = [];
     api({ urls });
     renderApp('/kalender');
-    await userEvent.click(await screen.findByRole('button', { name: 'Minggu berikutnya' }));
-    await screen.findByText('9 Nov s/d 15 Nov 2026');
-    expect(urls.some((u) => u.includes('from=2026-11-09') && u.includes('to=2026-11-15'))).toBe(true);
+    await userEvent.click(await screen.findByRole('button', { name: 'Bulan berikutnya' }));
+    expect(await screen.findByText('Desember 2026')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^\d+ Desember/ })).toHaveLength(31);
+    expect(urls.some((u) => u.includes('from=2026-12-01') && u.includes('to=2026-12-31'))).toBe(true);
+  });
+  it('previous month goes back, and a month that is not today\'s starts on its first day', async () => {
+    api();
+    renderApp('/kalender');
+    await userEvent.click(await screen.findByRole('button', { name: 'Bulan sebelumnya' }));
+    expect(await screen.findByText('Oktober 2026')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^1 Oktober/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('heading', { name: 'Kamis, 1 Okt 2026' })).toBeInTheDocument();
+  });
+  it('coming back to the current month selects today again', async () => {
+    api();
+    renderApp('/kalender');
+    await userEvent.click(await screen.findByRole('button', { name: 'Bulan berikutnya' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Bulan sebelumnya' }));
+    expect(await screen.findByRole('button', { name: /^4 November/ })).toHaveAttribute('aria-pressed', 'true');
   });
   it('says so when the day has nothing', async () => {
     api();

@@ -13,3 +13,16 @@ export const dayMonth = (iso: string) =>
   new Intl.DateTimeFormat('id-ID', { timeZone: 'UTC', day: 'numeric', month: 'short' }).format(new Date(`${iso}T00:00:00Z`)).replace('.', '');
 
 export const dayOfMonth = (iso: string) => Number(iso.slice(8, 10));
+
+/** "2026-11" -> first and last day of that month. */
+export function monthRange(month: string): [string, string] {
+  const first = `${month}-01`;
+  const [y, m] = month.split('-').map(Number);
+  return [first, addDays(`${y + Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, '0')}-01`, -1)];
+}
+
+export function addMonths(month: string, n: number): string {
+  const [y, m] = month.split('-').map(Number);
+  const t = y * 12 + (m - 1) + n;
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`;
+}

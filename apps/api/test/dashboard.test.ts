@@ -36,6 +36,28 @@ describe('GET /dashboard', () => {
     expect(d.series[0]).toMatchObject({ ph_inlet: null, ph_outlet: null });
     expect(d.series[6]).toMatchObject({ ph_inlet: 6.1, ph_outlet: 5.6 });
   });
+  it('each day also carries TSS inlet/outlet and the site-wide rainfall, null when missing', async () => {
+    const { cookie } = await login('Operator');
+    const sp = await addPond();
+    await call(`/water/${D}/${sp}`, { method: 'PUT', cookie, body: json({ ph_outlet: 7, tss_inlet: 120, tss_outlet: 38 }) });
+    await call('/weather/2026-10-31', { method: 'PUT', cookie, body: json({ rainfall_mm: 4.5, rain_hours: 1 }) });
+    await call(`/weather/${D}`, { method: 'PUT', cookie, body: json({ rainfall_mm: 12.5, rain_hours: 3.5 }) });
+    const d = await (await call(`/dashboard?sp=${sp}&days=7&date=${D}`, { cookie })).json() as any;
+    const by = Object.fromEntries(d.series.map((x: any) => [x.date, x]));
+    expect(by[D]).toMatchObject({ tss_inlet: 120, tss_outlet: 38, rainfall_mm: 12.5 });
+    expect(by['2026-10-31']).toMatchObject({ tss_inlet: null, tss_outlet: null, rainfall_mm: 4.5 });
+    expect(by['2026-10-29']).toMatchObject({ tss_inlet: null, tss_outlet: null, rainfall_mm: null });
+  });
+  it('rainfall does not depend on which pond is asked for', async () => {
+    const { cookie } = await login('Operator');
+    const a = await addPond('A');
+    const b = await addPond('B');
+    await call(`/weather/${D}`, { method: 'PUT', cookie, body: json({ rainfall_mm: 9, rain_hours: 2 }) });
+    for (const sp of [a, b]) {
+      const d = await (await call(`/dashboard?sp=${sp}&days=7&date=${D}`, { cookie })).json() as any;
+      expect(d.series.at(-1).rainfall_mm).toBe(9);
+    }
+  });
   it('today carries derived m3/d and weather', async () => {
     const { cookie } = await login('Operator');
     const sp = await addPond();

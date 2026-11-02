@@ -21,9 +21,11 @@ dashboardRoutes.get('/', async (c) => {
 
   const start = addDays(date, -(days - 1));
   const water = (await db.prepare(
-    'SELECT date,ph_inlet,ph_outlet,tss_outlet,debit_outlet_m3s FROM surface_water WHERE sp_id = ? AND date BETWEEN ? AND ?',
+    'SELECT date,ph_inlet,ph_outlet,tss_inlet,tss_outlet,debit_outlet_m3s FROM surface_water WHERE sp_id = ? AND date BETWEEN ? AND ?',
   ).bind(sp, start, date).all<any>()).results;
-  const weather = await db.prepare('SELECT rainfall_mm,rain_hours FROM weather WHERE date = ?').bind(date).first<any>();
+  const weatherRows = (await db.prepare('SELECT date,rainfall_mm,rain_hours FROM weather WHERE date BETWEEN ? AND ?').bind(start, date).all<any>()).results;
+  const weatherByDate = new Map(weatherRows.map((w) => [w.date, w]));
+  const weather = weatherByDate.get(date);
   const coag = (await db.prepare(
     'SELECT date,type,stock_remaining FROM coagulant WHERE sp_id = ? AND date <= ? ORDER BY type, date',
   ).bind(sp, date).all<any>()).results;
@@ -33,7 +35,10 @@ dashboardRoutes.get('/', async (c) => {
   const series = Array.from({ length: days }, (_, i) => {
     const d = addDays(start, i);
     const w = byDate.get(d);
-    return { date: d, ph_inlet: w?.ph_inlet ?? null, ph_outlet: w?.ph_outlet ?? null };
+    return {
+      date: d, ph_inlet: w?.ph_inlet ?? null, ph_outlet: w?.ph_outlet ?? null,
+      tss_inlet: w?.tss_inlet ?? null, tss_outlet: w?.tss_outlet ?? null, rainfall_mm: weatherByDate.get(d)?.rainfall_mm ?? null,
+    };
   });
 
   const todayWater = byDate.get(date);

@@ -33,6 +33,7 @@ export function mockApi(opts: { role?: Role; name?: string; ponds?: unknown[]; h
     const custom = opts.handler?.(url, init);
     if (custom) return custom;
     if (url.startsWith('/api/auth/me')) return new Response(JSON.stringify({ id: 'u1', name: opts.name ?? 'Rudi Hartono', role: opts.role ?? 'Operator' }));
+    if (url.startsWith('/api/events?')) return new Response(JSON.stringify({ today: '2026-11-02', events: [] }));
     if (url.startsWith('/api/events/summary')) return new Response(JSON.stringify({ today: '2026-11-02', overdue: 0, due_today: 0 }));
     if (url.startsWith('/api/ponds')) return new Response(JSON.stringify(opts.ponds ?? [POND, POND_B]));
     if (url.startsWith('/api/day')) return new Response(JSON.stringify(emptyDay));
