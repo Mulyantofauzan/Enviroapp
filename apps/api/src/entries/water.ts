@@ -18,7 +18,7 @@ waterRoutes.put('/:date/:sp', requireWrite, async (c) => {
   const v = readNumbers(c, await readBody(c),
     { ph_inlet: ph, ph_outlet: ph, tss_inlet: pos, tss_outlet: pos, debit_inlet_m3s: pos, debit_outlet_m3s: pos },
     { ph_inlet: 'pH inlet', ph_outlet: 'pH outlet', tss_inlet: 'TSS inlet', tss_outlet: 'TSS outlet',
-      debit_inlet_m3s: 'Flow inlet', debit_outlet_m3s: 'Flow outlet' });
+      debit_inlet_m3s: 'Debit inlet', debit_outlet_m3s: 'Debit outlet' });
   if (isFail(v)) return v.fail;
   await c.env.DB.prepare(
     `INSERT INTO surface_water (id,date,sp_id,ph_inlet,ph_outlet,tss_inlet,tss_outlet,debit_inlet_m3s,debit_outlet_m3s,logged_by)

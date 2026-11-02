@@ -20,7 +20,7 @@ dayRoutes.get('/', async (c) => {
   const sp = c.req.query('sp') ?? '';
   const bad = badDate(c, date);
   if (bad) return bad;
-  if (!sp) return c.json({ error: 'Pick a pond.' }, 400);
+  if (!sp) return c.json({ error: 'Pilih settling pond dulu.' }, 400);
   const db = c.env.DB;
   const weather = await db.prepare('SELECT date,rainfall_mm,rain_hours FROM weather WHERE date = ?').bind(date).first();
   const water = await db.prepare(

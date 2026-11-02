@@ -20,12 +20,12 @@ coagulantRoutes.put('/:date/:sp/:type', requireWrite, async (c) => {
   const type = c.req.param('type');
   const bad = badDate(c, date);
   if (bad) return bad;
-  if (!(COAGULANT_TYPES as string[]).includes(type)) return c.json({ error: 'Pick Tawas Serbuk, Tawas Batu or Kapur.' }, 400);
+  if (!(COAGULANT_TYPES as string[]).includes(type)) return c.json({ error: 'Pilih Tawas Serbuk, Tawas Batu, atau Kapur.' }, 400);
   const pond = await activePond(c, sp);
   if (pond) return pond;
   const v = readNumbers(c, await readBody(c),
     { stock_in: { min: 0 }, stock_out: { min: 0 }, stock_remaining: {} },
-    { stock_in: 'Stock in', stock_out: 'Stock out', stock_remaining: 'Stock remaining' });
+    { stock_in: 'Stok masuk', stock_out: 'Stok keluar', stock_remaining: 'Sisa stok' });
   if (isFail(v)) return v.fail;
   const prev = await previousRemaining(c.env.DB, sp, type, date);
   const remaining = v.stock_remaining ?? defaultRemaining(prev, v.stock_in ?? 0, v.stock_out ?? 0);

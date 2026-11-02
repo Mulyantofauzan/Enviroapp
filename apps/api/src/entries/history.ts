@@ -14,9 +14,9 @@ historyRoutes.get('/', async (c) => {
   const to = c.req.query('to') ?? '';
   const sp = c.req.query('sp') || null;
   if (!isValidDate(from) || !isValidDate(to) || from > to)
-    return c.json({ error: 'Pick a valid date range.' }, 400);
+    return c.json({ error: 'Pilih rentang tanggal yang benar.' }, 400);
   if ((Date.parse(to) - Date.parse(from)) / 86_400_000 > MAX_DAYS)
-    return c.json({ error: 'Pick a range of one year or less.' }, 400);
+    return c.json({ error: 'Pilih rentang satu tahun atau kurang.' }, 400);
   const db = c.env.DB;
   const spFilter = sp ? 'AND sp_id = ?' : '';
   const args = (extra: unknown[] = []) => (sp ? [...extra, sp] : extra);

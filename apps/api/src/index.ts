@@ -24,7 +24,7 @@ app.route('/dashboard', dashboardRoutes);
 
 app.onError((err, c) => {
   console.error(err);
-  return c.json({ error: 'Something went wrong. Try again.' }, 500);
+  return c.json({ error: 'Terjadi kesalahan. Coba lagi.' }, 500);
 });
 
 export default app;

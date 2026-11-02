@@ -12,7 +12,7 @@ weatherRoutes.put('/:date', requireWrite, async (c) => {
   if (bad) return bad;
   const v = readNumbers(c, await readBody(c),
     { rainfall_mm: { min: 0 }, rain_hours: { min: 0, max: 24 } },
-    { rainfall_mm: 'Rainfall', rain_hours: 'Rain hours' });
+    { rainfall_mm: 'Curah hujan', rain_hours: 'Jam hujan' });
   if (isFail(v)) return v.fail;
   await c.env.DB.prepare(
     `INSERT INTO weather (id,date,rainfall_mm,rain_hours,logged_by) VALUES (?,?,?,?,?)
