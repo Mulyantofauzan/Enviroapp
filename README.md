@@ -58,5 +58,9 @@ File eviden disimpan di R2 (binding `EVIDENCE`). Saat pengembangan, `wrangler de
 ## Security note
 The login route has no built-in attempt limit. Before field use, add a Cloudflare rate-limiting rule for `POST /api/auth/login` in the dashboard.
 
-## Not in this version
-Offline data queue. Offline now means the app shell opens without signal; saving needs a connection.
+## Mode luring
+Tanpa sinyal, Operator dan Admin tetap bisa membuka Input Cuaca, Air, Koagulan dan Eksekusi event (yang sudah pernah dibuka saat online), menyimpan, memotret eviden, dan menyelesaikan event. Semuanya masuk antrean di HP (IndexedDB) dan terunggah otomatis saat sinyal kembali, saat aplikasi dibuka, atau tiap 30 detik. Chip di atas layar menampilkan "Tidak ada koneksi - N menunggu" atau "Mengunggah N…"; daftar antrean (coba lagi, buang) terbuka dari chip.
+- Konflik: yang terakhir dicatat menang. Tiap simpan membawa jam HP (`recorded_at`); server tidak menimpa isian yang lebih baru. Jam HP yang salah jauh di belakang berarti datanya kalah dari edit lain.
+- Eviden membawa `client_id` sehingga kirim ulang tidak menggandakan; "Selesaikan event" menunggu semua fotonya terunggah. Foto ke event yang sudah selesai dibuang; data yang ditolak server ditandai gagal dengan pesannya.
+- Antrean milik pengguna yang membuatnya: keluar akun tidak menghapusnya, dan hanya pemiliknya yang mengunggah. Keluar saat ada antrean meminta konfirmasi.
+- Batas: unggah hanya berjalan saat aplikasi terbuka (iOS tidak punya Background Sync). Laporan, Eviden, dan Dashboard tetap butuh koneksi. Migrasi `0005_offline.sql` perlu dijalankan (`wrangler d1 migrations apply evo`).

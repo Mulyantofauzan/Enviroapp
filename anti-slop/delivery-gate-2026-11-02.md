@@ -131,3 +131,18 @@ Bukti (Chrome nyata, Manager, data contoh satu tahun, pond SP 11 LGG dan SP-02; 
 - Tes: shared 58, API 234, web 465 lulus; `tsc` bersih; `jspdf` tetap potongan terpisah.
 
 Catatan: pada grafik 1W, label rainfall dan durasi yang nilainya berdekatan saling menimpa (sama seperti sampel). Garis baku mutu TSS bisa melewati label batang kecil. Tidak diuji di HP sungguhan.
+
+---
+
+# Tambahan: Antrean luring dan sinkronisasi (Bagian 5)
+
+Bukti (Chrome nyata, server uji dimatikan sungguhan lalu dinyalakan lagi, Operator, layar 390 px, service worker aktif):
+- Setelah satu kali dibuka online, Input Cuaca, Air, Koagulan dan Eksekusi event terbuka tanpa server (cache baca `evo-api`). Simpan menampilkan "Tersimpan di HP, menunggu sinyal"; foto dan "Selesaikan event" masuk antrean dengan lencana "Menunggu unggah".
+- Muat ulang saat offline: antrean tetap ada ("Mengunggah 5…"). Keluar akun dengan antrean meminta konfirmasi ("Ada 5 data belum terunggah") dan Batal tetap masuk.
+- Server kembali: cuaca 12,5 mm, koagulan 5 kg, dan event terunggah sendiri; event berstatus selesai dengan satu eviden (tanpa ganda); antrean dan chip kosong. Edit lebih baru dari perangkat lain (pH 6,1, 3 menit di depan jam HP) tidak tertimpa entri antrean pH 7,7. Item milik pengguna lain di HP yang sama tidak disentuh.
+- Foto ditolak server (berkas bukan gambar): ditandai "gagal" dengan pesan server, tidak dicoba ulang, "Selesaikan event" tetap menunggu; item lain tidak terganggu.
+- Tes: shared 58, API 256, web 530+ lulus.
+
+Temuan yang diperbaiki selama verifikasi: setelah sinyal kembali, unggah tertahan karena jeda coba ulang terus bertambah saat offline dan acara `online` tidak menghapusnya (kini acara `online` dan tab kembali terlihat memaksa satu putaran, jeda tanpa sinyal maksimal 30 detik; dua tes baru). Dua kegagalan awal berasal dari skrip uji saya sendiri (mematikan proses Chrome saat mematikan server; berkas uji bukan gambar), bukan dari aplikasi.
+
+Belum diuji: HP sungguhan (butuh HTTPS setelah deploy), unggah saat aplikasi tertutup (tidak didukung), foto kamera offline di peramban nyata (jalur antrean sama dengan galeri, diuji unit). Jadwal uji "Uji luring ..." dan pond "SP 11" tertinggal di database lokal pengembangan.

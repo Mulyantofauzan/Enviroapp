@@ -305,7 +305,7 @@ describe('EventDetail offline', () => {
     await waitFor(() => expect(done).toBeEnabled());
     await userEvent.click(done);
     expect(await screen.findByText('Penyelesaian tersimpan di HP, menunggu sinyal')).toBeInTheDocument();
-    expect(screen.getByText(/Penyelesaian menunggu unggah/)).toBeInTheDocument();
+    expect(await screen.findByText(/Penyelesaian menunggu unggah/)).toBeInTheDocument();
   });
 
   it('a camera photo taken offline closes the camera and is queued', async () => {
