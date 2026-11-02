@@ -66,7 +66,7 @@ Migrasi `0005`: kolom `client_ts TEXT` (ISO UTC, boleh NULL) pada `weather`, `su
 - `PUT /weather/:date`, `/water/:date/:sp`, `/coagulant/:date/:sp/:type` menerima `recorded_at` (ISO UTC) opsional. Tanpa `recorded_at` perilaku lama (selalu menimpa) dan `client_ts` diisi waktu server. Dengan `recorded_at`: nilai di masa depan lebih dari 5 menit dari jam server dibatasi ke jam server; bila `recorded_at` **lebih lama** dari `client_ts` tersimpan, tidak menimpa dan respons `200 { applied: false, reason: 'newer-exists' }`; selain itu menimpa dan respons seperti sekarang ditambah `applied: true`.
 - Tulis koagulan tetap menghitung ulang rantai sisa stok di server.
 - `POST /events/:scheduleId/:date/evidence` menerima `client_id` (uuid) pada form; bila sudah ada eviden dengan `client_id` itu, mengembalikan eviden yang ada (`200`) tanpa membuat baris atau berkas R2 kedua.
-- `POST /events/:scheduleId/:date/complete` sudah idempoten; dipastikan oleh tes (kirim dua kali = satu penyelesaian).
+- `POST /events/:scheduleId/:date/complete` tidak diubah. Panggilan kedua membalas 409 "Event ini sudah selesai."; mesin sinkron memperlakukan balasan itu sebagai berhasil (event memang sudah selesai), dan tes memastikan dua panggilan tetap menghasilkan satu penyelesaian.
 
 ## 9. Teknis
 
