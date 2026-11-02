@@ -26,6 +26,13 @@ async function readFormLimited(req: Request, max: number): Promise<FormData | 't
   return new Response(new Blob(chunks), { headers: { 'content-type': req.headers.get('content-type') ?? '' } }).formData().catch(() => null);
 }
 const LOCKED = 'Event sudah selesai. Eviden tidak bisa diubah.';
+const TAKEN = 'ID unggahan sudah dipakai.';
+const CLIENT_ID = /^[A-Za-z0-9-]{8,64}$/;
+
+type Prior = { id: string; filename: string; mime: string; size: number; source: string; gps_lat: number | null; gps_lng: number | null; gps_accuracy: number | null; taken_at: string | null; uploaded_by: string };
+const findByClientId = (db: D1Database, clientId: string) =>
+  db.prepare('SELECT id,filename,mime,size,source,gps_lat,gps_lng,gps_accuracy,taken_at,uploaded_by FROM evidences WHERE client_id = ?').bind(clientId).first<Prior>();
+const shapeOf = ({ uploaded_by: _u, ...rest }: Prior) => rest;
 const NOT_YET = 'Event ini belum waktunya.';
 
 type Sched = { id: string; frequency: any; start_date: string; ended_on: string | null };
@@ -51,6 +58,12 @@ evidenceRoutes.post('/events/:scheduleId/:date/evidence', requireAuth, requireEx
   if (declared > MAX_BYTES + FORM_OVERHEAD) return tooBig;
   const form = await readFormLimited(c.req.raw, MAX_BYTES + FORM_OVERHEAD);
   if (form === 'too_big') return tooBig;
+  const clientId = form?.get('client_id');
+  if (clientId !== null && clientId !== undefined && (typeof clientId !== 'string' || !CLIENT_ID.test(clientId))) return c.json({ error: 'ID unggahan tidak sah.' }, 400);
+  if (typeof clientId === 'string') {
+    const prior = await findByClientId(db, clientId);
+    if (prior) return prior.uploaded_by === c.get('user').id ? c.json(shapeOf(prior), 200) : c.json({ error: TAKEN }, 409);
+  }
   const file = form?.get('file');
   if (!file || typeof file === 'string') return c.json({ error: 'Pilih berkas untuk diunggah.' }, 400);
   if (file.size === 0) return c.json({ error: 'Berkas kosong.' }, 400);
@@ -67,11 +80,20 @@ evidenceRoutes.post('/events/:scheduleId/:date/evidence', requireAuth, requireEx
   const filename = safeFilename(file.name);
   await c.env.EVIDENCE.put(key, data, { httpMetadata: { contentType: mime } });
   // Written as one statement so an event completed a moment ago cannot receive a new file.
-  const res = await db.prepare(
-    `INSERT INTO evidences (id,schedule_id,due_date,r2_key,filename,mime,size,uploaded_by,uploaded_at,source,gps_lat,gps_lng,gps_accuracy,taken_at)
-     SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM event_completions WHERE schedule_id = ? AND due_date = ?)`,
-  ).bind(id, s.id, date, key, filename, mime, data.length, c.get('user').id, new Date().toISOString(),
-    meta.source, meta.gps_lat, meta.gps_lng, meta.gps_accuracy, meta.taken_at, s.id, date).run();
+  let res: D1Result;
+  try {
+    res = await db.prepare(
+      `INSERT INTO evidences (id,schedule_id,due_date,r2_key,filename,mime,size,uploaded_by,uploaded_at,source,gps_lat,gps_lng,gps_accuracy,taken_at,client_id)
+       SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM event_completions WHERE schedule_id = ? AND due_date = ?)`,
+    ).bind(id, s.id, date, key, filename, mime, data.length, c.get('user').id, new Date().toISOString(),
+      meta.source, meta.gps_lat, meta.gps_lng, meta.gps_accuracy, meta.taken_at, typeof clientId === 'string' ? clientId : null, s.id, date).run();
+  } catch (err) {
+    // Two uploads with one client_id at once: the unique index lets one in; answer with the winner.
+    await c.env.EVIDENCE.delete(key);
+    const winner = typeof clientId === 'string' ? await findByClientId(db, clientId) : null;
+    if (winner && winner.uploaded_by === c.get('user').id) return c.json(shapeOf(winner), 200);
+    throw err;
+  }
   if (res.meta.changes === 0) {
     await c.env.EVIDENCE.delete(key);
     return c.json({ error: LOCKED }, 409);
