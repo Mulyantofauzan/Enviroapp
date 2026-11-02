@@ -60,3 +60,26 @@ button, input, select { font: inherit; color: inherit; }
   .field input.is-alert.pulse { animation: pulse 700ms ease-out 1; }
   @keyframes pulse { from { box-shadow: 0 0 0 0 rgba(179, 38, 30, 0.45); } to { box-shadow: 0 0 0 14px rgba(179, 38, 30, 0); } }
 }
+
+h2 { font-size: 1.35rem; margin-top: 0.5rem; }
+h3 { font-size: 1rem; color: var(--peat-soft); font-weight: 500; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { border: 2px solid var(--moss); background: transparent; color: var(--moss-dark); border-radius: var(--radius-chip); padding: 10px 16px; min-height: 44px; font-weight: 600; cursor: pointer; }
+.chip.is-active { background: var(--moss); color: #fff; }
+
+.flowstrip { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; background: var(--pond); color: #fff; border-radius: 28px; padding: 18px 22px; }
+.flow-end { display: grid; text-align: center; font-variant-numeric: tabular-nums; }
+.flow-end strong { font-family: var(--font-head); font-size: 1.7rem; }
+.flow-end small { opacity: 0.8; }
+.flow-line { height: 3px; background: rgba(255, 255, 255, 0.6); border-radius: 2px; }
+.flowstrip .flow-end.is-alert { background: var(--alert); color: var(--alert-ink); border-radius: 16px; padding: 6px 12px; }
+.flowstrip .flow-line.is-alert { background: var(--alert); }
+
+.water-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 420px) { .water-grid { grid-template-columns: 1fr; } }
+.coag { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; background: var(--paper); border-radius: 22px; padding: 14px; }
+.coag legend { font-family: var(--font-head); font-weight: 700; padding: 0 6px; }
+.coag-grid { display: grid; gap: 8px; }
+
+.savebar { position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); display: flex; justify-content: center; padding: 0 16px 8px; z-index: 11; pointer-events: none; }
+.savebar .btn-primary { pointer-events: auto; width: 100%; max-width: 608px; box-shadow: 0 6px 18px rgba(30, 43, 37, 0.25); }
