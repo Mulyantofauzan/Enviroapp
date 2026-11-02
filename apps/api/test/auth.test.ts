@@ -25,7 +25,7 @@ describe('auth routes', () => {
     const u = await addUser('Operator');
     const res = await call('/auth/login', { method: 'POST', body: json({ email: u.email, password: 'nope' }) });
     expect(res.status).toBe(401);
-    expect((await res.json() as any).error).toBe('Wrong email or password.');
+    expect((await res.json() as any).error).toBe('Email atau kata sandi salah.');
   });
   it('unknown email returns the same 401', async () => {
     const res = await call('/auth/login', { method: 'POST', body: json({ email: 'ghost@x.id', password: 'x' }) });

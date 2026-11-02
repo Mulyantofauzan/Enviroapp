@@ -11,8 +11,8 @@ const isRole = (r: unknown): r is Role => typeof r === 'string' && (ROLES as str
 const MIN_PW = 8;
 
 userRoutes.get('/', async (c) => {
-  const { results } = await c.env.DB.prepare('SELECT id,name,email,role FROM users ORDER BY name').all();
-  return c.json(results);
+  const { results } = await c.env.DB.prepare('SELECT id,name,email,role,is_active FROM users ORDER BY name').all();
+  return c.json(results.map((u: any) => ({ ...u, is_active: !!u.is_active })));
 });
 
 userRoutes.post('/', async (c) => {
@@ -34,7 +34,7 @@ userRoutes.post('/', async (c) => {
 
 userRoutes.patch('/:id', async (c) => {
   const b = await c.req.json().catch(() => ({}));
-  const row = await c.env.DB.prepare('SELECT id,name,email,role FROM users WHERE id = ?').bind(c.req.param('id')).first<any>();
+  const row = await c.env.DB.prepare('SELECT id,name,email,role,is_active FROM users WHERE id = ?').bind(c.req.param('id')).first<any>();
   if (!row) return c.json({ error: 'User not found.' }, 404);
   const name = b.name === undefined ? row.name : typeof b.name === 'string' ? b.name.trim() : '';
   if (!name) return c.json({ error: 'Name is required.' }, 400);
@@ -45,6 +45,15 @@ userRoutes.patch('/:id', async (c) => {
     await c.env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(await hashPassword(b.password), row.id).run();
     await c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(row.id).run();
   }
-  await c.env.DB.prepare('UPDATE users SET name = ?, role = ? WHERE id = ?').bind(name, role, row.id).run();
-  return c.json({ id: row.id, name, email: row.email, role });
+  if (b.is_active !== undefined && typeof b.is_active !== 'boolean') return c.json({ error: 'Status aktif tidak valid.' }, 400);
+  const active = b.is_active === undefined ? !!row.is_active : b.is_active;
+  if (!active && c.get('user').id === row.id) return c.json({ error: 'Anda tidak bisa menonaktifkan akun sendiri.' }, 409);
+  const losesAdmin = row.role === 'Admin' && row.is_active && (role !== 'Admin' || !active);
+  if (losesAdmin) {
+    const n = await c.env.DB.prepare("SELECT COUNT(*) c FROM users WHERE role = 'Admin' AND is_active = 1").first<{ c: number }>();
+    if ((n?.c ?? 0) <= 1) return c.json({ error: 'Harus ada minimal satu admin aktif.' }, 409);
+  }
+  await c.env.DB.prepare('UPDATE users SET name = ?, role = ?, is_active = ? WHERE id = ?').bind(name, role, active ? 1 : 0, row.id).run();
+  if (!active) await c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(row.id).run();
+  return c.json({ id: row.id, name, email: row.email, role, is_active: active });
 });

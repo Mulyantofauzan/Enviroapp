@@ -15,10 +15,11 @@ authRoutes.post('/login', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   const password = typeof body.password === 'string' ? body.password : '';
-  const row = await c.env.DB.prepare('SELECT id, name, role, password_hash FROM users WHERE lower(email) = ?')
-    .bind(email).first<{ id: string; name: string; role: string; password_hash: string }>();
+  const row = await c.env.DB.prepare('SELECT id, name, role, password_hash, is_active FROM users WHERE lower(email) = ?')
+    .bind(email).first<{ id: string; name: string; role: string; password_hash: string; is_active: number }>();
   const ok = await verifyPassword(password, row?.password_hash ?? (await getDummyHash()));
-  if (!row || !ok) return c.json({ error: 'Wrong email or password.' }, 401);
+  if (!row || !ok) return c.json({ error: 'Email atau kata sandi salah.' }, 401);
+  if (!row.is_active) return c.json({ error: 'Akun nonaktif. Hubungi admin.' }, 401);
   const sid = await createSession(c.env.DB, row.id);
   const secure = new URL(c.req.url).protocol === 'https:';
   setCookie(c, COOKIE, sid, { httpOnly: true, sameSite: 'Lax', path: '/', secure, maxAge: SESSION_TTL_SECONDS });

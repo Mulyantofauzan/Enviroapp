@@ -142,3 +142,64 @@ describe('users', () => {
     expect((await call('/users', { cookie })).status).toBe(403);
   });
 });
+
+describe('user active status', () => {
+  const body = { name: 'Budi', email: 'budi@x.id', password: 'secret-123', role: 'Operator' };
+  const make = async (cookie: string, over: object = {}) =>
+    (await (await call('/users', { method: 'POST', cookie, body: json({ ...body, ...over }) })).json()) as any;
+
+  it('list includes is_active', async () => {
+    const { cookie } = await login('Admin');
+    await make(cookie);
+    const list = await (await call('/users', { cookie })).json() as any[];
+    expect(list.every((u) => typeof u.is_active === 'boolean')).toBe(true);
+  });
+  it('deactivated user cannot sign in, with a clear message', async () => {
+    const { cookie } = await login('Admin');
+    const u = await make(cookie);
+    await call(`/users/${u.id}`, { method: 'PATCH', cookie, body: json({ is_active: false }) });
+    const res = await call('/auth/login', { method: 'POST', body: json({ email: body.email, password: body.password }) });
+    expect(res.status).toBe(401);
+    expect((await res.json() as any).error).toBe('Akun nonaktif. Hubungi admin.');
+  });
+  it('deactivating a signed-in user ends their session at once', async () => {
+    const admin = await login('Admin');
+    const u = await make(admin.cookie);
+    const res = await call('/auth/login', { method: 'POST', body: json({ email: body.email, password: body.password }) });
+    const cookie = res.headers.get('set-cookie')!.split(';')[0];
+    expect((await call('/auth/me', { cookie })).status).toBe(200);
+    await call(`/users/${u.id}`, { method: 'PATCH', cookie: admin.cookie, body: json({ is_active: false }) });
+    expect((await call('/auth/me', { cookie })).status).toBe(401);
+  });
+  it('reactivating restores sign in', async () => {
+    const { cookie } = await login('Admin');
+    const u = await make(cookie);
+    await call(`/users/${u.id}`, { method: 'PATCH', cookie, body: json({ is_active: false }) });
+    await call(`/users/${u.id}`, { method: 'PATCH', cookie, body: json({ is_active: true }) });
+    expect((await call('/auth/login', { method: 'POST', body: json({ email: body.email, password: body.password }) })).status).toBe(200);
+  });
+  it('admin cannot deactivate themselves', async () => {
+    const { cookie, user } = await login('Admin');
+    const list = await (await call('/users', { cookie })).json() as any[];
+    const me = list.find((u) => u.email === user.email);
+    const res = await call(`/users/${me.id}`, { method: 'PATCH', cookie, body: json({ is_active: false }) });
+    expect(res.status).toBe(409);
+  });
+  it('last active admin cannot be demoted', async () => {
+    const { cookie, user } = await login('Admin');
+    const me = (await (await call('/users', { cookie })).json() as any[]).find((u) => u.email === user.email);
+    const res = await call(`/users/${me.id}`, { method: 'PATCH', cookie, body: json({ role: 'Operator' }) });
+    expect(res.status).toBe(409);
+    expect((await res.json() as any).error).toBe('Harus ada minimal satu admin aktif.');
+  });
+  it('a second admin can be deactivated by the first', async () => {
+    const { cookie } = await login('Admin');
+    const second = await make(cookie, { email: 'adm2@x.id', role: 'Admin' });
+    expect((await call(`/users/${second.id}`, { method: 'PATCH', cookie, body: json({ is_active: false }) })).status).toBe(200);
+  });
+  it('a non-boolean is_active is 400', async () => {
+    const { cookie } = await login('Admin');
+    const u = await make(cookie);
+    expect((await call(`/users/${u.id}`, { method: 'PATCH', cookie, body: json({ is_active: 'false' }) })).status).toBe(400);
+  });
+});
