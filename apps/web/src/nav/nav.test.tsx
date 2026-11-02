@@ -16,7 +16,7 @@ describe('navFor', () => {
   it('tabs per role', () => {
     expect(labels('Operator')).toEqual(['Beranda', 'Input', 'Kalender', 'Akun']);
     expect(labels('Manager')).toEqual(['Beranda', 'Kalender', 'Akun']);
-    expect(labels('Auditor')).toEqual(['Kalender', 'Riwayat', 'Akun']);
+    expect(labels('Auditor')).toEqual(['Kalender', 'Riwayat', 'Eviden', 'Akun']);
     expect(labels('Admin')).toEqual(['Beranda', 'Input', 'Kalender', 'Akun']);
   });
   it('admin manages users and master data, others do not', () => {
@@ -25,8 +25,12 @@ describe('navFor', () => {
     expect(navFor('Operator').manage).toEqual([]);
   });
   it('riwayat link lives in Akun except for the auditor, who has the tab', () => {
-    expect(navFor('Operator').more.map((m) => m.label)).toEqual(['Riwayat data']);
+    expect(navFor('Operator').more.map((m) => m.label)).toEqual(['Riwayat data', 'Eviden lapangan']);
     expect(navFor('Auditor').more).toEqual([]);
+  });
+  it('field evidence is a tab for the auditor and a link in Akun for everyone else', () => {
+    expect(navFor('Auditor').more).toEqual([]);
+    for (const r of ['Operator', 'Manager', 'Admin'] as Role[]) expect(navFor(r).more.map((m) => m.label)).toContain('Eviden lapangan');
   });
   it('home', () => {
     expect(homeFor('Auditor')).toBe('/kalender');

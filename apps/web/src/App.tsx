@@ -16,6 +16,7 @@ import { InputHub } from './screens/InputHub';
 import { InputCuaca } from './screens/InputCuaca';
 import { InputAir } from './screens/InputAir';
 import { InputKoagulan } from './screens/InputKoagulan';
+import { Eviden } from './screens/Eviden';
 import { Riwayat } from './screens/Riwayat';
 import { Pengguna } from './screens/Pengguna';
 import { Master } from './screens/Master';
@@ -49,6 +50,7 @@ export function App() {
             <Route path="/kalender" element={<Kalender />} />
             <Route path="/kalender/jadwal" element={<RequireRole role={role} allow={['Manager', 'Admin']}><AturJadwal /></RequireRole>} />
             <Route path="/kalender/:scheduleId/:date" element={<EventDetail />} />
+            <Route path="/eviden" element={<Eviden />} />
             <Route path="/riwayat" element={<Riwayat />} />
             <Route path="/akun" element={<Akun />} />
             <Route path="/pengguna" element={<RequireRole role={role} allow={['Admin']}><Pengguna /></RequireRole>} />
