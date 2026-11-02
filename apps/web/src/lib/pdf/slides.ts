@@ -143,7 +143,7 @@ async function drawPond(doc: Doc, autoTable: AutoTable, p: PondPage, raster: Ras
     ['Total (karung)', ...p.weekly.bags.map(n1)],
     ['Average per day (kg)', ...p.weekly.avgPerDay.map(n1)],
   ]) + 4;
-  const chartH = 112;
+  const chartH = 158;
   await addChart(doc, raster, lineChartSvg({ width: rightW, height: chartH, title: 'Penggunaan Koagulan MTD', theme: POND_THEME, categories: p.weekly.labels, legend: false, decimals: 0, series: [{ name: 'Total Tawas (kg)', color: NAVY, values: p.weekly.chart }] }), x, y, rightW, chartH);
   y += chartH + 4;
   y = summaryTable(doc, autoTable, x, y, rightW, ['MONTHLY', ...p.monthly.labels], [

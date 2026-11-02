@@ -38,21 +38,24 @@ function frame(o: { width: number; height: number; title: string; theme: Theme; 
 
 type LegendItem = { name: string; color: string; kind: 'box' | 'line' };
 function legend(items: LegendItem[], W: number, y: number): string {
-  const widths = items.map((i) => i.name.length * CHAR_W + 26);
-  let x = Math.max(6, (W - widths.reduce((a, b) => a + b, 0)) / 2);
+  const natural = items.map((i) => i.name.length * CHAR_W + 26);
+  const k = Math.min(1, (W - 10) / natural.reduce((a, b) => a + b, 0));
+  const widths = natural.map((w) => w * k);
+  const size = Math.max(6.5, 9 * k);
+  let x = Math.max(5, (W - widths.reduce((a, b) => a + b, 0)) / 2);
   const parts = items.map((it, i) => {
     const sw = it.kind === 'line'
-      ? `<line x1="${n2(x)}" x2="${n2(x + 16)}" y1="${y}" y2="${y}" stroke="${it.color}" stroke-width="2"/>`
-      : `<rect x="${n2(x)}" y="${y - 4}" width="14" height="8" fill="${it.color}"/>`;
-    const t = `<text x="${n2(x + 19)}" y="${y + 3.5}" font-family="${FONT}" font-size="9" fill="${INK}">${esc(it.name)}</text>`;
+      ? `<line x1="${n2(x)}" x2="${n2(x + 16 * k)}" y1="${y}" y2="${y}" stroke="${it.color}" stroke-width="2"/>`
+      : `<rect x="${n2(x)}" y="${y - 4}" width="${n2(14 * k)}" height="8" fill="${it.color}"/>`;
+    const t = `<text x="${n2(x + 19 * k)}" y="${y + 3.5}" font-family="${FONT}" font-size="${n2(size)}" fill="${INK}">${esc(it.name)}</text>`;
     x += widths[i];
     return sw + t;
   });
   return `<g data-legend="1">${parts.join('')}</g>`;
 }
 
-function axisText(x: number, y: number, text: string, anchor: 'start' | 'middle' | 'end', fill = INK): string {
-  return `<text x="${n2(x)}" y="${n2(y)}" text-anchor="${anchor}" font-family="${FONT}" font-size="9" fill="${fill}">${esc(text)}</text>`;
+function axisText(x: number, y: number, text: string, anchor: 'start' | 'middle' | 'end', fill = INK, size = 9): string {
+  return `<text x="${n2(x)}" y="${n2(y)}" text-anchor="${anchor}" font-family="${FONT}" font-size="${size}" fill="${fill}">${esc(text)}</text>`;
 }
 
 export function barChartSvg(o: {
@@ -75,7 +78,8 @@ export function barChartSvg(o: {
     out.push(`<line x1="${L}" x2="${W - R}" y1="${n2(y(t))}" y2="${n2(y(t))}" stroke="${GRID}" stroke-width="0.4"/>`);
     out.push(axisText(L - 5, y(t) + 3, formatNumber(t), 'end'));
   }
-  o.categories.forEach((c, i) => out.push(axisText(L + slot * i + slot / 2, T + ih + 12, c, 'middle')));
+  const catSize = slot < 40 ? 7.5 : 9;
+  o.categories.forEach((c, i) => out.push(axisText(L + slot * i + slot / 2, T + ih + 12, c, 'middle', INK, catSize)));
   o.series.forEach((s, si) => s.values.forEach((v, i) => {
     if (v === null) return;
     const x = L + slot * i + (slot - bw * k) / 2 + bw * si;
@@ -84,7 +88,10 @@ export function barChartSvg(o: {
   o.series.forEach((s, si) => s.values.forEach((v, i) => {
     if (v === null) return;
     const cx = L + slot * i + (slot - bw * k) / 2 + bw * si + bw / 2;
-    out.push(`<text data-label="1" x="${n2(cx)}" y="${n2(y(v) - 3)}" text-anchor="middle" font-family="${FONT}" font-size="8.5" font-weight="bold" fill="${INK}">${esc(formatNumber(v, decimals))}</text>`);
+    // A label that would sit level with its left neighbour's is raised so the two stay readable.
+    const left = si > 0 ? o.series[si - 1].values[i] : null;
+    const crowded = left !== null && Math.abs(y(v) - y(left)) < 10 && bw * k < 60;
+    out.push(`<text data-label="1" x="${n2(cx)}" y="${n2(y(v) - 3 - (crowded ? 9 : 0))}" text-anchor="middle" font-family="${FONT}" font-size="8" font-weight="bold" fill="${INK}">${esc(formatNumber(v, decimals))}</text>`);
   }));
   for (const l of lines) out.push(`<line data-limit="1" x1="${L}" x2="${W - R}" y1="${n2(y(l.value))}" y2="${n2(y(l.value))}" stroke="${l.color}" stroke-width="1.6"/>`);
   out.push(legend([
@@ -121,7 +128,7 @@ export function lineChartSvg(o: {
     out.push(axisText(L - 5, y(t, scales.left) + 3, formatNumber(t), 'end', o.series.find((s) => side(s) === 'left')?.color ?? INK));
   }
   if (hasRight) for (const t of scales.right.ticks) out.push(axisText(W - R + 5, y(t, scales.right) + 3, formatNumber(t), 'start', o.series.find((s) => side(s) === 'right')!.color));
-  o.categories.forEach((c, i) => out.push(axisText(x(i), T + ih + 12, c, 'middle')));
+  o.categories.forEach((c, i) => out.push(axisText(x(i), T + ih + 12, c, 'middle', INK, slot < 40 ? 7.5 : 9)));
 
   o.series.forEach((s, si) => {
     const sc = scales[side(s)];
@@ -141,7 +148,9 @@ export function lineChartSvg(o: {
       const text = formatNumber(v, decimals);
       const w = text.length * 5.8 + 7, h = 12;
       const bx = Math.min(W - 2 - w, Math.max(2, x(i) - w / 2));
-      const by = si === 0 ? y(v, sc) - 6 - h : y(v, sc) + 6;
+      let by = si === 0 ? y(v, sc) - 6 - h : y(v, sc) + 6;
+      if (si > 0 && by + h > T + ih) by = y(v, sc) - 6 - h; // keep clear of the category labels
+      if (slot < w && i % 2 === 1) by -= h + 2; // neighbouring labels would overlap: lift every second one
       out.push(`<g data-label="1"><rect x="${n2(bx)}" y="${n2(by)}" width="${n2(w)}" height="${h}" fill="${s.color}"/><text x="${n2(bx + w / 2)}" y="${n2(by + 9)}" text-anchor="middle" font-family="${FONT}" font-size="8.5" font-weight="bold" fill="#FFFFFF">${esc(text)}</text></g>`);
     });
   });
