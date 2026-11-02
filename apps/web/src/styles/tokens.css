@@ -21,9 +21,9 @@
   --purple: #5b3fa8;
   --purple-soft: #ede9fb;
 
-  --radius-card: 20px;
-  --radius-field: 14px;
-  --radius-btn: 14px;
+  --radius-card: 16px;
+  --radius-field: 12px;
+  --radius-btn: 12px;
   --radius-pill: 999px;
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }

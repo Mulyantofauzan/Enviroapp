@@ -50,13 +50,14 @@ export function Kalender() {
   return (
     <>
       <ScreenHeader title="Kalender" subtitle={month ? `Enviro Events - ${month}` : 'Enviro Events'} onProfile={() => nav('/akun')} />
-      <div className="ui-page">
+      <div className="ui-page ui-page--wide">
         {canSchedule && <Link to="/kalender/jadwal" className="ui-btn ui-btn--outline">Atur jadwal</Link>}
         {error && <p className="ui-error" role="alert">{error}</p>}
         {!weekStart || !today || !selected ? (
           !error && <p className="ui-muted">Memuat…</p>
         ) : (
-          <>
+          <div className="ui-cal">
+            <div className="ui-cal__side">
             <WeekStrip weekStart={weekStart} selected={selected} today={today} marks={marks}
               onSelect={setSelected} onPrev={() => setWeekStart(addDays(weekStart, -7))} onNext={() => setWeekStart(addDays(weekStart, 7))} />
             <div className="ui-chips" role="tablist" aria-label="Frekuensi">
@@ -66,7 +67,8 @@ export function Kalender() {
                 </button>
               ))}
             </div>
-
+            </div>
+            <div className="ui-cal__main">
             {overdue.data && overdue.data.events.length > 0 && (
               <section className="ui-stack" aria-label="Overdue">
                 <h2>Overdue</h2>
@@ -87,7 +89,8 @@ export function Kalender() {
                 <EventCard key={`${e.schedule_id}|${e.due_date}`} event={e} canAct={canAct} pondName={e.sp_id ? pondName.get(e.sp_id) : undefined} />
               ))}
             </section>
-          </>
+            </div>
+          </div>
         )}
       </div>
     </>

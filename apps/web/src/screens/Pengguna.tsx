@@ -83,7 +83,7 @@ export function Pengguna() {
   return (
     <>
       <ScreenHeader title="Kelola Pengguna" subtitle="Admin System - akun dan hak akses" onProfile={() => nav('/akun')} />
-      <div className="ui-page">
+      <div className="ui-page ui-page--mid">
         <label className="ui-search">
           <Icon name="search" />
           <input type="search" aria-label="Cari nama atau email" placeholder="Cari nama atau email" value={q} onChange={(e) => setQ(e.target.value)} />

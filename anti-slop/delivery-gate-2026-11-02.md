@@ -61,3 +61,15 @@ Bukti: `npm test` (shared 58, api 179, web 176, semua lulus), `tsc` bersih, `vit
 | R-35 verifikasi | SEBAGIAN | Dijalankan: tes, build, server nyata, Chrome nyata untuk tampilan, unggah multipart nyata. Pemilih berkas di peramban nyata dan HP sungguhan belum dicoba (unggah diuji lewat jsdom dan `curl`) |
 
 Keamanan eviden yang diuji: tipe dari isi file (executable bernama `.jpg` ditolak), batas 10 MB tepat, file kosong, nama file berbahaya tidak bisa menyuntik header, unggah yang berbarengan dengan penyelesaian tidak masuk, unduhan butuh sesi, objek R2 hilang mengembalikan 404.
+
+---
+
+# Tambahan: kepadatan tampilan dan tata letak responsif
+
+Permintaan pemilik produk: tampilan terasa terlalu besar. Perubahan: huruf isi 15 menjadi 14 px, kolom isian dan pemilih 52 menjadi 46 px (area ketik tetap 44 px), tombol 52 menjadi 44 px, padding kartu 16 menjadi 14 px, radius kartu 20 menjadi 16 px, judul kartu 17 menjadi 15 px, judul halaman 20 menjadi 17 px, angka KPI 28 menjadi 22 px, ikon dalam gelembung 18 px, tabel 14 menjadi 13 px, jarak antar-blok 16 menjadi 12 px. Judul `h2` di luar kartu sebelumnya memakai ukuran bawaan peramban (sekitar 21 px) dan kini 15 px.
+
+Layar lebar (≥ 760 px): kartu modul dan angka dashboard 4 kolom, grafik dan stok bersebelahan (≥ 760 px), kalender dua kolom (≥ 900 px), halaman form tetap 600 px, daftar dan dashboard sampai 1040 px, rel samping 208 px.
+
+Bukti (Chrome nyata, tinggi dokumen di 360 px, layar yang panjang): 10.183 px menjadi 9.203 px (-10%); Input Air 1.427 menjadi 1.272 (-11%); Atur jadwal berformulir 1.614 menjadi 1.470 (-9%); Pengguna 1.421 menjadi 1.252 (-12%). Tanpa overflow horizontal di 360, 390, 768, dan 1200 px. Tidak ada kontrol berinteraksi di bawah 44 px (saklar tetap 52x30 dengan area sentuh 44 px lewat `::after`).
+
+Catatan jujur: skrip ukur sempat memotret halaman login pada putaran panjang (sesi tidak terbawa); kini skrip mendeteksi dan melaporkan hal itu, dan tiap layar yang dipakai sebagai bukti sudah dipastikan bukan halaman login. Penyebab kemacetan itu ada di skrip ukur, tidak terlihat di aplikasi.

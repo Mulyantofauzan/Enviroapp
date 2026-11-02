@@ -45,7 +45,7 @@ export function BerandaManager() {
   return (
     <>
       <ScreenHeader title="Dashboard" subtitle={`Manager${range ? ` - ${range}` : ''}`} onProfile={() => nav('/akun')} />
-      <div className="ui-page">
+      <div className="ui-page ui-page--wide">
         {!loading && ponds.length === 0 ? <PondsUnavailable /> : (
           <>
             <PondPicker ponds={ponds} value={current} onChange={setCurrent} label="Settling Pond" />
@@ -64,6 +64,7 @@ export function BerandaManager() {
                 ) : (
                   <section className="ui-card"><p className="ui-muted">Belum ada data hari ini.</p></section>
                 )}
+                <div className="ui-dash-cols">
                 <section className="ui-card">
                   <h2>pH Inlet vs Outlet</h2>
                   {hasPh ? <PhChart series={data.series} band={th.ph_outlet} /> : <p className="ui-muted">Belum ada data pH pada rentang ini.</p>}
@@ -72,6 +73,7 @@ export function BerandaManager() {
                   <h2>Sisa stok koagulan (kg)</h2>
                   <StockBars items={COAGULANT_TYPES.map((c) => ({ type: c, ...data.coagulant[c] }))} />
                 </section>
+                </div>
               </>
             )}
           </>

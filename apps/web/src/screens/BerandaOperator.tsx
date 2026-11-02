@@ -53,7 +53,7 @@ export function BerandaOperator() {
   return (
     <>
       <ScreenHeader title={`Halo, ${user.name.split(' ')[0]}`} subtitle={`${ROLE_LABEL[user.role]} - ${formatDateId(today)}`} onProfile={() => nav('/akun')} />
-      <div className="ui-page">
+      <div className="ui-page ui-page--wide">
         {!loading && ponds.length === 0 ? <PondsUnavailable /> : (
           <>
             <section className="ui-card"><PondPicker ponds={ponds} value={current} onChange={setCurrent} label="Settling Pond aktif" /></section>

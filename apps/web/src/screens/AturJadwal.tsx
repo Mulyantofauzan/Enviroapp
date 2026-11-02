@@ -71,7 +71,7 @@ export function AturJadwal() {
   return (
     <>
       <ScreenHeader title="Atur Jadwal" subtitle="Kalender Enviro Events" onProfile={() => nav('/akun')} />
-      <div className="ui-page">
+      <div className="ui-page ui-page--mid">
         <Link to="/kalender" className="ui-back"><Icon name="chevron-left" /> Kembali ke Kalender</Link>
         <Button block onClick={openNew} disabled={!today}><Icon name="plus" /> Tambah jadwal</Button>
         {error && <p className="ui-error" role="alert">{error}</p>}

@@ -90,7 +90,7 @@ export function Master() {
   return (
     <>
       <ScreenHeader title="Master Data" subtitle="Admin System - Settling Pond" onProfile={() => nav('/akun')} />
-      <div className="ui-page">
+      <div className="ui-page ui-page--mid">
         <Button block onClick={() => setForm({ ...blank })}><Icon name="plus" /> Tambah Settling Pond</Button>
         <section className="ui-card ui-rows" aria-label="Daftar Settling Pond">
           <h2>{ponds ? `${ponds.length} Settling Pond` : 'Memuat…'}</h2>
