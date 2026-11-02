@@ -36,3 +36,19 @@ describe('api fallback message', () => {
     expect(err.message).toBe('Terjadi kesalahan. Coba lagi.');
   });
 });
+
+describe('api with FormData', () => {
+  it('lets the browser set the multipart content-type', async () => {
+    const f = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', f);
+    await api('/events/x/2026-11-02/evidence', { method: 'POST', body: new FormData() });
+    const init = (f.mock.calls[0] as any)[1];
+    expect(new Headers(init.headers).has('content-type')).toBe(false);
+  });
+  it('still sends JSON bodies as JSON', async () => {
+    const f = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', f);
+    await api('/x', { method: 'POST', body: '{"a":1}' });
+    expect(new Headers((f.mock.calls[0] as any)[1].headers).get('content-type')).toBe('application/json');
+  });
+});

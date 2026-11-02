@@ -14,13 +14,14 @@ const labels = (r: Role) => navFor(r).tabs.map((t) => t.label);
 
 describe('navFor', () => {
   it('tabs per role', () => {
-    expect(labels('Operator')).toEqual(['Beranda', 'Input', 'Akun']);
-    expect(labels('Manager')).toEqual(['Beranda', 'Akun']);
-    expect(labels('Auditor')).toEqual(['Riwayat', 'Akun']);
-    expect(labels('Admin')).toEqual(['Beranda', 'Input', 'Akun']);
+    expect(labels('Operator')).toEqual(['Beranda', 'Input', 'Kalender', 'Akun']);
+    expect(labels('Manager')).toEqual(['Beranda', 'Kalender', 'Akun']);
+    expect(labels('Auditor')).toEqual(['Kalender', 'Riwayat', 'Akun']);
+    expect(labels('Admin')).toEqual(['Beranda', 'Input', 'Kalender', 'Akun']);
   });
   it('admin manages users and master data, others do not', () => {
-    expect(navFor('Admin').manage.map((m) => m.label)).toEqual(['Pengguna', 'Master']);
+    expect(navFor('Admin').manage.map((m) => m.label)).toEqual(['Atur jadwal', 'Pengguna', 'Master']);
+    expect(navFor('Manager').manage.map((m) => m.label)).toEqual(['Atur jadwal']);
     expect(navFor('Operator').manage).toEqual([]);
   });
   it('riwayat link lives in Akun except for the auditor, who has the tab', () => {
@@ -28,7 +29,7 @@ describe('navFor', () => {
     expect(navFor('Auditor').more).toEqual([]);
   });
   it('home', () => {
-    expect(homeFor('Auditor')).toBe('/riwayat');
+    expect(homeFor('Auditor')).toBe('/kalender');
     expect(homeFor('Manager')).toBe('/');
   });
 });
@@ -54,16 +55,16 @@ describe('App routing', () => {
     open('/master');
     expect(await screen.findByRole('heading', { name: /Halo, Rudi/ })).toBeInTheDocument();
   });
-  it('auditor opening / lands on riwayat', async () => {
+  it('auditor opening / lands on the calendar', async () => {
     mock('Auditor');
     open('/');
-    expect(await screen.findByRole('heading', { name: 'Riwayat' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Kalender' })).toBeInTheDocument();
   });
   it('tab bar shows only the role tabs', async () => {
     mock('Operator');
     open('/');
     const nav = await screen.findByRole('navigation', { name: 'Menu utama' });
-    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Beranda', 'Input', 'Akun']);
+    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Beranda', 'Input', 'Kalender', 'Akun']);
   });
 });
 
@@ -82,6 +83,22 @@ describe('Akun', () => {
     open('/akun');
     expect(await screen.findByRole('link', { name: /Pengguna/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Master/ })).toBeInTheDocument();
+  });
+  it('manager sees Atur jadwal, operator does not', async () => {
+    mock('Manager');
+    open('/akun');
+    expect(await screen.findByRole('link', { name: /Atur jadwal/ })).toHaveAttribute('href', '/kalender/jadwal');
+  });
+  it('operator has no Atur jadwal', async () => {
+    mock('Operator');
+    open('/akun');
+    await screen.findByText('Rudi Hartono');
+    expect(screen.queryByRole('link', { name: /Atur jadwal/ })).toBeNull();
+  });
+  it('operator opening /kalender/jadwal is sent home', async () => {
+    mock('Operator');
+    open('/kalender/jadwal');
+    expect(await screen.findByRole('heading', { name: /Halo, Rudi/ })).toBeInTheDocument();
   });
   it('auditor has no riwayat link in Akun', async () => {
     mock('Auditor');

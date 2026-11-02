@@ -15,7 +15,7 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
     res = await fetch(`/api${path}`, {
       ...init,
       credentials: 'include',
-      headers: { ...(init.body ? { 'content-type': 'application/json' } : {}), ...init.headers },
+      headers: { ...(init.body && !(init.body instanceof FormData) ? { 'content-type': 'application/json' } : {}), ...init.headers },
     });
   } catch {
     throw new ApiError('Tidak ada koneksi. Coba lagi.', 0);

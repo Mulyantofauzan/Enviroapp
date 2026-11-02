@@ -25,6 +25,9 @@ const PATHS = {
   'cloud-off': <><path d="M7 18.500h9.500a3.500 3.500 0 0 0 1.400-6.700A5 5 0 0 0 9.300 9.800" /><path d="M5.500 10.500A4 4 0 0 0 7 18.500" /><path d="m3 3 18 18" /></>,
   'log-out': <><path d="M9 4.500H6A1.500 1.500 0 0 0 4.500 6v12A1.500 1.500 0 0 0 6 19.500h3" /><path d="m15 8 4 4-4 4M19 12H9" /></>,
   x: <path d="M6 6l12 12M18 6 6 18" />,
+  upload: <><path d="M12 16V5" /><path d="m7.500 9.500 4.500-4.500 4.500 4.500" /><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" /></>,
+  trash: <><path d="M4.500 7h15" /><path d="M9.500 7V4.500h5V7" /><path d="M6.500 7l.8 12a1.500 1.500 0 0 0 1.500 1.400h6.400a1.500 1.500 0 0 0 1.500-1.400l.8-12" /><path d="M10 11v6M14 11v6" /></>,
+  'chevron-left': <path d="m14.500 6-6 6 6 6" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;

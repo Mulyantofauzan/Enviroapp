@@ -3,6 +3,8 @@ import { ROLE_LABEL, formatDateId, formatNumber, isOutOfLimit, type Threshold } 
 import { useAuth } from '../auth/AuthContext';
 import { Icon, type IconName } from '../icons';
 import { useDay } from '../hooks/useDay';
+import { useEventSummary } from '../hooks/useEventSummary';
+import { Banner } from '../ui/Banner';
 import { usePond } from '../pond/PondContext';
 import { PondsUnavailable } from '../pond/PondsUnavailable';
 import { ScreenHeader } from '../ui/ScreenHeader';
@@ -16,6 +18,8 @@ const TILES: { to: string; icon: IconName; tone: string; title: string; sub: str
   { to: '/input/air', icon: 'droplet', tone: 'primary', title: 'Air Permukaan', sub: 'pH, TSS, debit' },
   { to: '/input/koagulan', icon: 'flask', tone: 'warning', title: 'Koagulan', sub: 'Kapur & tawas' },
 ];
+
+const eventSub = (n: number | undefined) => (n === undefined ? 'Jadwal dan eviden' : n > 0 ? `${n} event overdue` : 'Tidak ada yang telat');
 
 function verdict(v: number | null, t: Threshold | undefined): 'abnormal' | 'normal' | null {
   if (v === null || !t || (t.min === null && t.max === null)) return null;
@@ -40,6 +44,7 @@ export function BerandaOperator() {
   const { ponds, current, setCurrent, loading } = usePond();
   const today = localToday();
   const { data, error } = useDay(today, current);
+  const { summary } = useEventSummary();
   const pond = ponds.find((p) => p.id === current);
   if (!user) return null;
 
@@ -60,7 +65,17 @@ export function BerandaOperator() {
                   <small>{t.sub}</small>
                 </Link>
               ))}
+              <Link to="/kalender" className="ui-card ui-tile">
+                <span className={`ui-bubble ui-bubble--${summary && summary.overdue > 0 ? 'danger' : 'primary'}`}><Icon name="calendar" /></span>
+                <strong>Event Enviro</strong>
+                <small>{eventSub(summary?.overdue)}</small>
+              </Link>
             </div>
+            {summary && summary.overdue > 0 && (
+              <Link to="/kalender" className="ui-linkblock" aria-label={`${summary.overdue} event overdue`}>
+                <Banner tone="danger" title={`${summary.overdue} event overdue`}>Unggah eviden untuk menyelesaikannya</Banner>
+              </Link>
+            )}
             <section className="ui-card" aria-label={`Data hari ini - ${pond ? pondLabel(pond) : ''}`}>
               <h2>Data hari ini - {pond?.code ?? pond?.name}</h2>
               {error && <p className="ui-error" role="alert">{error}</p>}

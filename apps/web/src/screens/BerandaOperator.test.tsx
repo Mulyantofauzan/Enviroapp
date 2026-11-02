@@ -48,7 +48,7 @@ describe('Beranda Operator', () => {
     expect(screen.getByRole('link', { name: /Cuaca/ })).toHaveAttribute('href', '/input/cuaca');
     expect(screen.getByRole('link', { name: /Air Permukaan/ })).toHaveAttribute('href', '/input/air');
     expect(screen.getByRole('link', { name: /Koagulan/ })).toHaveAttribute('href', '/input/koagulan');
-    expect(screen.queryByText(/Event Enviro/)).toBeNull();
+    expect(screen.getByRole('link', { name: /Event Enviro/ })).toHaveAttribute('href', '/kalender');
   });
   it('no ponds: explains what to do', async () => {
     mockApi({ ponds: [] });
@@ -70,5 +70,28 @@ describe('BerandaOperator when the pond list fails to load', () => {
     expect(screen.queryByText(/Belum ada settling pond aktif/)).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Coba lagi' }));
     expect(await screen.findByRole('combobox', { name: /Settling Pond/ })).toBeInTheDocument();
+  });
+});
+
+describe('Beranda Operator events', () => {
+  const summary = (overdue: number) => (u: string) => (u.startsWith('/api/events/summary') ? json({ today: '2026-11-02', overdue, due_today: 1 }) : undefined);
+  it('shows the overdue count on the tile and a banner to the calendar', async () => {
+    mockApi({ handler: summary(2) });
+    renderApp('/');
+    const banner = await screen.findByRole('link', { name: '2 event overdue' });
+    expect(banner).toHaveAttribute('href', '/kalender');
+    expect(screen.getAllByText('2 event overdue').length).toBeGreaterThanOrEqual(1);
+  });
+  it('says nothing is late and shows no banner when there is no overdue', async () => {
+    mockApi({ handler: summary(0) });
+    renderApp('/');
+    expect(await screen.findByText('Tidak ada yang telat')).toBeInTheDocument();
+    expect(screen.queryByText(/Unggah eviden untuk menyelesaikannya/)).toBeNull();
+  });
+  it('a failing summary does not break the page', async () => {
+    mockApi({ handler: (u) => (u.startsWith('/api/events/summary') ? json({ error: 'x' }, 500) : undefined) });
+    renderApp('/');
+    expect(await screen.findByRole('heading', { name: 'Halo, Rudi' })).toBeInTheDocument();
+    expect(screen.queryByText(/event overdue/)).toBeNull();
   });
 });

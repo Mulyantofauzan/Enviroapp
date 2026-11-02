@@ -10,18 +10,20 @@ const RIWAYAT_LINK: NavItem = { to: '/riwayat', label: 'Riwayat data', icon: 'fi
 const AKUN: NavItem = { to: '/akun', label: 'Akun', icon: 'user' };
 const PENGGUNA: NavItem = { to: '/pengguna', label: 'Pengguna', icon: 'users' };
 const MASTER: NavItem = { to: '/master', label: 'Master', icon: 'database' };
+const KALENDER: NavItem = { to: '/kalender', label: 'Kalender', icon: 'calendar' };
+const JADWAL: NavItem = { to: '/kalender/jadwal', label: 'Atur jadwal', icon: 'clipboard' };
 
-/** Only destinations that exist today. Kalender, Laporan and Eviden are added when those parts are built. */
+/** Only destinations that exist today. Laporan and Eviden are added when those parts are built. */
 export function navFor(role: Role): { tabs: NavItem[]; more: NavItem[]; manage: NavItem[] } {
   switch (role) {
-    case 'Auditor': return { tabs: [RIWAYAT_TAB, AKUN], more: [], manage: [] };
-    case 'Manager': return { tabs: [BERANDA, AKUN], more: [RIWAYAT_LINK], manage: [] };
-    case 'Operator': return { tabs: [BERANDA, INPUT, AKUN], more: [RIWAYAT_LINK], manage: [] };
-    case 'Admin': return { tabs: [BERANDA, INPUT, AKUN], more: [RIWAYAT_LINK], manage: [PENGGUNA, MASTER] };
+    case 'Auditor': return { tabs: [KALENDER, RIWAYAT_TAB, AKUN], more: [], manage: [] };
+    case 'Manager': return { tabs: [BERANDA, KALENDER, AKUN], more: [RIWAYAT_LINK], manage: [JADWAL] };
+    case 'Operator': return { tabs: [BERANDA, INPUT, KALENDER, AKUN], more: [RIWAYAT_LINK], manage: [] };
+    case 'Admin': return { tabs: [BERANDA, INPUT, KALENDER, AKUN], more: [RIWAYAT_LINK], manage: [JADWAL, PENGGUNA, MASTER] };
   }
 }
 
-export const homeFor = (role: Role) => (role === 'Auditor' ? '/riwayat' : '/');
+export const homeFor = (role: Role) => (role === 'Auditor' ? '/kalender' : '/');
 
 /** Everything the wide-screen rail lists, Akun last. */
 export function railFor(role: Role): NavItem[] {

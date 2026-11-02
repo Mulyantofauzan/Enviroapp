@@ -19,6 +19,9 @@ import { InputKoagulan } from './screens/InputKoagulan';
 import { Riwayat } from './screens/Riwayat';
 import { Pengguna } from './screens/Pengguna';
 import { Master } from './screens/Master';
+import { Kalender } from './screens/Kalender';
+import { EventDetail } from './screens/EventDetail';
+import { AturJadwal } from './screens/AturJadwal';
 
 function RequireRole({ role, allow, children }: { role: Role; allow: Role[]; children: ReactNode }) {
   return allow.includes(role) ? <>{children}</> : <Navigate to={homeFor(role)} replace />;
@@ -38,11 +41,14 @@ export function App() {
         <main className="ui-main">
           <div className="ui-conn-slot"><ConnectionChip /></div>
           <Routes>
-            <Route path="/" element={role === 'Auditor' ? <Navigate to="/riwayat" replace /> : role === 'Manager' ? <BerandaManager /> : <BerandaOperator />} />
+            <Route path="/" element={role === 'Auditor' ? <Navigate to="/kalender" replace /> : role === 'Manager' ? <BerandaManager /> : <BerandaOperator />} />
             <Route path="/input" element={<RequireRole role={role} allow={writers}><InputHub /></RequireRole>} />
             <Route path="/input/cuaca" element={<RequireRole role={role} allow={writers}><InputCuaca /></RequireRole>} />
             <Route path="/input/air" element={<RequireRole role={role} allow={writers}><InputAir /></RequireRole>} />
             <Route path="/input/koagulan" element={<RequireRole role={role} allow={writers}><InputKoagulan /></RequireRole>} />
+            <Route path="/kalender" element={<Kalender />} />
+            <Route path="/kalender/jadwal" element={<RequireRole role={role} allow={['Manager', 'Admin']}><AturJadwal /></RequireRole>} />
+            <Route path="/kalender/:scheduleId/:date" element={<EventDetail />} />
             <Route path="/riwayat" element={<Riwayat />} />
             <Route path="/akun" element={<Akun />} />
             <Route path="/pengguna" element={<RequireRole role={role} allow={['Admin']}><Pengguna /></RequireRole>} />
