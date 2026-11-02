@@ -472,3 +472,10 @@ a.ui-btn { text-decoration: none; }
 .ui-chart__label { fill: var(--text); font: 600 11px var(--font); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
 .ui-chart__label--inlet { fill: var(--text-sub); }
 .ui-chart__label--bad { fill: var(--danger); font-weight: 700; }
+
+.ui-chart__bar--0 { fill: var(--primary); }
+.ui-chart__bar--1 { fill: var(--water); }
+.ui-chart__bar--2 { fill: var(--warning); }
+.ui-legend__bar--0 { background: var(--primary); }
+.ui-legend__bar--1 { background: var(--water); }
+.ui-legend__bar--2 { background: var(--warning); }

@@ -34,4 +34,13 @@ describe('RainChart', () => {
     const { container } = render(<RainChart series={s([null, null])} />);
     expect(container).toBeEmptyDOMElement();
   });
+  it('labels every bar when there are few and only four when there are many', () => {
+    const few = render(<RainChart series={s([0, 12.5, null, 4])} />);
+    expect([...few.container.querySelectorAll('text.ui-chart__label')].map((t) => t.textContent)).toEqual(['0', '12,5', '4']);
+    few.unmount();
+    const many = render(<RainChart series={Array.from({ length: 30 }, (_, i) => ({ date: `2026-10-${String((i % 28) + 1).padStart(2, '0')}`, value: i === 5 ? 40 : i }))} />);
+    const n = many.container.querySelectorAll('text.ui-chart__label').length;
+    expect(n).toBeGreaterThanOrEqual(3);
+    expect(n).toBeLessThanOrEqual(4);
+  });
 });

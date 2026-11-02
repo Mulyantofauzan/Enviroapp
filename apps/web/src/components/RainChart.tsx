@@ -1,16 +1,10 @@
 import { formatNumber } from '@evo/shared';
+import { labelAnchor, labeledIndexes } from '../lib/labels';
+import { clean, niceStep } from '../lib/scale';
 
 export type RainPoint = { date: string; value: number | null };
 
-const W = 340, H = 200, L = 38, R = 12, T = 12, B = 28;
-
-function niceStep(range: number): number {
-  const rough = range / 4 || 1;
-  const p = Math.pow(10, Math.floor(Math.log10(rough)));
-  for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= rough - 1e-9) return m * p;
-  return 10 * p;
-}
-const clean = (n: number) => Math.round(n * 1e6) / 1e6;
+const W = 340, H = 200, L = 38, R = 12, T = 18, B = 28;
 
 export function RainChart({ series }: { series: RainPoint[] }) {
   const vals = series.map((s) => s.value).filter((v): v is number => v !== null);
@@ -26,6 +20,7 @@ export function RainChart({ series }: { series: RainPoint[] }) {
   const ticks: number[] = [];
   for (let t = 0; t <= hi + 1e-9; t = clean(t + step)) ticks.push(t);
   const every = Math.ceil(n / 7);
+  const shown = labeledIndexes(series.map((s) => s.value));
   const total = vals.reduce((a, b) => a + b, 0);
 
   return (
@@ -44,6 +39,12 @@ export function RainChart({ series }: { series: RainPoint[] }) {
           <rect key={s.date} data-bar className="ui-chart__bar" rx={2} x={L + slot * i + (slot - bw) / 2} width={bw}
             y={y(s.value)} height={T + ih - y(s.value)} />
         ))}
+        {series.map((s, i) => {
+          if (s.value === null || !shown.has(i)) return null;
+          const cx = L + slot * i + slot / 2;
+          const t = formatNumber(s.value, 1);
+          return <text key={`l${s.date}`} className="ui-chart__label" x={cx} y={y(s.value) - 5} textAnchor={labelAnchor(cx, L, W - R, t.length * 6.5)}>{t}</text>;
+        })}
       </svg>
       <ul className="ui-legend"><li><i className="ui-legend__bar" />Curah hujan (mm)</li></ul>
       <table className="ui-sr">
