@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { COAGULANT_TYPES, defaultRemaining, type CoagulantType } from '@evo/shared';
 import type { AppEnv } from '../types';
 import { requireAuth, requireWrite } from '../auth/guard';
-import { activePond, badDate, isFail, readBody, readNumbers } from './common';
+import { activePond, badDate, isFail, ONLY_IF_NOT_OLDER, readBody, readNumbers, readRecordedAt } from './common';
 
 export const coagulantRoutes = new Hono<AppEnv>();
 coagulantRoutes.use('*', requireAuth);
@@ -23,16 +23,20 @@ coagulantRoutes.put('/:date/:sp/:type', requireWrite, async (c) => {
   if (!(COAGULANT_TYPES as string[]).includes(type)) return c.json({ error: 'Pilih Tawas Serbuk, Tawas Batu, atau Kapur.' }, 400);
   const pond = await activePond(c, sp);
   if (pond) return pond;
-  const v = readNumbers(c, await readBody(c),
+  const body = await readBody(c);
+  const at = readRecordedAt(c, body);
+  if (isFail(at)) return at.fail;
+  const v = readNumbers(c, body,
     { stock_in: { min: 0 }, stock_out: { min: 0 }, stock_remaining: {} },
     { stock_in: 'Stok masuk', stock_out: 'Stok keluar', stock_remaining: 'Sisa stok' });
   if (isFail(v)) return v.fail;
   const prev = await previousRemaining(c.env.DB, sp, type, date);
   const remaining = v.stock_remaining ?? defaultRemaining(prev, v.stock_in ?? 0, v.stock_out ?? 0);
-  await c.env.DB.prepare(
-    `INSERT INTO coagulant (id,date,sp_id,type,stock_in,stock_out,stock_remaining,logged_by) VALUES (?,?,?,?,?,?,?,?)
+  const res = await c.env.DB.prepare(
+    `INSERT INTO coagulant (id,date,sp_id,type,stock_in,stock_out,stock_remaining,logged_by,client_ts) VALUES (?,?,?,?,?,?,?,?,?)
      ON CONFLICT(date,sp_id,type) DO UPDATE SET stock_in=excluded.stock_in, stock_out=excluded.stock_out,
-       stock_remaining=excluded.stock_remaining, logged_by=excluded.logged_by`,
-  ).bind(crypto.randomUUID(), date, sp, type, v.stock_in, v.stock_out, remaining, c.get('user').id).run();
-  return c.json({ date, sp_id: sp, type: type as CoagulantType, stock_in: v.stock_in, stock_out: v.stock_out, stock_remaining: remaining });
+       stock_remaining=excluded.stock_remaining, logged_by=excluded.logged_by, client_ts=excluded.client_ts
+     ${at.explicit ? ONLY_IF_NOT_OLDER : ''}`,
+  ).bind(crypto.randomUUID(), date, sp, type, v.stock_in, v.stock_out, remaining, c.get('user').id, at.iso).run();
+  return c.json({ date, sp_id: sp, type: type as CoagulantType, stock_in: v.stock_in, stock_out: v.stock_out, stock_remaining: remaining, applied: res.meta.changes > 0 });
 });

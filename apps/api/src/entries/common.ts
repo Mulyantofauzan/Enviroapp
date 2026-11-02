@@ -43,3 +43,17 @@ export async function readBody(c: Context<AppEnv>): Promise<Record<string, unkno
   const b = await c.req.json().catch(() => ({}));
   return b && typeof b === 'object' ? (b as Record<string, unknown>) : {};
 }
+
+const FUTURE_SLACK_MS = 5 * 60_000;
+
+/** The time the phone recorded the entry. Missing = server clock (and the write always wins). Far-future values are held to the server clock. */
+export function readRecordedAt(c: Context<AppEnv>, body: Record<string, unknown>, now = Date.now()): { iso: string; explicit: boolean } | Fail {
+  const raw = body.recorded_at;
+  if (raw === undefined || raw === null || raw === '') return { iso: new Date(now).toISOString(), explicit: false };
+  const t = typeof raw === 'string' ? Date.parse(raw) : NaN;
+  if (Number.isNaN(t)) return { fail: c.json({ error: 'Waktu pencatatan tidak sah.' }, 400) };
+  return { iso: new Date(t > now + FUTURE_SLACK_MS ? now : t).toISOString(), explicit: true };
+}
+
+/** Appended to an upsert's DO UPDATE: an older recorded entry never replaces a newer one. */
+export const ONLY_IF_NOT_OLDER = 'WHERE client_ts IS NULL OR excluded.client_ts >= client_ts';
