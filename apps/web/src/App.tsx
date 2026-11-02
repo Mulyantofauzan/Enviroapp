@@ -13,6 +13,9 @@ import { Akun } from './screens/Akun';
 import { BerandaOperator } from './screens/BerandaOperator';
 import { BerandaManager } from './screens/BerandaManager';
 import { InputHub } from './screens/InputHub';
+import { InputCuaca } from './screens/InputCuaca';
+import { InputAir } from './screens/InputAir';
+import { InputKoagulan } from './screens/InputKoagulan';
 import { Riwayat } from './screens/Riwayat';
 import { Pengguna } from './screens/Pengguna';
 import { Master } from './screens/Master';
@@ -36,7 +39,10 @@ export function App() {
           <div className="ui-conn-slot"><ConnectionChip /></div>
           <Routes>
             <Route path="/" element={role === 'Auditor' ? <Navigate to="/riwayat" replace /> : role === 'Manager' ? <BerandaManager /> : <BerandaOperator />} />
-            <Route path="/input/*" element={<RequireRole role={role} allow={writers}><InputHub /></RequireRole>} />
+            <Route path="/input" element={<RequireRole role={role} allow={writers}><InputHub /></RequireRole>} />
+            <Route path="/input/cuaca" element={<RequireRole role={role} allow={writers}><InputCuaca /></RequireRole>} />
+            <Route path="/input/air" element={<RequireRole role={role} allow={writers}><InputAir /></RequireRole>} />
+            <Route path="/input/koagulan" element={<RequireRole role={role} allow={writers}><InputKoagulan /></RequireRole>} />
             <Route path="/riwayat" element={<Riwayat />} />
             <Route path="/akun" element={<Akun />} />
             <Route path="/pengguna" element={<RequireRole role={role} allow={['Admin']}><Pengguna /></RequireRole>} />

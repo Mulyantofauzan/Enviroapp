@@ -10,6 +10,7 @@ export function PondPicker({ ponds, value, onChange, label = 'Settling Pond' }: 
       <span className="ui-pick__box">
         <Icon name="pin" />
         <select aria-label={label} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
+          {!ponds.some((p) => p.id === value) && <option value="" disabled>Pilih pond</option>}
           {ponds.map((p) => <option key={p.id} value={p.id}>{pondLabel(p)}</option>)}
         </select>
         <Icon name="chevron-down" />
