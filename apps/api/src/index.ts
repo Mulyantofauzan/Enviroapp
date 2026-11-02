@@ -11,6 +11,7 @@ import { historyRoutes } from './entries/history';
 import { dashboardRoutes } from './entries/dashboard';
 import { scheduleRoutes } from './events/schedules';
 import { eventRoutes } from './events/events';
+import { evidenceRoutes } from './events/evidence';
 
 export const app = new Hono<AppEnv>().basePath('/api');
 
@@ -25,6 +26,7 @@ app.route('/history', historyRoutes);
 app.route('/dashboard', dashboardRoutes);
 app.route('/schedules', scheduleRoutes);
 app.route('/events', eventRoutes);
+app.route('/', evidenceRoutes);
 
 app.onError((err, c) => {
   console.error(err);

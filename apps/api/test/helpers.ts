@@ -13,7 +13,7 @@ export async function addUser(role: Role, email = `${role.toLowerCase()}@x.id`, 
 export function call(path: string, init: RequestInit & { cookie?: string } = {}) {
   const headers = new Headers(init.headers);
   if (init.cookie) headers.set('cookie', init.cookie);
-  if (init.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
+  if (init.body && !(init.body instanceof FormData) && !headers.has('content-type')) headers.set('content-type', 'application/json');
   return app.request(`/api${path}`, { ...init, headers }, env);
 }
 
