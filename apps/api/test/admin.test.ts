@@ -41,33 +41,70 @@ describe('ponds', () => {
   });
 });
 
-describe('thresholds', () => {
-  it('put then get', async () => {
+describe('pond details and thresholds', () => {
+  const mk = (cookie: string, extra: object = {}) =>
+    call('/ponds', { method: 'POST', cookie, body: json({ name: 'Pit Selatan', code: 'SP-02', latitude: -3.78421, longitude: 115.60214, thresholds: { ph_outlet: { min: 6, max: 9 }, tss_outlet: { min: null, max: 40 } }, ...extra }) });
+
+  it('create with code, coordinates and thresholds, then list returns them', async () => {
     const { cookie } = await login('Admin');
-    expect((await call('/thresholds/ph_outlet', { method: 'PUT', cookie, body: json({ min: 6, max: 9 }) })).status).toBe(200);
-    const all = await (await call('/thresholds', { cookie })).json() as any;
-    expect(all.ph_outlet).toEqual({ min: 6, max: 9 });
+    expect((await mk(cookie)).status).toBe(201);
+    const [p] = await (await call('/ponds', { cookie })).json() as any[];
+    expect(p).toMatchObject({ code: 'SP-02', name: 'Pit Selatan', latitude: -3.78421, longitude: 115.60214, is_active: true });
+    expect(p.thresholds).toEqual({ ph_outlet: { min: 6, max: 9 }, tss_outlet: { min: null, max: 40 } });
   });
-  it('unknown key is 400', async () => {
+  it('pond without thresholds lists an empty object', async () => {
     const { cookie } = await login('Admin');
-    expect((await call('/thresholds/nope', { method: 'PUT', cookie, body: json({ min: 1, max: 2 }) })).status).toBe(400);
+    await call('/ponds', { method: 'POST', cookie, body: json({ name: 'SP 1' }) });
+    const [p] = await (await call('/ponds', { cookie })).json() as any[];
+    expect(p.thresholds).toEqual({});
+    expect(p.code).toBeNull();
   });
-  it('null side accepted', async () => {
+  it('patch changes one pond thresholds and leaves another alone', async () => {
     const { cookie } = await login('Admin');
-    expect((await call('/thresholds/tss_outlet', { method: 'PUT', cookie, body: json({ min: null, max: 40 }) })).status).toBe(200);
-    expect(((await (await call('/thresholds', { cookie })).json()) as any).tss_outlet).toEqual({ min: null, max: 40 });
+    const a = await (await mk(cookie)).json() as any;
+    const b = await (await mk(cookie, { name: 'Pit Utara', code: 'SP-01' })).json() as any;
+    await call(`/ponds/${a.id}`, { method: 'PATCH', cookie, body: json({ thresholds: { ph_outlet: { min: 5.5, max: 9.5 } } }) });
+    const list = await (await call('/ponds', { cookie })).json() as any[];
+    expect(list.find((p) => p.id === a.id).thresholds.ph_outlet).toEqual({ min: 5.5, max: 9.5 });
+    expect(list.find((p) => p.id === b.id).thresholds.ph_outlet).toEqual({ min: 6, max: 9 });
   });
-  it('min greater than max is 400', async () => {
+  it('blank TSS maximum is stored as null', async () => {
     const { cookie } = await login('Admin');
-    expect((await call('/thresholds/ph_inlet', { method: 'PUT', cookie, body: json({ min: 9, max: 6 }) })).status).toBe(400);
+    const a = await (await mk(cookie)).json() as any;
+    await call(`/ponds/${a.id}`, { method: 'PATCH', cookie, body: json({ thresholds: { tss_outlet: { min: '', max: '' } } }) });
+    const [p] = await (await call('/ponds', { cookie })).json() as any[];
+    expect(p.thresholds.tss_outlet).toEqual({ min: null, max: null });
+  });
+  it('unknown threshold key is 400', async () => {
+    const { cookie } = await login('Admin');
+    expect((await mk(cookie, { thresholds: { ph_inlet: { min: 1, max: 2 } } })).status).toBe(400);
+  });
+  it('min above max is 400', async () => {
+    const { cookie } = await login('Admin');
+    expect((await mk(cookie, { thresholds: { ph_outlet: { min: 9, max: 6 } } })).status).toBe(400);
   });
   it('non-numeric bound is 400', async () => {
     const { cookie } = await login('Admin');
-    expect((await call('/thresholds/ph_inlet', { method: 'PUT', cookie, body: json({ min: 'x', max: 6 }) })).status).toBe(400);
+    expect((await mk(cookie, { thresholds: { ph_outlet: { min: 'x', max: 6 } } })).status).toBe(400);
   });
-  it('operator cannot put', async () => {
-    const { cookie } = await login('Operator');
-    expect((await call('/thresholds/ph_inlet', { method: 'PUT', cookie, body: json({ min: 1, max: 2 }) })).status).toBe(403);
+  it('latitude out of range is 400', async () => {
+    const { cookie } = await login('Admin');
+    expect((await mk(cookie, { latitude: 91 })).status).toBe(400);
+  });
+  it('duplicate code is 409', async () => {
+    const { cookie } = await login('Admin');
+    await mk(cookie);
+    expect((await mk(cookie, { name: 'Lain' })).status).toBe(409);
+  });
+  it('operator cannot patch', async () => {
+    const admin = await login('Admin');
+    const a = await (await mk(admin.cookie)).json() as any;
+    const op = await login('Operator');
+    expect((await call(`/ponds/${a.id}`, { method: 'PATCH', cookie: op.cookie, body: json({ name: 'X' }) })).status).toBe(403);
+  });
+  it('old global thresholds route is gone', async () => {
+    const { cookie } = await login('Admin');
+    expect((await call('/thresholds', { cookie })).status).toBe(404);
   });
 });
 
