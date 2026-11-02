@@ -11,6 +11,12 @@ type Fail = { fail: Response };
 const isFail = (v: unknown): v is Fail => typeof v === 'object' && v !== null && 'fail' in v;
 const text = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
 
+/** A start date outside 2000-01-01 .. five years from now is almost certainly a typo (e.g. 0202). */
+const startDateOk = (d: string) => {
+  const today = todayInSite();
+  return d >= '2000-01-01' && d <= `${Number(today.slice(0, 4)) + 5}${today.slice(4)}`;
+};
+
 const LOCKED_MSG = 'Frekuensi dan tanggal mulai tidak bisa diubah karena jadwal ini sudah punya catatan.';
 
 const SELECT = `
@@ -49,6 +55,7 @@ function readFields(c: Context<AppEnv>, b: any, partial: boolean): Record<string
   }
   if (!partial || b.start_date !== undefined) {
     if (!isValidDate(b.start_date)) return { fail: c.json({ error: 'Tanggal mulai harus berbentuk 2026-11-02.' }, 400) };
+    if (!startDateOk(b.start_date)) return { fail: c.json({ error: 'Tanggal mulai harus antara 1 Jan 2000 dan 5 tahun dari sekarang.' }, 400) };
     out.start_date = b.start_date;
   }
   if (b.sp_id !== undefined) out.sp_id = text(b.sp_id);
@@ -89,7 +96,8 @@ scheduleRoutes.patch('/:id', requireScheduler, async (c) => {
   if (isFail(f)) return f.fail;
   const changesTiming = (f.frequency !== undefined && f.frequency !== row.frequency) || (f.start_date !== undefined && f.start_date !== row.start_date);
   if (changesTiming && row.locked) return c.json({ error: LOCKED_MSG }, 409);
-  const bad = await checkRefs(c, f.sp_id, f.assigned_to);
+  // An assignee deactivated after the schedule was made can stay; only a new, unknown or inactive pick is refused.
+  const bad = await checkRefs(c, f.sp_id, f.assigned_to === row.assigned_to ? undefined : f.assigned_to);
   if (bad) return bad;
   const next = { ...row, ...f };
   await c.env.DB.prepare('UPDATE event_schedules SET title = ?, description = ?, frequency = ?, start_date = ?, sp_id = ?, assigned_to = ? WHERE id = ?')

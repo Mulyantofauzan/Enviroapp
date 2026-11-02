@@ -178,6 +178,31 @@ describe('upload', () => {
   });
 });
 
+describe('upload body limits', () => {
+  it('a streamed body with no content-length is cut off at the limit, not read in full', async () => {
+    const op = await login('Operator');
+    const sid = await schedule(op.user.id);
+    let pulled = 0;
+    const stream = new ReadableStream({ pull(ctrl) { pulled++; ctrl.enqueue(new Uint8Array(MB)); if (pulled >= 60) ctrl.close(); } });
+    const res = await app.request(`/api/events/${sid}/${d(-1)}/evidence`, {
+      method: 'POST', headers: { cookie: op.cookie, 'content-type': 'multipart/form-data; boundary=xyz' }, body: stream, duplex: 'half',
+    } as RequestInit, env);
+    expect(res.status).toBe(413);
+    expect(pulled).toBeLessThan(20);
+  });
+  it('a lying small content-length does not bypass the limit either', async () => {
+    const op = await login('Operator');
+    const sid = await schedule(op.user.id);
+    let pulled = 0;
+    const stream = new ReadableStream({ pull(ctrl) { pulled++; ctrl.enqueue(new Uint8Array(MB)); if (pulled >= 60) ctrl.close(); } });
+    const res = await app.request(`/api/events/${sid}/${d(-1)}/evidence`, {
+      method: 'POST', headers: { cookie: op.cookie, 'content-type': 'multipart/form-data; boundary=xyz', 'content-length': '100' }, body: stream, duplex: 'half',
+    } as RequestInit, env);
+    expect(res.status).toBe(413);
+    expect(pulled).toBeLessThan(20);
+  });
+});
+
 describe('delete evidence', () => {
   const mk = async () => {
     const op = await login('Operator');

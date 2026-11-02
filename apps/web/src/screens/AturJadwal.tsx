@@ -86,7 +86,7 @@ export function AturJadwal() {
                 {EVENT_FREQUENCIES.map((f) => <option key={f} value={f}>{FREQUENCY_LABEL[f]}</option>)}
               </select>
             </label>
-            <label className="ui-text"><span>Tanggal mulai</span><input type="date" value={form.start_date} disabled={form.locked} required onChange={(e) => e.target.value && set({ start_date: e.target.value })} /></label>
+            <label className="ui-text"><span>Tanggal mulai</span><input type="date" value={form.start_date} min="2000-01-01" disabled={form.locked} required onChange={(e) => e.target.value && set({ start_date: e.target.value })} /></label>
             {form.locked && <p className="ui-muted">Terkunci karena sudah ada catatan</p>}
             <label className="ui-text"><span>Settling Pond</span>
               <select value={form.sp_id} onChange={(e) => set({ sp_id: e.target.value })}>
@@ -94,10 +94,13 @@ export function AturJadwal() {
                 {ponds.map((p) => <option key={p.id} value={p.id}>{pondLabel(p)}</option>)}
               </select>
             </label>
-            {people.length > 0 && (
+            {(people.length > 0 || !!form.assigned_to) && (
               <label className="ui-text"><span>Ditugaskan ke</span>
                 <select value={form.assigned_to} onChange={(e) => set({ assigned_to: e.target.value })}>
                   <option value="">Tidak ada</option>
+                  {form.assigned_to && !people.some((u) => u.id === form.assigned_to) && (
+                    <option value={form.assigned_to}>{(list?.find((x) => x.id === form.id)?.assigned_to_name ?? 'Pengguna')} (nonaktif)</option>
+                  )}
                   {people.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </label>

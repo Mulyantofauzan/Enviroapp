@@ -8,6 +8,22 @@ export const evidenceRoutes = new Hono<AppEnv>();
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const FORM_OVERHEAD = 256 * 1024;
+
+/** Reads a multipart body but stops as soon as it passes `max` bytes, whatever the headers claim. */
+async function readFormLimited(req: Request, max: number): Promise<FormData | 'too_big' | null> {
+  if (!req.body) return null;
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) { await reader.cancel(); return 'too_big'; }
+    chunks.push(value);
+  }
+  return new Response(new Blob(chunks), { headers: { 'content-type': req.headers.get('content-type') ?? '' } }).formData().catch(() => null);
+}
 const LOCKED = 'Event sudah selesai. Eviden tidak bisa diubah.';
 const NOT_YET = 'Event ini belum waktunya.';
 
@@ -32,7 +48,8 @@ evidenceRoutes.post('/events/:scheduleId/:date/evidence', requireAuth, requireEx
   const tooBig = c.json({ error: 'Berkas terlalu besar. Maksimal 10 MB.' }, 413);
   const declared = Number(c.req.header('content-length') ?? 0);
   if (declared > MAX_BYTES + FORM_OVERHEAD) return tooBig;
-  const form = await c.req.formData().catch(() => null);
+  const form = await readFormLimited(c.req.raw, MAX_BYTES + FORM_OVERHEAD);
+  if (form === 'too_big') return tooBig;
   const file = form?.get('file');
   if (!file || typeof file === 'string') return c.json({ error: 'Pilih berkas untuk diunggah.' }, 400);
   if (file.size === 0) return c.json({ error: 'Berkas kosong.' }, 400);

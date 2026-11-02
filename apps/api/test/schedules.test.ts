@@ -64,6 +64,49 @@ describe('schedules: validation', () => {
   });
 });
 
+describe('schedules: start date window', () => {
+  const fiveYears = (n: number) => { const t = todayInSite(); return `${Number(t.slice(0, 4)) + n}${t.slice(4)}`; };
+  it('a typo year like 0202 is refused, with a plain message', async () => {
+    const { cookie } = await login('Manager');
+    const res = await create(cookie, { start_date: '0202-11-02' });
+    expect(res.status).toBe(400);
+    expect(await errOf(res)).toBe('Tanggal mulai harus antara 1 Jan 2000 dan 5 tahun dari sekarang.');
+  });
+  it('before 2000 and more than five years ahead are refused; the edges are accepted', async () => {
+    const { cookie } = await login('Manager');
+    expect((await create(cookie, { start_date: '1999-12-31' })).status).toBe(400);
+    expect((await create(cookie, { start_date: fiveYears(6) })).status).toBe(400);
+    expect((await create(cookie, { start_date: '2000-01-01' })).status).toBe(201);
+    expect((await create(cookie, { start_date: fiveYears(5) })).status).toBe(201);
+  });
+  it('the same window applies when editing', async () => {
+    const { cookie } = await login('Manager');
+    const id = ((await (await create(cookie)).json()) as any).id as string;
+    expect((await call(`/schedules/${id}`, { method: 'PATCH', cookie, body: json({ start_date: '0202-01-01' }) })).status).toBe(400);
+  });
+  it('a daily schedule from the earliest allowed date is still fully enumerated', async () => {
+    const { cookie } = await login('Manager');
+    await create(cookie, { start_date: '2000-01-01' });
+    const r = (await (await call('/events/summary', { cookie })).json()) as any;
+    expect(r.overdue).toBeGreaterThan(9000);
+    expect(r.overdue).toBeLessThan(20000);
+  });
+});
+
+describe('schedules: assignee who was deactivated later', () => {
+  it('editing something else still works, but picking another inactive person does not', async () => {
+    const mgr = await login('Manager');
+    const op = await login('Operator');
+    const other = await login('Auditor');
+    const id = ((await (await create(mgr.cookie, { assigned_to: op.user.id })).json()) as any).id as string;
+    await env.DB.prepare('UPDATE users SET is_active = 0 WHERE id IN (?, ?)').bind(op.user.id, other.user.id).run();
+    const same = await call(`/schedules/${id}`, { method: 'PATCH', cookie: mgr.cookie, body: json({ title: 'Judul baru', assigned_to: op.user.id }) });
+    expect(same.status).toBe(200);
+    const change = await call(`/schedules/${id}`, { method: 'PATCH', cookie: mgr.cookie, body: json({ assigned_to: other.user.id }) });
+    expect(change.status).toBe(400);
+  });
+});
+
 describe('schedules: change and stop', () => {
   const mk = async () => {
     const { cookie, user } = await login('Manager');

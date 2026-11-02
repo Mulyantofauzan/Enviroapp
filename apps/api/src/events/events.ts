@@ -99,7 +99,7 @@ eventRoutes.get('/overdue', async (c) => {
   const db = c.env.DB;
   const today = todayInSite();
   const schedules = await loadSchedules(db, f);
-  const doneAll = (await db.prepare(COMPLETIONS).all<Completion>()).results;
+  const doneAll = (await db.prepare('SELECT schedule_id, due_date FROM event_completions WHERE due_date < ?').bind(today).all<{ schedule_id: string; due_date: string }>()).results;
   const done = new Set(doneAll.map((r) => `${r.schedule_id}|${r.due_date}`));
   const list = overdueList(schedules, done, today);
   const shown = list.slice(0, OVERDUE_CAP);
@@ -111,10 +111,15 @@ eventRoutes.get('/summary', async (c) => {
   const db = c.env.DB;
   const today = todayInSite();
   const schedules = await loadSchedules(db, { frequency: null, sp: null });
-  const done = new Set((await db.prepare(COMPLETIONS).all<Completion>()).results.map((r) => `${r.schedule_id}|${r.due_date}`));
-  const overdue = overdueList(schedules, done, today).length;
-  const dueToday = schedules.filter((s) => isDueDate(s, today) && !done.has(`${s.id}|${today}`)).length;
-  return c.json({ today, overdue, due_today: dueToday });
+  // Completions only exist on real due dates (timing is locked once records exist), so
+  // overdue = due dates up to yesterday minus completions up to yesterday. No rows are read back.
+  const yesterday = addDays(today, -1);
+  let due = 0;
+  for (const s of schedules) if (s.start_date <= yesterday) due += dueDates(s, s.start_date, yesterday).length;
+  const past = await db.prepare('SELECT COUNT(*) n FROM event_completions WHERE due_date < ?').bind(today).first<{ n: number }>();
+  const doneToday = new Set((await db.prepare('SELECT schedule_id FROM event_completions WHERE due_date = ?').bind(today).all<{ schedule_id: string }>()).results.map((r) => r.schedule_id));
+  const dueToday = schedules.filter((s) => isDueDate(s, today) && !doneToday.has(s.id)).length;
+  return c.json({ today, overdue: Math.max(0, due - (past?.n ?? 0)), due_today: dueToday });
 });
 
 eventRoutes.get('/:scheduleId/:date', async (c) => {

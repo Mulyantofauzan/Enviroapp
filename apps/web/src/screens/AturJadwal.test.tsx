@@ -118,6 +118,23 @@ describe('Atur jadwal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
     expect(await screen.findByText(/tidak bisa diubah karena jadwal ini sudah punya catatan/)).toBeInTheDocument();
   });
+  it('keeps showing an assignee who was deactivated, so an edit does not silently drop them', async () => {
+    const calls = setup([sch({ assigned_to: 'u9', assigned_to_name: 'Bagas Prakoso' })]);
+    renderApp('/kalender/jadwal');
+    await userEvent.click(await screen.findByRole('button', { name: 'Ubah Cek Saluran Inlet' }));
+    const select = screen.getByLabelText('Ditugaskan ke') as HTMLSelectElement;
+    expect(select.value).toBe('u9');
+    expect(within(select).getByRole('option', { name: 'Bagas Prakoso (nonaktif)' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
+    await waitFor(() => expect(changes(calls)).toHaveLength(1));
+    expect(changes(calls)[0].body.assigned_to).toBe('u9');
+  });
+  it('limits the start date input to 2000 and later', async () => {
+    setup([]);
+    renderApp('/kalender/jadwal');
+    await userEvent.click(await screen.findByRole('button', { name: 'Tambah jadwal' }));
+    expect(screen.getByLabelText('Tanggal mulai')).toHaveAttribute('min', '2000-01-01');
+  });
   it('has a way back to the calendar', async () => {
     setup();
     renderApp('/kalender/jadwal');

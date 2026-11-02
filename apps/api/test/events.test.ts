@@ -173,3 +173,24 @@ describe('GET /events/:scheduleId/:date', () => {
     expect((await call('/events/nope/abc', { cookie })).status).toBe(400);
   });
 });
+
+describe('GET /events/summary reads little', () => {
+  it('counts completions in SQL instead of reading and joining the whole history', async () => {
+    const { cookie, user } = await login('Manager');
+    const s = await schedule(user.id, { start_date: d(-30) });
+    for (let i = 1; i <= 10; i++) await complete(s.id, d(-i), user.id);
+    const seen: string[] = [];
+    const spying = new Proxy(env.DB, {
+      get(t, p) {
+        if (p === 'prepare') return (sql: string) => { seen.push(sql); return t.prepare(sql); };
+        const v = (t as any)[p];
+        return typeof v === 'function' ? v.bind(t) : v;
+      },
+    });
+    const res = await app.request('/api/events/summary', { headers: { cookie } }, { DB: spying, EVIDENCE: env.EVIDENCE });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as any).overdue).toBe(20);
+    expect(seen.some((q) => /COUNT\(\*\)[^;]*event_completions/i.test(q))).toBe(true);
+    expect(seen.some((q) => /event_completions/i.test(q) && /JOIN users/i.test(q))).toBe(false);
+  });
+});
