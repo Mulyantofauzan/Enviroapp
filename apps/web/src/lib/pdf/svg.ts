@@ -36,6 +36,11 @@ function frame(o: { width: number; height: number; title: string; theme: Theme; 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" fill="${theme.panel}" stroke="${theme.border}" stroke-width="1"/>${tag}${body}</svg>`;
 }
 
+const noData = (series: { values: Pt[] }[], W: number, T: number, ih: number) =>
+  series.every((s) => s.values.every((v) => v === null))
+    ? `<text x="${W / 2}" y="${n2(T + ih / 2)}" text-anchor="middle" font-family="${FONT}" font-size="12" fill="${INK}">No data</text>`
+    : '';
+
 type LegendItem = { name: string; color: string; kind: 'box' | 'line' };
 function legend(items: LegendItem[], W: number, y: number): string {
   const natural = items.map((i) => i.name.length * CHAR_W + 26);
@@ -98,6 +103,7 @@ export function barChartSvg(o: {
     ...o.series.map((s): LegendItem => ({ name: s.name, color: s.color, kind: 'box' })),
     ...lines.map((l): LegendItem => ({ name: l.name, color: l.color, kind: 'line' })),
   ], W, H - 12));
+  out.push(noData(o.series, W, T, ih));
   return frame({ ...o, tag: true }, out.join(''));
 }
 
@@ -155,5 +161,6 @@ export function lineChartSvg(o: {
     });
   });
   if (showLegend) out.push(legend(o.series.map((s): LegendItem => ({ name: s.name, color: s.color, kind: 'line' })), W, H - 12));
+  out.push(noData(o.series, W, T, ih));
   return frame({ ...o, tag: showTag }, out.join(''));
 }

@@ -112,3 +112,15 @@ describe('lineChartSvg', () => {
     expect(s).not.toContain('var(');
   });
 });
+
+describe('empty charts', () => {
+  it('say "No data" when every series is empty, and not otherwise', () => {
+    const empty = days.map(() => null);
+    const l = parse(lineChartSvg({ width: 270, height: 200, title: 'T', theme: WEATHER_THEME, categories: days, series: [{ name: 'x', color: '#000', values: empty }] }));
+    expect(l.documentElement.textContent).toContain('No data');
+    const b = parse(barChartSvg({ width: 270, height: 200, title: 'T', theme: POND_THEME, categories: days, series: [{ name: 'x', color: '#000', values: empty }] }));
+    expect(b.documentElement.textContent).toContain('No data');
+    expect(parse(bar()).documentElement.textContent).not.toContain('No data');
+    expect(parse(line()).documentElement.textContent).not.toContain('No data');
+  });
+});

@@ -22,14 +22,25 @@ type Doc = import('jspdf').jsPDF;
 type AutoTable = typeof import('jspdf-autotable').default;
 const lastY = (doc: Doc) => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
 
+const MAX_BANNER_W = PAGE_W - MARGIN * 2;
+
+/** Biggest font (17 down to 9 pt) that fits the standard box; else widen the box up to the page; else cut with "...". */
+export function fitBanner(text: string, measure: (t: string, size: number) => number): { text: string; size: number; width: number } {
+  const fits = (t: string, size: number, w: number) => measure(t, size) <= w - 16;
+  for (let size = 17; size >= 9; size--) if (fits(text, size, BANNER_W)) return { text, size, width: BANNER_W };
+  const need = Math.ceil(measure(text, 9)) + 16;
+  if (need <= MAX_BANNER_W) return { text, size: 9, width: Math.max(BANNER_W, need) };
+  let cut = text;
+  while (cut.length > 1 && !fits(`${cut}...`, 9, MAX_BANNER_W)) cut = cut.slice(0, -1);
+  return { text: `${cut}...`, size: 9, width: MAX_BANNER_W };
+}
+
 function drawBanner(doc: Doc, title: string, fill: string, y = MARGIN) {
-  const x = (PAGE_W - BANNER_W) / 2;
-  doc.setFillColor(...rgb(fill)).rect(x, y, BANNER_W, BANNER_H, 'F');
-  const text = pdfSafe(title);
-  let size = 17;
   doc.setFont('helvetica', 'bolditalic');
-  for (; size > 9; size--) { doc.setFontSize(size); if (doc.getTextWidth(text) <= BANNER_W - 16) break; }
-  doc.setFontSize(size).setTextColor(255).text(text, PAGE_W / 2, y + BANNER_H / 2 + size * 0.35, { align: 'center' });
+  const fit = fitBanner(pdfSafe(title), (t, size) => doc.setFontSize(size).getTextWidth(t));
+  const x = (PAGE_W - fit.width) / 2;
+  doc.setFillColor(...rgb(fill)).rect(x, y, fit.width, BANNER_H, 'F');
+  doc.setFontSize(fit.size).setTextColor(255).text(fit.text, PAGE_W / 2, y + BANNER_H / 2 + fit.size * 0.35, { align: 'center' });
 }
 
 async function addChart(doc: Doc, raster: Raster, xml: string, x: number, y: number, w: number, h: number) {

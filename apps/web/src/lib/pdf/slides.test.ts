@@ -3,7 +3,7 @@ import { unzlibSync, strFromU8 } from 'fflate';
 import type { ReportSection } from '../report';
 import { pondPage, weatherPage } from './pages';
 import { pdfSafe } from './safe';
-import { buildSlidePdf } from './slides';
+import { buildSlidePdf, fitBanner } from './slides';
 
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 const raster = () => vi.fn(async (s: { width: number; height: number }) => ({ dataUrl: PNG, width: s.width, height: s.height }));
@@ -84,5 +84,24 @@ describe('pdfSafe', () => {
   it('keeps Latin text and ³, swaps characters Helvetica cannot draw for ?', () => {
     expect(pdfSafe('Débit m³/hari')).toBe('Débit m³/hari');
     expect(pdfSafe('Salju ☃')).toBe('Salju ?');
+  });
+});
+
+describe('fitBanner', () => {
+  const measure = (t: string, size: number) => t.length * size * 0.6;
+  it('keeps the standard box and 17 pt for a short title', () => {
+    expect(fitBanner('SP 11 LGG MONITORING', measure)).toEqual({ text: 'SP 11 LGG MONITORING', size: 17, width: 300 });
+  });
+  it('shrinks, then widens the box, so a long title is never cut off', () => {
+    const r = fitBanner('SP 12 KOLAM PENGENDAPAN TAMBANG UTARA BLOK C MONITORING', measure);
+    expect(r.width).toBeGreaterThan(300);
+    expect(r.width).toBeLessThanOrEqual(786);
+    expect(measure(r.text, r.size)).toBeLessThanOrEqual(r.width - 16);
+  });
+  it('truncates with an ellipsis only when even the widest box is too small', () => {
+    const r = fitBanner('X'.repeat(200), measure);
+    expect(r.width).toBe(786);
+    expect(r.text.endsWith('...')).toBe(true);
+    expect(measure(r.text, r.size)).toBeLessThanOrEqual(r.width - 16);
   });
 });
