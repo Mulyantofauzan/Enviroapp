@@ -9,13 +9,11 @@ type Totals = { ponds: { sp_id: string; 'Tawas Serbuk': number; 'Tawas Batu': nu
 
 const byCodeThenName = (a: Pond, b: Pond) => (a.code ?? '').localeCompare(b.code ?? '') || a.name.localeCompare(b.name);
 
-/** Fetches what the slides need (a year of history, lifetime tawas totals) and builds the PDF. Reads nothing from the page. */
-export async function buildPdfReport(o: {
-  to: string; sp: string; kinds: ReportKind[]; ponds: Pond[]; eventSection: ReportSection | null;
-  fetchJson?: typeof api; build?: typeof buildSlidePdf;
-}): Promise<Blob> {
+export type SlideSource = { to: string; sp: string; kinds: ReportKind[]; ponds: Pond[]; eventSection: ReportSection | null; fetchJson?: typeof api };
+
+/** Fetches what the slides need (a year of history, lifetime tawas totals) and shapes it into pages. Shared by the PDF and PowerPoint exports. Reads nothing from the page. */
+export async function loadSlideInput(o: SlideSource): Promise<SlideInput> {
   const fetchJson = o.fetchJson ?? api;
-  const build = o.build ?? buildSlidePdf;
   const spQ = o.sp ? `&sp=${encodeURIComponent(o.sp)}` : '';
   const wantsPonds = o.kinds.includes('air') || o.kinds.includes('koagulan');
 
@@ -35,5 +33,9 @@ export async function buildPdfReport(o: {
     });
   }
   if (o.kinds.includes('event') && o.eventSection && o.eventSection.rows.length > 0) input.event = o.eventSection;
-  return build(input);
+  return input;
+}
+
+export async function buildPdfReport(o: SlideSource & { build?: typeof buildSlidePdf }): Promise<Blob> {
+  return (o.build ?? buildSlidePdf)(await loadSlideInput(o));
 }

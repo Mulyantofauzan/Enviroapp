@@ -87,7 +87,7 @@ describe('Riwayat: edit links', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Cuaca' }));
     expect(await screen.findByRole('link', { name: 'Ubah 2 Nov 2026' })).toHaveAttribute('href', '/input/cuaca?date=2026-11-02');
     await userEvent.click(screen.getByRole('tab', { name: 'Koagulan' }));
-    expect((await screen.findAllByRole('link', { name: /Ubah 2 Nov 2026 SP-02 Pit Selatan/ }))[0]).toHaveAttribute('href', '/input/koagulan?date=2026-11-02&sp=p1');
+    expect((await screen.findAllByRole('link', { name: /Ubah 2 Nov 2026 SP-02 Pit Selatan/ }))[0]).toHaveAttribute('href', '/input/air?date=2026-11-02&sp=p1');
   });
   it.each(['Manager', 'Auditor'] as const)('%s reads the table but has no edit links or action column', async (role) => {
     mockApi({ role, ponds: [POND], handler: api([e1]) });

@@ -10,6 +10,7 @@ import { addDays, addMonths, dateText, monthRange } from '../lib/dates';
 import { reportFilename, saveBlob } from '../lib/download';
 import { buildReport, cellText, reportRowCount, type ReportKind, type ReportRow } from '../lib/report';
 import { buildPdfReport } from '../lib/pdf/export';
+import { buildPptxReport } from '../lib/pptx/export';
 import { witaStamp } from '../lib/stamp';
 import { validatePeriod } from '../lib/windows';
 import { buildXlsx, type ReportMeta } from '../lib/xlsx';
@@ -26,6 +27,7 @@ const PRESETS = [{ value: '7', label: '7 hari' }, { value: '30', label: '30 hari
 const KINDS: { id: ReportKind; label: string }[] = [{ id: 'cuaca', label: 'Cuaca' }, { id: 'air', label: 'Air Permukaan' }, { id: 'koagulan', label: 'Koagulan' }, { id: 'event', label: 'Event' }];
 const PREVIEW_ROWS = 50;
 const MAX_ROWS = 20_000;
+const PPTX_TYPE = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 type Row = ReportRow & { i: number };
@@ -42,7 +44,7 @@ export function Laporan() {
   const [spChoice, setSpChoice] = useState<string | null>(null);
   const [active, setActive] = useState<Set<ReportKind>>(new Set(['cuaca', 'air', 'koagulan']));
   const [view, setView] = useState<ReportKind>('air');
-  const [busy, setBusy] = useState<'xlsx' | 'pdf' | null>(null);
+  const [busy, setBusy] = useState<'xlsx' | 'pdf' | 'pptx' | null>(null);
   const [exportError, setExportError] = useState('');
 
   const sp = spChoice ?? current ?? '';
@@ -79,7 +81,7 @@ export function Laporan() {
     setActive(next);
   }
 
-  const lokasi = pond ? pondLabel(pond) : 'Semua lokasi';
+  const lokasi = pond ? pondLabel(pond) : 'Semua pond';
   const meta = (): ReportMeta => ({
     title: 'Laporan EVO', lokasi, periode: `${dateText(from)} - ${dateText(to)}`,
     dibuatOleh: user?.name ?? '-', dibuatPada: `${witaStamp(new Date())} WITA`,
@@ -99,13 +101,14 @@ export function Laporan() {
     }
   }
 
-  async function exportPdf() {
+  async function exportSlides(kind: 'pdf' | 'pptx') {
     setExportError('');
     if (total > MAX_ROWS) { setExportError(`Ada ${formatNumber(total, 0)} baris. Persempit periode agar tidak lebih dari 20.000.`); return; }
-    setBusy('pdf');
+    setBusy(kind);
     try {
-      const blob = await buildPdfReport({ to, sp, kinds, ponds, eventSection: sections.find((x) => x.id === 'event') ?? null });
-      saveBlob(blob, reportFilename(lokasi, from, to, 'pdf'));
+      const input = { to, sp, kinds, ponds, eventSection: sections.find((x) => x.id === 'event') ?? null };
+      const blob = kind === 'pdf' ? await buildPdfReport(input) : await buildPptxReport(input);
+      saveBlob(kind === 'pptx' ? new Blob([blob], { type: PPTX_TYPE }) : blob, reportFilename(lokasi, from, to, kind));
     } catch (e) {
       setExportError((e as Error).message || 'Berkas tidak bisa dibuat. Coba lagi.');
     } finally {
@@ -129,7 +132,7 @@ export function Laporan() {
         <section className="ui-card ui-filters" aria-label="Filter laporan">
           <label className="ui-filters__wide"><span>Lokasi</span>
             <select aria-label="Lokasi" value={sp} onChange={(e) => setSpChoice(e.target.value)}>
-              <option value="">Semua lokasi</option>
+              <option value="">Semua pond</option>
               {ponds.map((p) => <option key={p.id} value={p.id}>{pondLabel(p)}</option>)}
             </select>
           </label>
@@ -172,7 +175,8 @@ export function Laporan() {
 
         {exportError && <p className="ui-error" role="alert">{exportError}</p>}
         <Button disabled={!canExport} onClick={exportExcel}><Icon name="download" /> {busy === 'xlsx' ? 'Menyiapkan…' : 'Ekspor Excel (.xlsx)'}</Button>
-        <Button variant="outline" disabled={!canExport} onClick={exportPdf}><Icon name="file" /> {busy === 'pdf' ? 'Menyiapkan…' : 'Ekspor PDF'}</Button>
+        <Button variant="outline" disabled={!canExport} onClick={() => exportSlides('pdf')}><Icon name="file" /> {busy === 'pdf' ? 'Menyiapkan…' : 'Ekspor PDF'}</Button>
+        <Button variant="outline" disabled={!canExport} onClick={() => exportSlides('pptx')}><Icon name="file" /> {busy === 'pptx' ? 'Menyiapkan…' : 'Ekspor PowerPoint (.pptx)'}</Button>
       </div>
     </>
   );

@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { Role } from '@evo/shared';
 import { useAuth } from './auth/AuthContext';
 import { PondProvider } from './pond/PondContext';
@@ -16,7 +16,6 @@ import { BerandaManager } from './screens/BerandaManager';
 import { InputHub } from './screens/InputHub';
 import { InputCuaca } from './screens/InputCuaca';
 import { InputAir } from './screens/InputAir';
-import { InputKoagulan } from './screens/InputKoagulan';
 import { Eviden } from './screens/Eviden';
 import { Laporan } from './screens/Laporan';
 import { Riwayat } from './screens/Riwayat';
@@ -28,6 +27,12 @@ import { AturJadwal } from './screens/AturJadwal';
 
 function RequireRole({ role, allow, children }: { role: Role; allow: Role[]; children: ReactNode }) {
   return allow.includes(role) ? <>{children}</> : <Navigate to={homeFor(role)} replace />;
+}
+
+/** Old bookmarks to the separate koagulan screen land on the combined screen, keeping date and pond. */
+function KoagulanRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/input/air${search}`} replace />;
 }
 
 export function App() {
@@ -49,7 +54,7 @@ export function App() {
             <Route path="/input" element={<RequireRole role={role} allow={writers}><InputHub /></RequireRole>} />
             <Route path="/input/cuaca" element={<RequireRole role={role} allow={writers}><InputCuaca /></RequireRole>} />
             <Route path="/input/air" element={<RequireRole role={role} allow={writers}><InputAir /></RequireRole>} />
-            <Route path="/input/koagulan" element={<RequireRole role={role} allow={writers}><InputKoagulan /></RequireRole>} />
+            <Route path="/input/koagulan" element={<KoagulanRedirect />} />
             <Route path="/kalender" element={<Kalender />} />
             <Route path="/kalender/jadwal" element={<RequireRole role={role} allow={['Manager', 'Admin']}><AturJadwal /></RequireRole>} />
             <Route path="/kalender/:scheduleId/:date" element={<EventDetail />} />

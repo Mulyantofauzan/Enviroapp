@@ -73,11 +73,11 @@ describe('Input Air Permukaan', () => {
     renderApp(`/input/air?date=${D}&sp=p1`);
     await userEvent.type(await screen.findByLabelText('pH inlet'), '6,8');
     await userEvent.type(screen.getByLabelText('pH outlet'), '7,1');
-    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
     await waitFor(() => expect(puts(calls)).toHaveLength(1));
     expect(puts(calls)[0].url).toBe(`/api/water/${D}/p1`);
     expect(puts(calls)[0].body).toMatchObject({ ph_inlet: 6.8, ph_outlet: 7.1 });
-    expect(await screen.findByText('Data air tersimpan')).toBeInTheDocument();
+    expect(await screen.findByText('Data air & koagulan tersimpan')).toBeInTheDocument();
   });
   it('daily flow is calculated from m3/s', async () => {
     mockApi();
@@ -90,7 +90,7 @@ describe('Input Air Permukaan', () => {
     renderApp(`/input/air?date=${D}&sp=p1`);
     await userEvent.type(await screen.findByLabelText('pH outlet'), '5,8');
     expect(screen.getByText('Di luar baku mutu 6-9')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
     await waitFor(() => expect(puts(calls)).toHaveLength(1));
     expect(puts(calls)[0].body.ph_outlet).toBe(5.8);
   });
@@ -104,7 +104,7 @@ describe('Input Air Permukaan', () => {
     const calls = mockApi();
     renderApp(`/input/air?date=${D}&sp=p1`);
     await userEvent.type(await screen.findByLabelText('pH inlet'), 'abc');
-    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
     expect(await screen.findByText('Perbaiki angka yang ditandai dulu.')).toBeInTheDocument();
     expect(puts(calls)).toHaveLength(0);
     expect(screen.getByText('Masukkan angka')).toBeVisible();
@@ -116,13 +116,39 @@ describe('Input Air Permukaan', () => {
   });
 });
 
-describe('Input Koagulan', () => {
+describe('Input Air & Koagulan: one screen', () => {
+  it('shows water and coagulant sections, and one save sends both', async () => {
+    const calls = mockApi();
+    renderApp(`/input/air?date=${D}&sp=p1`);
+    await userEvent.type(await screen.findByLabelText('pH inlet'), '7');
+    await userEvent.type(screen.getByLabelText('Tawas Batu keluar'), '25');
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
+    await waitFor(() => expect(puts(calls)).toHaveLength(2));
+    expect(puts(calls).map((c) => c.url).sort()).toEqual([`/api/coagulant/${D}/p1/Tawas%20Batu`, `/api/water/${D}/p1`]);
+  });
+  it('coagulant only: does not create an empty water record', async () => {
+    const calls = mockApi();
+    renderApp(`/input/air?date=${D}&sp=p1`);
+    await userEvent.type(await screen.findByLabelText('Tawas Batu keluar'), '25');
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
+    await waitFor(() => expect(puts(calls)).toHaveLength(1));
+    expect(puts(calls)[0].url).toContain('/api/coagulant/');
+  });
+  it('the old koagulan address opens the combined screen with the same date and pond', async () => {
+    mockApi();
+    renderApp(`/input/koagulan?date=${D}&sp=p1`);
+    expect(await screen.findByLabelText('Tawas Serbuk masuk')).toBeVisible();
+    expect(screen.getByLabelText('pH inlet')).toBeVisible();
+  });
+});
+
+describe('Input Air & Koagulan: koagulan section', () => {
   const prev = { ...emptyDay.previousRemaining, Kapur: 200 };
   const withPrev = (u: string) => (u.startsWith('/api/day') ? json({ ...emptyDay, previousRemaining: prev }) : undefined);
 
   it('shows starting stock and a calculated remaining', async () => {
     mockApi({ handler: withPrev });
-    renderApp(`/input/koagulan?date=${D}&sp=p1`);
+    renderApp(`/input/air?date=${D}&sp=p1`);
     expect(await screen.findByText('Stok awal 200 kg')).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Kapur masuk'), '100');
     await userEvent.type(screen.getByLabelText('Kapur keluar'), '40');
@@ -130,24 +156,24 @@ describe('Input Koagulan', () => {
   });
   it('warns below zero but still saves', async () => {
     const calls = mockApi({ handler: withPrev });
-    renderApp(`/input/koagulan?date=${D}&sp=p1`);
+    renderApp(`/input/air?date=${D}&sp=p1`);
     await userEvent.type(await screen.findByLabelText('Kapur keluar'), '500');
     expect(screen.getByText('Stok di bawah nol. Periksa hitungan Anda.')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Simpan data koagulan' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
     await waitFor(() => expect(puts(calls).length).toBeGreaterThan(0));
   });
   it('saves only the types that were touched and sends a typed remaining', async () => {
     const calls = mockApi({ handler: withPrev });
-    renderApp(`/input/koagulan?date=${D}&sp=p1`);
+    renderApp(`/input/air?date=${D}&sp=p1`);
     await userEvent.type(await screen.findByLabelText('Kapur masuk'), '100');
     const sisa = screen.getByLabelText('Kapur sisa');
     await userEvent.clear(sisa);
     await userEvent.type(sisa, '255');
-    await userEvent.click(screen.getByRole('button', { name: 'Simpan data koagulan' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
     await waitFor(() => expect(puts(calls)).toHaveLength(1));
     expect(puts(calls)[0].url).toBe(`/api/coagulant/${D}/p1/Kapur`);
     expect(puts(calls)[0].body).toMatchObject({ stock_in: 100, stock_remaining: 255 });
-    expect(await screen.findByText('Data koagulan tersimpan')).toBeInTheDocument();
+    expect(await screen.findByText('Data air & koagulan tersimpan')).toBeInTheDocument();
   });
 });
 
@@ -177,15 +203,15 @@ describe('Input offline', () => {
     mockApi({ handler: offlinePut });
     renderApp(`/input/air?date=${D}&sp=p1`);
     await userEvent.type(await screen.findByLabelText('pH inlet'), '7');
-    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
     expect(await screen.findByText(QUEUED)).toBeInTheDocument();
     expect((await listItems('u1'))[0].key).toBe(`water|${D}|p1`);
   });
   it('Koagulan: offline save queues one item per type that has numbers', async () => {
     mockApi({ handler: offlinePut });
-    renderApp(`/input/koagulan?date=${D}&sp=p1`);
+    renderApp(`/input/air?date=${D}&sp=p1`);
     await userEvent.type(await screen.findByLabelText('Tawas Serbuk keluar'), '5');
-    await userEvent.click(screen.getByRole('button', { name: 'Simpan data koagulan' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
     expect(await screen.findByText(QUEUED)).toBeInTheDocument();
     expect((await listItems('u1')).length).toBeGreaterThanOrEqual(1);
   });

@@ -9,7 +9,7 @@ describe('reportFilename', () => {
     expect(reportFilename('A/B "x"', '2026-10-27', '2026-11-02', 'pdf')).toBe('laporan-evo-A_B_x_-2026-10-27-2026-11-02.pdf');
   });
   it('all locations is "semua"', () => {
-    expect(reportFilename('Semua lokasi', '2026-10-27', '2026-11-02', 'pdf')).toBe('laporan-evo-semua-2026-10-27-2026-11-02.pdf');
+    expect(reportFilename('Semua pond', '2026-10-27', '2026-11-02', 'pdf')).toBe('laporan-evo-semua-2026-10-27-2026-11-02.pdf');
   });
 });
 

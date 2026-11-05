@@ -46,8 +46,7 @@ describe('Beranda Operator', () => {
     renderApp('/');
     await screen.findByRole('heading', { name: 'Halo, Rudi' });
     expect(screen.getByRole('link', { name: /Cuaca/ })).toHaveAttribute('href', '/input/cuaca');
-    expect(screen.getByRole('link', { name: /Air Permukaan/ })).toHaveAttribute('href', '/input/air');
-    expect(screen.getByRole('link', { name: /Koagulan/ })).toHaveAttribute('href', '/input/koagulan');
+    expect(screen.getByRole('link', { name: /Air & Koagulan/ })).toHaveAttribute('href', '/input/air');
     expect(screen.getByRole('link', { name: /Event Enviro/ })).toHaveAttribute('href', '/kalender');
   });
   it('no ponds: explains what to do', async () => {

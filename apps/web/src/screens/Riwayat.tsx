@@ -95,7 +95,7 @@ export function Riwayat() {
     { key: 'in', header: 'Masuk', align: 'right', render: (r) => num(r.c.stock_in) },
     { key: 'out', header: 'Keluar', align: 'right', render: (r) => num(r.c.stock_out) },
     { key: 'left', header: 'Sisa', align: 'right', render: (r) => (r.c.staleRemaining ? <>{num(r.c.stock_remaining)} <Badge tone="warning">Selisih</Badge></> : num(r.c.stock_remaining)) },
-    ...action<Cg>('koagulan', true),
+    ...action<Cg>('air', true),
   ];
   const empty = 'Tidak ada data pada rentang ini.';
 

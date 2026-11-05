@@ -15,8 +15,7 @@ import { localToday } from './input/DayScope';
 
 const TILES: { to: string; icon: IconName; tone: string; title: string; sub: string }[] = [
   { to: '/input/cuaca', icon: 'cloud-rain', tone: 'water', title: 'Cuaca', sub: 'Hujan & jam hujan' },
-  { to: '/input/air', icon: 'droplet', tone: 'primary', title: 'Air Permukaan', sub: 'pH, TSS, debit' },
-  { to: '/input/koagulan', icon: 'flask', tone: 'warning', title: 'Koagulan', sub: 'Kapur & tawas' },
+  { to: '/input/air', icon: 'droplet', tone: 'primary', title: 'Air & Koagulan', sub: 'pH, TSS, debit, tawas' },
 ];
 
 const eventSub = (n: number | undefined) => (n === undefined ? 'Jadwal dan eviden' : n > 0 ? `${n} event overdue` : 'Tidak ada yang telat');

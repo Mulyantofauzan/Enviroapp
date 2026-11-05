@@ -7,6 +7,8 @@ import { mockApi, renderApp, json, POND } from '../test-utils';
 
 vi.mock('../lib/pdf/slides', () => ({ buildSlidePdf: vi.fn(async () => new Blob(['%PDF-'], { type: 'application/pdf' })) }));
 import { buildSlidePdf } from '../lib/pdf/slides';
+vi.mock('../lib/pptx/slides', () => ({ buildSlidePptx: vi.fn(async () => new Blob(['PK'])) }));
+import { buildSlidePptx } from '../lib/pptx/slides';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); try { localStorage.clear(); } catch { /* ignore */ } });
 
@@ -248,6 +250,25 @@ describe('Laporan: PDF export', () => {
     await waitFor(() => expect(release).toBeTypeOf('function'));
     release();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Ekspor PDF' })).toBeEnabled());
+  });
+});
+
+describe('Laporan: PowerPoint export', () => {
+  it('"Semua pond" exports weather plus every pond with data, under a .pptx name', async () => {
+    setup('Manager', [entry('2026-11-02'), entry('2026-11-01'), entry('2026-11-02', { sp_id: 'p2' })]);
+    const names: string[] = [];
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download); });
+    renderApp('/laporan');
+    await ready();
+    await screen.findByRole('heading', { name: 'pH harian' });
+    await userEvent.selectOptions(screen.getByLabelText('Lokasi'), 'Semua pond');
+    await userEvent.click(await screen.findByRole('button', { name: 'Ekspor PowerPoint (.pptx)' }));
+    await waitFor(() => expect(names).toEqual(['laporan-evo-semua-2026-10-27-2026-11-02.pptx']));
+    const input = vi.mocked(buildSlidePptx).mock.calls.at(-1)![0];
+    expect(input.weather?.title).toBe('WEATHER MONITORING');
+    expect(input.ponds.length).toBeGreaterThanOrEqual(1);
   });
 });
 

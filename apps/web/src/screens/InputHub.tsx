@@ -17,10 +17,10 @@ export function InputHub() {
   const pond = ponds.find((p) => p.id === current);
 
   const coagCount = data ? COAGULANT_TYPES.filter((t) => data.coagulant[t]).length : 0;
+  const airStatus = !data ? null : !data.water && coagCount === 0 ? 'Belum diisi' : data.water && coagCount === 3 ? 'Sudah diisi' : `Air ${data.water ? 'sudah' : 'belum'}, koagulan ${coagCount} dari 3`;
   const rows: { to: string; icon: IconName; tone: string; title: string; status: string | null; done: boolean }[] = [
     { to: '/input/cuaca', icon: 'cloud-rain', tone: 'water', title: 'Cuaca', status: data ? (data.weather ? 'Sudah diisi' : 'Belum diisi') : null, done: !!data?.weather },
-    { to: '/input/air', icon: 'droplet', tone: 'primary', title: 'Air Permukaan', status: data ? (data.water ? 'Sudah diisi' : 'Belum diisi') : null, done: !!data?.water },
-    { to: '/input/koagulan', icon: 'flask', tone: 'warning', title: 'Koagulan', status: data ? (coagCount === 3 ? 'Sudah diisi' : coagCount === 0 ? 'Belum diisi' : `${coagCount} dari 3 jenis`) : null, done: coagCount === 3 },
+    { to: '/input/air', icon: 'droplet', tone: 'primary', title: 'Air & Koagulan', status: airStatus, done: !!data?.water && coagCount === 3 },
   ];
 
   return (

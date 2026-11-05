@@ -6,18 +6,17 @@ import { pondsFailOnce, json, mockApi, renderApp, emptyDay } from '../test-utils
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Input hub', () => {
-  it('lists the three modules with today status', async () => {
+  it('lists the two modules with today status', async () => {
     mockApi({
       handler: (u) => (u.startsWith('/api/day')
         ? json({ ...emptyDay, weather: { rainfall_mm: 1, rain_hours: 1 }, coagulant: { ...emptyDay.coagulant, Kapur: { stock_in: 1, stock_out: 0, stock_remaining: 1 } } })
         : undefined),
     });
     renderApp('/input');
-    await screen.findByText('1 dari 3 jenis');
+    await screen.findByText('Air belum, koagulan 1 dari 3');
     const cuaca = screen.getByRole('link', { name: /Cuaca/ });
     expect(cuaca).toHaveTextContent('Sudah diisi');
-    expect(screen.getByRole('link', { name: /Air Permukaan/ })).toHaveTextContent('Belum diisi');
-    expect(screen.getByRole('link', { name: /Koagulan/ })).toHaveTextContent('1 dari 3 jenis');
+    expect(screen.getByRole('link', { name: /Air & Koagulan/ })).toHaveTextContent('Air belum, koagulan 1 dari 3');
   });
 });
 
