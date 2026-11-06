@@ -81,7 +81,7 @@ export function ReportCharts({ kinds, entries, ytd, ytdError = '', spId, thresho
       for (const t of titles) cards.push(loadingCard('air', t));
     } else {
       const w = waterByDate(entries, spId, from, to);
-      const has = (k: 'ph_outlet' | 'ph_inlet' | 'tss_outlet' | 'tss_inlet' | 'debit_outlet_m3d') => w.some((d) => d[k] !== null);
+      const has = (k: 'ph_outlet' | 'ph_inlet' | 'tss_outlet' | 'tss_inlet' | 'debit_outlet_ls') => w.some((d) => d[k] !== null);
       const empty = <p className="ui-muted">Belum ada data pada rentang ini.</p>;
       cards.push(
         <Card kind="air" key={titles[0]} title={titles[0]} note={stats(w.map((d) => d.ph_outlet), 'pH outlet', 2)}>
@@ -90,8 +90,8 @@ export function ReportCharts({ kinds, entries, ytd, ytdError = '', spId, thresho
         <Card kind="air" key={titles[1]} title={titles[1]} note={stats(w.map((d) => d.tss_outlet), 'mg/L outlet')}>
           {has('tss_outlet') || has('tss_inlet') ? <TrendChart name="TSS" unit="mg/L" floorZero limit={thresholds?.tss_outlet} decimals={1} series={w.map((d) => ({ date: d.date, inlet: d.tss_inlet, outlet: d.tss_outlet }))} /> : empty}
         </Card>,
-        <Card kind="air" key={titles[2]} title={titles[2]} note={stats(w.map((d) => d.debit_outlet_m3d), 'm³/d')}>
-          {has('debit_outlet_m3d') ? <TrendChart name="Debit outlet" unit="m³/d" floorZero limit={undefined} hide="inlet" outletLabel="Debit outlet (m³/d)" decimals={1} series={w.map((d) => ({ date: d.date, inlet: null, outlet: d.debit_outlet_m3d }))} /> : empty}
+        <Card kind="air" key={titles[2]} title={titles[2]} note={stats(w.map((d) => d.debit_outlet_ls), 'L/s')}>
+          {has('debit_outlet_ls') ? <TrendChart name="Debit outlet" unit="L/s" floorZero limit={undefined} hide="inlet" outletLabel="Debit outlet (L/s)" decimals={1} series={w.map((d) => ({ date: d.date, inlet: null, outlet: d.debit_outlet_ls }))} /> : empty}
         </Card>,
       );
     }

@@ -18,13 +18,13 @@ export function rainByDate(entries: HistoryEntry[]): DayValue[] {
   return [...m.entries()].map(([date, value]) => ({ date, value })).sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
-export type WaterDay = { date: string; ph_inlet: number | null; ph_outlet: number | null; tss_inlet: number | null; tss_outlet: number | null; debit_outlet_m3d: number | null };
+export type WaterDay = { date: string; ph_inlet: number | null; ph_outlet: number | null; tss_inlet: number | null; tss_outlet: number | null; debit_outlet_ls: number | null };
 
 export function waterByDate(entries: HistoryEntry[], spId: string, from: string, to: string): WaterDay[] {
   const byDate = new Map(entries.filter((e) => e.sp_id === spId && e.water).map((e) => [e.date, e.water!]));
   return fillDates(from, to).map((date) => {
     const w = byDate.get(date);
-    return { date, ph_inlet: w?.ph_inlet ?? null, ph_outlet: w?.ph_outlet ?? null, tss_inlet: w?.tss_inlet ?? null, tss_outlet: w?.tss_outlet ?? null, debit_outlet_m3d: w?.debit_outlet_m3d ?? null };
+    return { date, ph_inlet: w?.ph_inlet ?? null, ph_outlet: w?.ph_outlet ?? null, tss_inlet: w?.tss_inlet ?? null, tss_outlet: w?.tss_outlet ?? null, debit_outlet_ls: w?.debit_outlet_ls ?? null };
   });
 }
 

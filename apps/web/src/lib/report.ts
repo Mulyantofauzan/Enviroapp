@@ -11,6 +11,7 @@ export type HistoryEntry = {
   water: {
     ph_inlet: number | null; ph_outlet: number | null; tss_inlet: number | null; tss_outlet: number | null;
     debit_inlet_m3d: number | null; debit_outlet_m3d: number | null;
+    debit_inlet_ls?: number | null; debit_outlet_ls?: number | null;
   } | null;
   coagulant: { type: string; stock_in: number | null; stock_out: number | null; stock_remaining: number | null; staleRemaining: boolean }[];
 };
@@ -56,13 +57,13 @@ export function buildReport(input: { entries: HistoryEntry[]; events: EventOccur
       if (isOutOfLimit(w.ph_outlet, th?.ph_outlet)) bad.push('pho');
       if (isOutOfLimit(w.tss_outlet, th?.tss_outlet)) bad.push('tsso');
       rows.push({
-        cells: { date: dateText(e.date), pond: pondShort(e.sp_id), phi: w.ph_inlet, pho: w.ph_outlet, tssi: w.tss_inlet, tsso: w.tss_outlet, di: w.debit_inlet_m3d, do: w.debit_outlet_m3d },
+        cells: { date: dateText(e.date), pond: pondShort(e.sp_id), phi: w.ph_inlet, pho: w.ph_outlet, tssi: w.tss_inlet, tsso: w.tss_outlet, di: w.debit_inlet_ls ?? null, do: w.debit_outlet_ls ?? null },
         bad,
       });
     }
     out.push({
       id: 'air', title: 'Air Permukaan',
-      columns: [text('date', 'Tanggal'), text('pond', 'Pond'), num('phi', 'pH inlet'), num('pho', 'pH outlet'), num('tssi', 'TSS inlet (mg/L)'), num('tsso', 'TSS outlet (mg/L)'), num('di', 'Debit inlet (m³/d)', 1), num('do', 'Debit outlet (m³/d)', 1)],
+      columns: [text('date', 'Tanggal'), text('pond', 'Pond'), num('phi', 'pH inlet'), num('pho', 'pH outlet'), num('tssi', 'TSS inlet (mg/L)'), num('tsso', 'TSS outlet (mg/L)'), num('di', 'Debit inlet (L/s)', 1), num('do', 'Debit outlet (L/s)', 1)],
       rows,
     });
   }

@@ -65,7 +65,7 @@ export function BerandaManager() {
                   <div className="ui-kpis">
                     <Kpi label="pH Outlet hari ini" value={t.ph_outlet} tone={judge(t.ph_outlet, th.ph_outlet)} />
                     <Kpi label="TSS Outlet" value={t.tss_outlet} unit="mg/L" tone={judge(t.tss_outlet, th.tss_outlet)} />
-                    <Kpi label="Debit harian (otomatis)" value={t.debit_outlet_m3d} unit="m³/d" sub={t.debit_outlet_m3s === null ? undefined : `Dari ${formatNumber(t.debit_outlet_m3s, 4)} m³/s`} />
+                    <Kpi label="Debit outlet" value={t.debit_outlet_ls} unit="L/s" />
                     <Kpi label="Curah hujan" value={t.rainfall_mm} unit="mm" sub={t.rain_hours === null ? undefined : `${formatNumber(t.rain_hours)} jam hujan`} />
                   </div>
                 ) : (

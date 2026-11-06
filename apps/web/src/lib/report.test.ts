@@ -5,7 +5,7 @@ import type { Pond } from '../pond/PondContext';
 
 const POND_A: Pond = { id: 'a', code: 'SP-02', name: 'Pit Selatan', is_active: true, thresholds: { ph_outlet: { min: 6, max: 9 }, tss_outlet: { min: null, max: 40 } } };
 const POND_B: Pond = { id: 'b', code: 'SP-01', name: 'Pit Utara', is_active: true, thresholds: {} };
-const water = (o: Partial<NonNullable<HistoryEntry['water']>> = {}) => ({ ph_inlet: 7, ph_outlet: 7, tss_inlet: 100, tss_outlet: 30, debit_inlet_m3d: 1000, debit_outlet_m3d: 1278.7, ...o });
+const water = (o: Partial<NonNullable<HistoryEntry['water']>> = {}) => ({ ph_inlet: 7, ph_outlet: 7, tss_inlet: 100, tss_outlet: 30, debit_inlet_m3d: 1000, debit_outlet_m3d: 1278.7, debit_inlet_ls: 11.6, debit_outlet_ls: 14.8, ...o });
 const entry = (date: string, sp: string | null, o: Partial<HistoryEntry> = {}): HistoryEntry => ({ date, sp_id: sp, weather: null, water: null, coagulant: [], ...o });
 const ev = (o: Partial<EventOccurrence> = {}): EventOccurrence => ({
   schedule_id: 's1', title: 'Cek pompa', description: null, frequency: 'Daily', category_id: null, category_name: null, category_color: null, assigned_to_name: null,
@@ -21,6 +21,12 @@ describe('buildReport: air', () => {
     expect(s.rows.map((r) => r.cells.date)).toEqual(['2 Nov 2026', '1 Nov 2026']);
     expect(s.rows[1].cells.phi).toBeNull();
     expect(s.rows[0].cells.pond).toBe('SP-02');
+  });
+  it('shows flow in L/s', () => {
+    const s = air([entry('2026-11-02', 'a', { water: water() })]);
+    expect(s.columns.filter((c) => c.key === 'di' || c.key === 'do').map((c) => c.header)).toEqual(['Debit inlet (L/s)', 'Debit outlet (L/s)']);
+    expect(s.rows[0].cells.di).toBe(11.6);
+    expect(s.rows[0].cells.do).toBe(14.8);
   });
   it('flags only outlet values outside the pond limit', () => {
     const s = air([entry('2026-11-02', 'a', { water: water({ ph_outlet: 5.8, tss_outlet: 55, ph_inlet: 2, tss_inlet: 999 }) })]);

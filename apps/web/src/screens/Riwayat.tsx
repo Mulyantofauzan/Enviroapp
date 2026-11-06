@@ -76,8 +76,8 @@ export function Riwayat() {
     { key: 'pho', header: 'pH outlet', align: 'right', render: (r) => num(r.water.ph_outlet), cellClass: (r) => bad(r.water.ph_outlet, limit(r.sp_id, 'ph_outlet')) },
     { key: 'tssi', header: 'TSS inlet', align: 'right', render: (r) => num(r.water.tss_inlet) },
     { key: 'tsso', header: 'TSS outlet', align: 'right', render: (r) => num(r.water.tss_outlet), cellClass: (r) => bad(r.water.tss_outlet, limit(r.sp_id, 'tss_outlet')) },
-    { key: 'di', header: 'Debit inlet (m³/d)', align: 'right', render: (r) => num(r.water.debit_inlet_m3d, 1) },
-    { key: 'do', header: 'Debit outlet (m³/d)', align: 'right', render: (r) => num(r.water.debit_outlet_m3d, 1) },
+    { key: 'di', header: 'Debit inlet (L/s)', align: 'right', render: (r) => num(r.water.debit_inlet_ls ?? null, 1) },
+    { key: 'do', header: 'Debit outlet (L/s)', align: 'right', render: (r) => num(r.water.debit_outlet_ls ?? null, 1) },
     ...action<Air>('air', true),
   ];
   type Wx = (typeof weatherRows)[number];

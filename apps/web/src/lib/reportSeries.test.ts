@@ -4,7 +4,7 @@ import type { HistoryEntry } from './report';
 
 const co = (type: string, out: number | null) => ({ type, stock_in: null, stock_out: out, stock_remaining: null, staleRemaining: false });
 const e = (date: string, sp: string | null, o: Partial<HistoryEntry> = {}): HistoryEntry => ({ date, sp_id: sp, weather: null, water: null, coagulant: [], ...o });
-const water = (o = {}) => ({ ph_inlet: 7, ph_outlet: 7.2, tss_inlet: 100, tss_outlet: 30, debit_inlet_m3d: 1000, debit_outlet_m3d: 900, ...o });
+const water = (o = {}) => ({ ph_inlet: 7, ph_outlet: 7.2, tss_inlet: 100, tss_outlet: 30, debit_inlet_m3d: 1000, debit_outlet_m3d: 900, debit_inlet_ls: 11.6, debit_outlet_ls: 10.4, ...o });
 
 describe('series', () => {
   it('fillDates lists every day inclusive', () => {
@@ -19,7 +19,7 @@ describe('series', () => {
     const out = waterByDate([e('2026-11-02', 'a', { water: water() }), e('2026-11-02', 'b', { water: water({ ph_outlet: 1 }) })], 'a', '2026-11-01', '2026-11-02');
     expect(out.map((d) => d.date)).toEqual(['2026-11-01', '2026-11-02']);
     expect(out[0].ph_outlet).toBeNull();
-    expect(out[1]).toMatchObject({ ph_outlet: 7.2, tss_outlet: 30, debit_outlet_m3d: 900 });
+    expect(out[1]).toMatchObject({ ph_outlet: 7.2, tss_outlet: 30, debit_outlet_ls: 10.4 });
   });
   it('coagUsageDaily: sums Out across ponds per type; empty day stays null; empty Out on a recorded day is 0', () => {
     const out = coagUsageDaily([

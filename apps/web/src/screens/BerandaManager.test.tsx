@@ -9,7 +9,7 @@ const series = (n: number, fill = true) =>
   Array.from({ length: n }, (_, i) => ({ date: `2026-10-${String(30 - n + i + 1).padStart(2, '0')}`, ph_inlet: fill ? 6.2 : null, ph_outlet: fill ? 7.1 : null }));
 const base = {
   date: '2026-11-02', days: 7,
-  today: { ph_outlet: 5.8, tss_outlet: 38, debit_outlet_m3s: 0.0148, debit_outlet_m3d: 1278.72, rainfall_mm: 12.5, rain_hours: 3.5 },
+  today: { ph_outlet: 5.8, tss_outlet: 38, debit_outlet_m3s: 0.0148, debit_outlet_m3d: 1278.72, debit_outlet_ls: 14.8, rainfall_mm: 12.5, rain_hours: 3.5 },
   series: series(7),
   coagulant: { Kapur: { remaining: 260, max: 260, updated: '2026-11-02' }, 'Tawas Serbuk': { remaining: 87.5, max: 260, updated: '2026-11-02' }, 'Tawas Batu': { remaining: 130, max: 260, updated: '2026-11-02' } },
   thresholds: { ph_outlet: { min: 6, max: 9 }, tss_outlet: { min: null, max: 40 } },
@@ -30,8 +30,8 @@ describe('Dashboard Manager', () => {
     expect(within(ph).getByText('Abnormal')).toBeInTheDocument();
     const tss = screen.getByRole('group', { name: 'TSS Outlet' });
     expect(within(tss).getByText('Normal')).toBeInTheDocument();
-    expect(screen.getByText('1.278,7')).toBeInTheDocument();
-    expect(screen.getByText('Dari 0,0148 m³/s')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Debit outlet' })).toHaveTextContent('14,8');
+    expect(screen.queryByText(/m³/)).toBeNull();
     expect(screen.getByText('12,5')).toBeInTheDocument();
     expect(screen.getByText('3,5 jam hujan')).toBeInTheDocument();
   });

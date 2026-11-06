@@ -5,7 +5,7 @@ import { json, mockApi, renderApp, POND } from '../test-utils';
 
 afterEach(() => vi.unstubAllGlobals());
 
-const water = (over: Record<string, unknown> = {}) => ({ ph_inlet: 3, ph_outlet: 5.2, tss_inlet: 10, tss_outlet: 38, debit_inlet_m3d: 86400, debit_outlet_m3d: 1278.7, ...over });
+const water = (over: Record<string, unknown> = {}) => ({ ph_inlet: 3, ph_outlet: 5.2, tss_inlet: 10, tss_outlet: 38, debit_inlet_m3d: 86400, debit_outlet_m3d: 1278.7, debit_inlet_ls: 1000, debit_outlet_ls: 14.8, ...over });
 const e1 = {
   date: '2026-11-02', sp_id: 'p1', weather: { rainfall_mm: 12.5, rain_hours: 3.5 }, water: water(),
   coagulant: [{ type: 'Kapur', stock_in: 0, stock_out: 2, stock_remaining: 5, staleRemaining: true }],
@@ -21,8 +21,9 @@ describe('Riwayat table: Air permukaan', () => {
     renderApp('/riwayat');
     const table = await screen.findByRole('table', { name: 'Air permukaan' });
     const heads = within(table).getAllByRole('columnheader').map((h) => h.textContent);
-    expect(heads).toEqual(['Tanggal', 'Pond', 'pH inlet', 'pH outlet', 'TSS inlet', 'TSS outlet', 'Debit inlet (m³/d)', 'Debit outlet (m³/d)', 'Aksi']);
+    expect(heads).toEqual(['Tanggal', 'Pond', 'pH inlet', 'pH outlet', 'TSS inlet', 'TSS outlet', 'Debit inlet (L/s)', 'Debit outlet (L/s)', 'Aksi']);
     expect(within(table).getAllByRole('row')).toHaveLength(3); // header + 2 rows with water
+    expect(within(table).getAllByText('14,8').length).toBeGreaterThan(0);
   });
   it('marks outlet values outside that pond\'s limits, never inlet, never when no limits are set', async () => {
     mockApi({ ponds: [POND, POND2], handler: api() });
@@ -34,7 +35,7 @@ describe('Riwayat table: Air permukaan', () => {
     for (const c of within(table).getAllByRole('cell', { name: '3' })) expect(c).not.toHaveClass('is-bad');
   });
   it('formats numbers the Indonesian way and empty cells as a dash', async () => {
-    mockApi({ ponds: [POND], handler: api([{ ...e1, water: water({ tss_inlet: null }) }]) });
+    mockApi({ ponds: [POND], handler: api([{ ...e1, water: water({ tss_inlet: null, debit_outlet_ls: 1278.7 }) }]) });
     renderApp('/riwayat');
     const table = await screen.findByRole('table', { name: 'Air permukaan' });
     expect(within(table).getByRole('cell', { name: '1.278,7' })).toBeInTheDocument();

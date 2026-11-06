@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { COAGULANT_TYPES, formatNumber, m3sToM3d, type CoagulantType } from '@evo/shared';
+import { COAGULANT_TYPES, formatNumber, lsToM3s, m3sToLs, type CoagulantType } from '@evo/shared';
 import { useAuth } from '../auth/AuthContext';
 import { saveEntry } from '../lib/outbox/save';
 import { dayMonth } from '../lib/dates';
@@ -22,8 +22,8 @@ function AirKoagulanForm({ date, sp, data, thresholds, canEdit, reload }: DayCtx
   const root = useRef<HTMLDivElement>(null);
   const w = data.water;
   const [pts, setPts] = useState<Record<Side, Point>>({
-    inlet: { ph: w?.ph_inlet ?? null, tss: w?.tss_inlet ?? null, flow: w?.debit_inlet_m3s ?? null },
-    outlet: { ph: w?.ph_outlet ?? null, tss: w?.tss_outlet ?? null, flow: w?.debit_outlet_m3s ?? null },
+    inlet: { ph: w?.ph_inlet ?? null, tss: w?.tss_inlet ?? null, flow: w?.debit_inlet_m3s == null ? null : m3sToLs(w.debit_inlet_m3s) },
+    outlet: { ph: w?.ph_outlet ?? null, tss: w?.tss_outlet ?? null, flow: w?.debit_outlet_m3s == null ? null : m3sToLs(w.debit_outlet_m3s) },
   });
   const [coag, setCoag] = useState(() => initialCoag(data));
   const [busy, setBusy] = useState(false);
@@ -40,8 +40,8 @@ function AirKoagulanForm({ date, sp, data, thresholds, canEdit, reload }: DayCtx
         const r = await saveEntry({
           owner: user!.id, kind: 'water', key: `water|${date}|${sp}`, label: `Air ${dayMonth(date)}`, path: `/water/${date}/${sp}`,
           body: {
-            ph_inlet: pts.inlet.ph, tss_inlet: pts.inlet.tss, debit_inlet_m3s: pts.inlet.flow,
-            ph_outlet: pts.outlet.ph, tss_outlet: pts.outlet.tss, debit_outlet_m3s: pts.outlet.flow,
+            ph_inlet: pts.inlet.ph, tss_inlet: pts.inlet.tss, debit_inlet_m3s: pts.inlet.flow === null ? null : lsToM3s(pts.inlet.flow),
+            ph_outlet: pts.outlet.ph, tss_outlet: pts.outlet.tss, debit_outlet_m3s: pts.outlet.flow === null ? null : lsToM3s(pts.outlet.flow),
           },
         });
         queued = r.queued;
@@ -77,8 +77,7 @@ function AirKoagulanForm({ date, sp, data, thresholds, canEdit, reload }: DayCtx
           <NumberInput label="pH" ariaLabel={`pH ${name}`} value={p.ph} onChange={(v) => set(s, { ph: v })} readOnly={!canEdit} threshold={outlet ? thresholds.ph_outlet : undefined} unit="pH" />
           <NumberInput label="TSS" ariaLabel={`TSS ${name}`} unit="mg/L" value={p.tss} onChange={(v) => set(s, { tss: v })} readOnly={!canEdit} threshold={outlet ? thresholds.tss_outlet : undefined} />
         </div>
-        <NumberInput label="Debit (per detik)" ariaLabel={`Debit ${name} per detik`} unit="m³/s" value={p.flow} onChange={(v) => set(s, { flow: v })} readOnly={!canEdit} />
-        <NumberInput label="Debit harian" ariaLabel={`Debit harian ${name}`} unit="m³/d" auto readOnly value={p.flow === null ? null : m3sToM3d(p.flow)} onChange={() => {}} hint="Dihitung otomatis dari m³/s" />
+        <NumberInput label="Debit" ariaLabel={`Debit ${name}`} unit="L/s" value={p.flow} onChange={(v) => set(s, { flow: v })} readOnly={!canEdit} />
       </section>
     );
   };

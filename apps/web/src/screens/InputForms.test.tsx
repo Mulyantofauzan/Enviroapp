@@ -79,11 +79,20 @@ describe('Input Air Permukaan', () => {
     expect(puts(calls)[0].body).toMatchObject({ ph_inlet: 6.8, ph_outlet: 7.1 });
     expect(await screen.findByText('Data air & koagulan tersimpan')).toBeInTheDocument();
   });
-  it('daily flow is calculated from m3/s', async () => {
-    mockApi();
+  it('flow is typed in L/s and sent to the server as m3/s', async () => {
+    const calls = mockApi();
     renderApp(`/input/air?date=${D}&sp=p1`);
-    await userEvent.type(await screen.findByLabelText('Debit outlet per detik'), '0,0148');
-    expect(screen.getByLabelText('Debit harian outlet')).toHaveValue('1.278,7');
+    await userEvent.type(await screen.findByLabelText('Debit outlet'), '14,8');
+    expect(screen.queryByLabelText('Debit harian outlet')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
+    await waitFor(() => expect(puts(calls)).toHaveLength(1));
+    expect(puts(calls)[0].body.debit_outlet_m3s).toBe(0.0148);
+  });
+  it('shows a stored m3/s flow as L/s', async () => {
+    mockApi({ handler: (u) => (u.startsWith('/api/day') ? json({ ...emptyDay, water: { ph_inlet: null, ph_outlet: null, tss_inlet: null, tss_outlet: null, debit_inlet_m3s: 0.5, debit_outlet_m3s: 0.25 } }) : undefined) });
+    renderApp(`/input/air?date=${D}&sp=p1`);
+    expect(await screen.findByLabelText('Debit outlet')).toHaveValue('250');
+    expect(screen.getByLabelText('Debit inlet')).toHaveValue('500');
   });
   it('outlet pH below the pond limit is highlighted but still saves', async () => {
     const calls = mockApi();

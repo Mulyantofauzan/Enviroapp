@@ -22,7 +22,7 @@ describe('Beranda Operator', () => {
     expect(within(card).getByText('Abnormal')).toBeInTheDocument();
     expect(within(card).getByText('38')).toBeInTheDocument();
     expect(within(card).getByText('Normal')).toBeInTheDocument();
-    expect(within(card).getByText('1.278,7')).toBeInTheDocument();
+    expect(within(card).getByText('14,8')).toBeInTheDocument();
   });
   it('shows no verdict chip when the pond has no limits set', async () => {
     mockApi({

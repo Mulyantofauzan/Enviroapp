@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ROLE_LABEL, formatDateId, formatNumber, isOutOfLimit, type Threshold } from '@evo/shared';
+import { ROLE_LABEL, formatDateId, formatNumber, isOutOfLimit, m3sToLs, type Threshold } from '@evo/shared';
 import { useAuth } from '../auth/AuthContext';
 import { Icon, type IconName } from '../icons';
 import { useDay } from '../hooks/useDay';
@@ -89,7 +89,7 @@ export function BerandaOperator() {
                 <div className="ui-stats">
                   <Stat label="pH Outlet" value={w.ph_outlet} verdict={verdict(w.ph_outlet, th.ph_outlet)} />
                   <Stat label="TSS Outlet" value={w.tss_outlet} unit="mg/L" verdict={verdict(w.tss_outlet, th.tss_outlet)} />
-                  <Stat label="Debit harian" value={(w as any).debit_outlet_m3d ?? null} unit="m³/d" verdict={null} />
+                  <Stat label="Debit outlet" value={w.debit_outlet_m3s === null ? null : m3sToLs(w.debit_outlet_m3s)} unit="L/s" verdict={null} />
                 </div>
               )}
             </section>
