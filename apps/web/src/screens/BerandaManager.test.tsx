@@ -149,7 +149,8 @@ describe('Dashboard: TSS, rainfall and calendar overview', () => {
     renderApp('/');
     const card = await screen.findByRole('region', { name: 'Kalender bulan ini' });
     expect(within(card).getByText('November 2026')).toBeInTheDocument();
-    expect(await within(card).findByText(/2026-11-01|ada overdue/)).toBeInTheDocument();
+    expect(await within(card).findByTestId('day-2026-11-01')).toHaveTextContent('Air');
+    expect(within(card).getByRole('list', { name: 'Kategori' })).toHaveTextContent('Air');
     expect(within(card).getByText('2 event overdue')).toBeInTheDocument();
     expect(within(card).getByText('1 event hari ini')).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: 'Buka Kalender' })).toHaveAttribute('href', '/kalender');
