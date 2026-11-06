@@ -44,7 +44,7 @@ Layar `/input/impor` (Admin), dibuka dari Beranda atau Input. Alur sama dengan i
 **Aturan baris**
 - Tanggal dan Pond wajib. Pond dicocokkan dengan kode pond aktif. Tanggal dikenali sebagai tanggal Excel asli, `2026-04-01`, atau `01/04/2026`; tidak boleh di masa depan.
 - Sel kosong, "no data", dan "no flow" berarti tidak ada nilai. **Sel kosong tidak menimpa** nilai yang sudah ada di aplikasi.
-- Debit L/S dikonversi ke m³/s saat disimpan. Rentang nilai sama dengan form biasa (pH 0 sampai 14, nilai lain tidak negatif).
+- Pada baris no flow, pH dan TSS boleh 0 atau tulisan "No Flow" (dibaca kosong). Debit L/S dikonversi ke m³/s saat disimpan. Rentang nilai sama dengan form biasa (pH 0 sampai 14, nilai lain tidak negatif).
 - Cuaca per tanggal, bukan per pond. Beberapa baris pada tanggal yang sama dengan curah hujan atau jam hujan berbeda: barisnya ditandai error.
 - Stok sisa koagulan tidak diimpor; sistem menghitungnya berurutan dari stok sebelumnya, boleh negatif.
 - Batas 1.000 baris per berkas. Baris kosong dilewati.
@@ -64,7 +64,7 @@ Layar `/input/impor` (Admin), dibuka dari Beranda atau Input. Alur sama dengan i
 ## Di luar cakupan
 Kolom status air di database, impor `.csv`, pengisian stok awal lewat templat, impor CSV/Excel di luar format templat, perubahan satuan penyimpanan di database.
 
-## Asumsi yang perlu dikonfirmasi
+## Asumsi yang sudah dikonfirmasi
 1. Pond dalam templat diidentifikasi dengan **kode** (mis. SP11). Jika kode belum terisi untuk suatu pond, baris itu error.
-2. Hari dengan debit outlet 0 tetapi pH atau TSS diisi tetap dianggap no flow (nilai pH dan TSS disimpan, hanya tidak dihitung kepatuhan).
-3. Impor boleh menulis tanggal lampau tanpa batas bawah selain 1 Jan 2000.
+2. Pada hari no flow, pH dan TSS biasanya diisi 0 atau ditulis "No Flow". Keduanya sah: angka 0 disimpan apa adanya, tulisan "No Flow" dibaca sebagai kosong. Penentu no flow tetap debit outlet 0, sehingga pH 0 pada hari itu tidak dihitung pelanggaran.
+3. Impor boleh menulis tanggal lampau; batas bawah 1 Jan 2000.
