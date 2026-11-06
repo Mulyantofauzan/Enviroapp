@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { COAGULANT_TYPES, isValidDate, m3sToM3d, type Threshold } from '@evo/shared';
+import { COAGULANT_TYPES, isValidDate, m3sToLs, m3sToM3d, type Threshold } from '@evo/shared';
 import type { AppEnv } from '../types';
 import { requireAuth } from '../auth/guard';
 
@@ -26,9 +26,13 @@ dashboardRoutes.get('/', async (c) => {
   const weatherRows = (await db.prepare('SELECT date,rainfall_mm,rain_hours FROM weather WHERE date BETWEEN ? AND ?').bind(start, date).all<any>()).results;
   const weatherByDate = new Map(weatherRows.map((w) => [w.date, w]));
   const weather = weatherByDate.get(date);
+  // Hanya baris dalam rentang, ditambah satu baris terbaru per jenis (bisa sebelum rentang). Riwayat lama tidak dibaca.
+  const latest = 'SELECT * FROM (SELECT date,type,stock_remaining FROM coagulant WHERE sp_id = ? AND type = ? AND date <= ? ORDER BY date DESC LIMIT 1)';
   const coag = (await db.prepare(
-    'SELECT date,type,stock_remaining FROM coagulant WHERE sp_id = ? AND date <= ? ORDER BY type, date',
-  ).bind(sp, date).all<any>()).results;
+    `SELECT date,type,stock_remaining FROM coagulant WHERE sp_id = ? AND date BETWEEN ? AND ?
+     UNION ${Array(COAGULANT_TYPES.length).fill(latest).join(' UNION ')}`,
+  ).bind(sp, start, date, ...COAGULANT_TYPES.flatMap((t) => [sp, t, date])).all<any>()).results
+    .sort((a, b) => (a.type < b.type ? -1 : a.type > b.type ? 1 : a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   const th = (await db.prepare('SELECT key,min,max FROM pond_thresholds WHERE sp_id = ?').bind(sp).all<any>()).results;
 
   const byDate = new Map(water.map((w) => [w.date, w]));
@@ -48,6 +52,7 @@ dashboardRoutes.get('/', async (c) => {
         tss_outlet: todayWater?.tss_outlet ?? null,
         debit_outlet_m3s: todayWater?.debit_outlet_m3s ?? null,
         debit_outlet_m3d: todayWater?.debit_outlet_m3s == null ? null : m3sToM3d(todayWater.debit_outlet_m3s),
+        debit_outlet_ls: todayWater?.debit_outlet_m3s == null ? null : m3sToLs(todayWater.debit_outlet_m3s),
         rainfall_mm: weather?.rainfall_mm ?? null,
         rain_hours: weather?.rain_hours ?? null,
       }

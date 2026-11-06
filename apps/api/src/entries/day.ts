@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { COAGULANT_TYPES, m3sToM3d } from '@evo/shared';
+import { COAGULANT_TYPES, m3sToLs, m3sToM3d } from '@evo/shared';
 import type { AppEnv } from '../types';
 import { requireAuth } from '../auth/guard';
 import { badDate } from './common';
@@ -13,6 +13,8 @@ export const withDerivedFlow = (w: any) =>
     ...w,
     debit_inlet_m3d: w.debit_inlet_m3s === null ? null : m3sToM3d(w.debit_inlet_m3s),
     debit_outlet_m3d: w.debit_outlet_m3s === null ? null : m3sToM3d(w.debit_outlet_m3s),
+    debit_inlet_ls: w.debit_inlet_m3s === null ? null : m3sToLs(w.debit_inlet_m3s),
+    debit_outlet_ls: w.debit_outlet_m3s === null ? null : m3sToLs(w.debit_outlet_m3s),
   };
 
 dayRoutes.get('/', async (c) => {

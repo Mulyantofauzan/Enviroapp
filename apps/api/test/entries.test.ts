@@ -135,6 +135,16 @@ describe('day and history', () => {
     expect(day.previousRemaining['Tawas Batu']).toBeNull();
     expect(day.coagulant.Kapur).toBeNull();
   });
+  it('day and history return flow in L/s, null stays null', async () => {
+    const { cookie } = await login('Operator');
+    const sp = await addPond();
+    await call(`/water/${D2}/${sp}`, { method: 'PUT', cookie, body: json({ debit_outlet_m3s: 0.25 }) });
+    const day = await (await call(`/day?date=${D2}&sp=${sp}`, { cookie })).json() as any;
+    expect(day.water.debit_outlet_ls).toBe(250);
+    expect(day.water.debit_inlet_ls).toBeNull();
+    const h = await (await call(`/history?from=${D1}&to=${D3}&sp=${sp}`, { cookie })).json() as any[];
+    expect(h.find((e) => e.date === D2).water.debit_outlet_ls).toBe(250);
+  });
   it('day with no data returns nulls', async () => {
     const { cookie } = await login('Auditor');
     const sp = await addPond();

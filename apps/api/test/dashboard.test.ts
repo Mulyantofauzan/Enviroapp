@@ -66,6 +66,7 @@ describe('GET /dashboard', () => {
     expect(d.today.ph_outlet).toBe(5.6);
     expect(d.today.tss_outlet).toBe(38);
     expect(d.today.debit_outlet_m3d).toBeCloseTo(0.0148 * 86400, 6);
+    expect(d.today.debit_outlet_ls).toBe(14.8);
     expect(d.today.rainfall_mm).toBe(12.5);
     expect(d.today.rain_hours).toBe(3.5);
   });
@@ -91,6 +92,20 @@ describe('GET /dashboard', () => {
     await call(`/coagulant/2026-10-20/${sp}/Kapur`, { method: 'PUT', cookie, body: json({ stock_in: 300, stock_out: 0 }) });
     const d = await (await call(`/dashboard?sp=${sp}&days=7&date=${D}`, { cookie })).json() as any;
     expect(d.coagulant.Kapur).toEqual({ remaining: 300, max: 300, updated: '2026-10-20' });
+  });
+  it('old history outside the range never leaks into max, only the latest entry counts', async () => {
+    const { cookie } = await login('Operator');
+    const sp = await addPond();
+    await call(`/coagulant/2026-01-05/${sp}/Kapur`, { method: 'PUT', cookie, body: json({ stock_in: 9999, stock_out: 0 }) });
+    await call(`/coagulant/2026-10-20/${sp}/Kapur`, { method: 'PUT', cookie, body: json({ stock_in: 0, stock_out: 9699 }) });
+    const d = await (await call(`/dashboard?sp=${sp}&days=7&date=${D}`, { cookie })).json() as any;
+    expect(d.coagulant.Kapur).toEqual({ remaining: 300, max: 300, updated: '2026-10-20' });
+  });
+  it('coagulant lookups by pond and type use an index, not a table scan', async () => {
+    const plan = (await env.DB.prepare(
+      'EXPLAIN QUERY PLAN SELECT stock_remaining FROM coagulant WHERE sp_id = ? AND type = ? AND date <= ? ORDER BY date DESC LIMIT 1',
+    ).bind('x', 'Kapur', D).all<any>()).results.map((r) => r.detail).join(' | ');
+    expect(plan).toContain('idx_coagulant_sp_type_date');
   });
   it('returns the pond thresholds', async () => {
     const admin = await login('Admin');
