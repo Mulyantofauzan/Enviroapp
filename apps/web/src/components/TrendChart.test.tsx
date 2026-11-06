@@ -97,3 +97,17 @@ describe('TrendChart (TSS)', () => {
     });
   });
 });
+
+describe('TrendChart: no-flow days', () => {
+  const series = [d(1, 7, 7.5), { ...d(2, 7, 0), noFlow: true }, d(3, 7, 7.2)];
+  it('draws a no-flow outlet point at zero with its own marker, never as abnormal', () => {
+    const { container } = render(<TrendChart name="pH" series={series} limit={{ min: 6, max: 9 }} />);
+    expect(container.querySelectorAll('[data-noflow]')).toHaveLength(1);
+    expect(container.querySelector('[data-abnormal]')).toBeNull();
+    expect(container.querySelector('text.ui-chart__label--bad')).toBeNull();
+  });
+  it('says No flow in the screen-reader table', () => {
+    render(<TrendChart name="pH" series={series} limit={undefined} />);
+    expect(screen.getByRole('cell', { name: 'No flow' })).toBeInTheDocument();
+  });
+});

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { COAGULANT_TYPES, formatNumber, lsToM3s, m3sToLs, type CoagulantType } from '@evo/shared';
+import { COAGULANT_TYPES, formatNumber, isNoFlow, lsToM3s, m3sToLs, type CoagulantType } from '@evo/shared';
 import { useAuth } from '../auth/AuthContext';
 import { saveEntry } from '../lib/outbox/save';
 import { dayMonth } from '../lib/dates';
@@ -69,13 +69,14 @@ function AirKoagulanForm({ date, sp, data, thresholds, canEdit, reload }: DayCtx
   const panel = (s: Side) => {
     const p = pts[s];
     const outlet = s === 'outlet';
+    const noFlow = outlet && isNoFlow(p.flow);
     const name = SIDE_LABEL[s].toLowerCase();
     return (
       <section key={s} className="ui-card ui-module" aria-label={`Titik ${SIDE_LABEL[s]}`}>
         <h2><span className="ui-bubble ui-bubble--primary"><Icon name="droplet" /></span> Titik {SIDE_LABEL[s]}</h2>
         <div className="ui-two">
-          <NumberInput label="pH" ariaLabel={`pH ${name}`} value={p.ph} onChange={(v) => set(s, { ph: v })} readOnly={!canEdit} threshold={outlet ? thresholds.ph_outlet : undefined} unit="pH" />
-          <NumberInput label="TSS" ariaLabel={`TSS ${name}`} unit="mg/L" value={p.tss} onChange={(v) => set(s, { tss: v })} readOnly={!canEdit} threshold={outlet ? thresholds.tss_outlet : undefined} />
+          <NumberInput label="pH" ariaLabel={`pH ${name}`} value={p.ph} onChange={(v) => set(s, { ph: v })} readOnly={!canEdit} threshold={outlet && !noFlow ? thresholds.ph_outlet : undefined} unit="pH" />
+          <NumberInput label="TSS" ariaLabel={`TSS ${name}`} unit="mg/L" value={p.tss} onChange={(v) => set(s, { tss: v })} readOnly={!canEdit} threshold={outlet && !noFlow ? thresholds.tss_outlet : undefined} />
         </div>
         <NumberInput label="Debit" ariaLabel={`Debit ${name}`} unit="L/s" value={p.flow} onChange={(v) => set(s, { flow: v })} readOnly={!canEdit} />
       </section>

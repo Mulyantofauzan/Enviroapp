@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ROLE_LABEL, formatDateId, formatNumber, isOutOfLimit, m3sToLs, type Threshold } from '@evo/shared';
+import { ROLE_LABEL, formatDateId, formatNumber, isNoFlow, isOutOfLimit, m3sToLs, type Threshold } from '@evo/shared';
 import { useAuth } from '../auth/AuthContext';
 import { Icon, type IconName } from '../icons';
 import { useDay } from '../hooks/useDay';
@@ -25,14 +25,14 @@ function verdict(v: number | null, t: Threshold | undefined): 'abnormal' | 'norm
   return isOutOfLimit(v, t) ? 'abnormal' : 'normal';
 }
 
-function Stat({ label, value, unit, verdict: vd }: { label: string; value: number | null; unit?: string; verdict: 'abnormal' | 'normal' | null }) {
+function Stat({ label, value, unit, verdict: vd }: { label: string; value: number | null; unit?: string; verdict: 'abnormal' | 'normal' | 'noflow' | null }) {
   return (
     <div className="ui-stat">
       <span className="ui-stat__label">{label}</span>
       {value === null
         ? <strong className="is-empty">Belum diisi</strong>
         : <strong className={vd === 'abnormal' ? 'is-bad' : ''}>{formatNumber(value, 1)}{unit && <small> {unit}</small>}</strong>}
-      {vd && <Badge tone={vd === 'abnormal' ? 'danger' : 'success'}>{vd === 'abnormal' ? 'Abnormal' : 'Normal'}</Badge>}
+      {vd && <Badge tone={vd === 'abnormal' ? 'danger' : vd === 'noflow' ? 'neutral' : 'success'}>{vd === 'abnormal' ? 'Abnormal' : vd === 'noflow' ? 'No flow' : 'Normal'}</Badge>}
     </div>
   );
 }
@@ -87,8 +87,8 @@ export function BerandaOperator() {
               )}
               {w && (
                 <div className="ui-stats">
-                  <Stat label="pH Outlet" value={w.ph_outlet} verdict={verdict(w.ph_outlet, th.ph_outlet)} />
-                  <Stat label="TSS Outlet" value={w.tss_outlet} unit="mg/L" verdict={verdict(w.tss_outlet, th.tss_outlet)} />
+                  <Stat label="pH Outlet" value={w.ph_outlet} verdict={isNoFlow(w.debit_outlet_m3s) ? 'noflow' : verdict(w.ph_outlet, th.ph_outlet)} />
+                  <Stat label="TSS Outlet" value={w.tss_outlet} unit="mg/L" verdict={isNoFlow(w.debit_outlet_m3s) ? 'noflow' : verdict(w.tss_outlet, th.tss_outlet)} />
                   <Stat label="Debit outlet" value={w.debit_outlet_m3s === null ? null : m3sToLs(w.debit_outlet_m3s)} unit="L/s" verdict={null} />
                 </div>
               )}

@@ -90,6 +90,17 @@ describe('pondPage', () => {
     expect(p.debit.outlet[6]).toBe(15);
   });
 
+  it('a no-flow day plots zero for the outlet series and is counted', () => {
+    const p = pondPage(
+      [water('2026-10-25', 'p1', { ph_inlet: 6.5, ph_outlet: null, tss_inlet: 120, tss_outlet: null, debit_inlet_m3d: 864, debit_outlet_m3d: 0 })],
+      pond({ thresholds: { ph_outlet: { min: 6, max: 9 } } }), TO, null,
+    );
+    expect(p.ph.outlet[6]).toBe(0);
+    expect(p.tss.outlet[6]).toBe(0);
+    expect(p.debit.outlet[6]).toBe(0);
+    expect(p.ph.inlet[6]).toBe(6.5);
+    expect(p.noFlowDays).toBe(1);
+  });
   it('has null limits for a pond without thresholds', () => {
     const p = pondPage([], pond(), TO, null);
     expect(p.ph.min).toBeNull();

@@ -5,7 +5,7 @@ import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Icon } from '../icons';
 import { dateText } from '../lib/dates';
-import type { HistoryEntry } from '../lib/report';
+import { NO_FLOW, entryNoFlow, type HistoryEntry } from '../lib/report';
 import type { Pond } from '../pond/PondContext';
 import { Badge } from '../ui/Badge';
 import { DataTable, type Column } from '../ui/DataTable';
@@ -73,11 +73,11 @@ export function Riwayat() {
     { key: 'date', header: 'Tanggal', sticky: true, render: (r) => dateText(r.date) },
     { key: 'pond', header: 'Pond', render: (r) => pondShort(r.sp_id) },
     { key: 'phi', header: 'pH inlet', align: 'right', render: (r) => num(r.water.ph_inlet) },
-    { key: 'pho', header: 'pH outlet', align: 'right', render: (r) => num(r.water.ph_outlet), cellClass: (r) => bad(r.water.ph_outlet, limit(r.sp_id, 'ph_outlet')) },
+    { key: 'pho', header: 'pH outlet', align: 'right', render: (r) => (entryNoFlow(r.water) ? NO_FLOW : num(r.water.ph_outlet)), cellClass: (r) => (entryNoFlow(r.water) ? '' : bad(r.water.ph_outlet, limit(r.sp_id, 'ph_outlet'))) },
     { key: 'tssi', header: 'TSS inlet', align: 'right', render: (r) => num(r.water.tss_inlet) },
-    { key: 'tsso', header: 'TSS outlet', align: 'right', render: (r) => num(r.water.tss_outlet), cellClass: (r) => bad(r.water.tss_outlet, limit(r.sp_id, 'tss_outlet')) },
+    { key: 'tsso', header: 'TSS outlet', align: 'right', render: (r) => (entryNoFlow(r.water) ? NO_FLOW : num(r.water.tss_outlet)), cellClass: (r) => (entryNoFlow(r.water) ? '' : bad(r.water.tss_outlet, limit(r.sp_id, 'tss_outlet'))) },
     { key: 'di', header: 'Debit inlet (L/s)', align: 'right', render: (r) => num(r.water.debit_inlet_ls ?? null, 1) },
-    { key: 'do', header: 'Debit outlet (L/s)', align: 'right', render: (r) => num(r.water.debit_outlet_ls ?? null, 1) },
+    { key: 'do', header: 'Debit outlet (L/s)', align: 'right', render: (r) => (entryNoFlow(r.water) ? NO_FLOW : num(r.water.debit_outlet_ls ?? null, 1)) },
     ...action<Air>('air', true),
   ];
   type Wx = (typeof weatherRows)[number];

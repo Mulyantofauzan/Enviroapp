@@ -141,7 +141,7 @@ async function drawPond(doc: Doc, autoTable: AutoTable, p: PondPage, raster: Ras
   const tssLines = p.tss.limit !== null ? [{ name: 'BML MHU', color: LINE_RED, value: p.tss.limit }] : [];
   await addChart(doc, raster, bar('pH Monitoring', [{ name: 'pH Inlet', color: NAVY, values: p.ph.inlet }, { name: 'pH Outlet', color: YELLOW, values: p.ph.outlet }], 1, phLines), MARGIN, top, pw, ph);
   await addChart(doc, raster, bar('TSS Monitoring', [{ name: 'TSS inlet (mg/l)', color: YELLOW, values: p.tss.inlet }, { name: 'TSS outlet (mg/l)', color: NAVY, values: p.tss.outlet }], 0, tssLines), MARGIN + pw + gap, top, pw, ph);
-  await addChart(doc, raster, bar('Debit Inlet & Outlet', [{ name: 'Debit Inlet (L/S)', color: SERIES_BLUE, values: p.debit.inlet }, { name: 'Debit Outlet (L/S)', color: BLACK, values: p.debit.outlet }], 1), MARGIN, top + ph + gap, pw, ph);
+  await addChart(doc, raster, bar(`Debit Inlet & Outlet${p.noFlowDays > 0 ? ` (${p.noFlowDays} hari no flow)` : ''}`, [{ name: 'Debit Inlet (L/S)', color: SERIES_BLUE, values: p.debit.inlet }, { name: 'Debit Outlet (L/S)', color: BLACK, values: p.debit.outlet }], 1), MARGIN, top + ph + gap, pw, ph);
   await addChart(doc, raster, bar('Jenis & Qty Koagulan (kg)', [{ name: 'Tawas Batu (kg)', color: NAVY, values: p.coag.batu }, { name: 'Tawas Serbuk (kg)', color: YELLOW, values: p.coag.serbuk }], 0), MARGIN + pw + gap, top + ph + gap, pw, ph);
 
   const x = PAGE_W - MARGIN - rightW;

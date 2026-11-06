@@ -1,7 +1,7 @@
 import type { Pond } from '../../pond/PondContext';
 import type { DayValue } from '../aggregate';
 import { sumByMonth, sumByWeek } from '../aggregate';
-import type { HistoryEntry } from '../report';
+import { entryNoFlow, type HistoryEntry } from '../report';
 import { tawasByDate } from '../reportSeries';
 import { bags, lastDays, lastMonths, lastWeeks, dayLabel } from './dates';
 
@@ -21,6 +21,7 @@ export type PondPage = {
   ph: { inlet: Pt[]; outlet: Pt[]; min: number | null; max: number | null };
   tss: { inlet: Pt[]; outlet: Pt[]; limit: number | null };
   debit: { inlet: Pt[]; outlet: Pt[] };
+  noFlowDays: number;
   coag: { batu: Pt[]; serbuk: Pt[] };
   weekly: { labels: string[]; totalKg: number[]; bags: number[]; avgPerDay: number[]; chart: Pt[] };
   monthly: { labels: string[]; totalKg: number[]; bags: number[] };
@@ -81,6 +82,8 @@ export function pondPage(entries: HistoryEntry[], pond: Pond, to: string, total:
   const days = lastDays(to, 7);
   const waterOn = new Map(mine.filter((e) => e.water).map((e) => [e.date, e.water!]));
   const pick = (f: (w: NonNullable<HistoryEntry['water']>) => Pt): Pt[] => days.map((d) => { const w = waterOn.get(d); return w ? f(w) : null; });
+  const flowless = (w: NonNullable<HistoryEntry['water']>) => entryNoFlow(w);
+  const noFlowDays = days.filter((d) => { const w = waterOn.get(d); return !!w && flowless(w); }).length;
   const lps = (v: Pt): Pt => (v === null ? null : Math.round((v / L_PER_S_DIVISOR) * 1000) / 1000);
 
   const outOn = (type: string) => {
@@ -102,8 +105,9 @@ export function pondPage(entries: HistoryEntry[], pond: Pond, to: string, total:
   return {
     title: pondTitle(pond),
     days,
-    ph: { inlet: pick((w) => w.ph_inlet), outlet: pick((w) => w.ph_outlet), min: pond.thresholds?.ph_outlet?.min ?? null, max: pond.thresholds?.ph_outlet?.max ?? null },
-    tss: { inlet: pick((w) => w.tss_inlet), outlet: pick((w) => w.tss_outlet), limit: pond.thresholds?.tss_outlet?.max ?? null },
+    ph: { inlet: pick((w) => w.ph_inlet), outlet: pick((w) => (flowless(w) ? 0 : w.ph_outlet)), min: pond.thresholds?.ph_outlet?.min ?? null, max: pond.thresholds?.ph_outlet?.max ?? null },
+    tss: { inlet: pick((w) => w.tss_inlet), outlet: pick((w) => (flowless(w) ? 0 : w.tss_outlet)), limit: pond.thresholds?.tss_outlet?.max ?? null },
+    noFlowDays,
     debit: { inlet: pick((w) => lps(w.debit_inlet_m3d)), outlet: pick((w) => lps(w.debit_outlet_m3d)) },
     coag: { batu: outOn('Tawas Batu'), serbuk: outOn('Tawas Serbuk') },
     weekly: {

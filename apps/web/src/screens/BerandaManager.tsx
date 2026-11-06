@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { COAGULANT_TYPES, ROLE_LABEL, formatNumber, isOutOfLimit, type Threshold } from '@evo/shared';
+import { COAGULANT_TYPES, ROLE_LABEL, formatNumber, isNoFlow, isOutOfLimit, type Threshold } from '@evo/shared';
 import { useAuth } from '../auth/AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
 import { usePond } from '../pond/PondContext';
@@ -20,14 +20,14 @@ type Days = '7' | '30' | '90';
 const dayMonth = (iso: string) => new Intl.DateTimeFormat('id-ID', { timeZone: 'UTC', day: 'numeric', month: 'short' }).format(new Date(`${iso}T00:00:00Z`)).replace('.', '');
 const full = (iso: string) => `${dayMonth(iso)} ${iso.slice(0, 4)}`;
 
-function Kpi({ label, value, unit, sub, tone }: { label: string; value: number | null; unit?: string; sub?: string; tone?: 'abnormal' | 'normal' | null }) {
+function Kpi({ label, value, unit, sub, tone }: { label: string; value: number | null; unit?: string; sub?: string; tone?: 'abnormal' | 'normal' | 'noflow' | null }) {
   return (
     <div className="ui-card ui-kpi" role="group" aria-label={label}>
       <span className="ui-kpi__label">{label}</span>
       {value === null
         ? <strong className="is-empty">Belum diisi</strong>
         : <strong className={tone === 'abnormal' ? 'is-bad' : ''}>{formatNumber(value, 1)}{unit && <small> {unit}</small>}</strong>}
-      {tone && <Badge tone={tone === 'abnormal' ? 'danger' : 'success'}>{tone === 'abnormal' ? 'Abnormal' : 'Normal'}</Badge>}
+      {tone && <Badge tone={tone === 'abnormal' ? 'danger' : tone === 'noflow' ? 'neutral' : 'success'}>{tone === 'abnormal' ? 'Abnormal' : tone === 'noflow' ? 'No flow' : 'Normal'}</Badge>}
       {sub && <span className="ui-kpi__sub">{sub}</span>}
     </div>
   );
@@ -63,8 +63,8 @@ export function BerandaManager() {
               <>
                 {t ? (
                   <div className="ui-kpis">
-                    <Kpi label="pH Outlet hari ini" value={t.ph_outlet} tone={judge(t.ph_outlet, th.ph_outlet)} />
-                    <Kpi label="TSS Outlet" value={t.tss_outlet} unit="mg/L" tone={judge(t.tss_outlet, th.tss_outlet)} />
+                    <Kpi label="pH Outlet hari ini" value={t.ph_outlet} tone={isNoFlow(t.debit_outlet_m3s) ? 'noflow' : judge(t.ph_outlet, th.ph_outlet)} />
+                    <Kpi label="TSS Outlet" value={t.tss_outlet} unit="mg/L" tone={isNoFlow(t.debit_outlet_m3s) ? 'noflow' : judge(t.tss_outlet, th.tss_outlet)} />
                     <Kpi label="Debit outlet" value={t.debit_outlet_ls} unit="L/s" />
                     <Kpi label="Curah hujan" value={t.rainfall_mm} unit="mm" sub={t.rain_hours === null ? undefined : `${formatNumber(t.rain_hours)} jam hujan`} />
                   </div>

@@ -35,6 +35,13 @@ describe('Dashboard Manager', () => {
     expect(screen.getByText('12,5')).toBeInTheDocument();
     expect(screen.getByText('3,5 jam hujan')).toBeInTheDocument();
   });
+  it('a no-flow day shows No flow instead of an Abnormal verdict', async () => {
+    mockApi({ role: 'Manager', handler: dash({ today: { ...base.today, ph_outlet: 0, tss_outlet: 0, debit_outlet_m3s: 0, debit_outlet_m3d: 0, debit_outlet_ls: 0 } }) });
+    renderApp('/');
+    const ph = await screen.findByRole('group', { name: 'pH Outlet hari ini' });
+    expect(within(ph).getByText('No flow')).toBeInTheDocument();
+    expect(within(ph).queryByText('Abnormal')).toBeNull();
+  });
   it('asks for 7 days first and 30 when chosen', async () => {
     const urls: string[] = [];
     mockApi({ role: 'Manager', handler: dash({}, (u) => urls.push(u)) });

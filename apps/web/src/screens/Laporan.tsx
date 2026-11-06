@@ -165,6 +165,7 @@ export function Laporan() {
             <Segmented label="Pratinjau" options={kinds.map((k) => ({ value: k, label: KINDS.find((x) => x.id === k)!.label }))} value={shownView} onChange={setView} />
             <DataTable caption={section.title} columns={columns} rows={previewRows} rowKey={(r) => String(r.i)} emptyText="Tidak ada data pada periode ini." pageSize={PREVIEW_ROWS} />
             <p className="ui-report-note">Pratinjau {previewRows.length} dari {section.rows.length} baris</p>
+            {section.note && <p className="ui-report-note">{section.note}</p>}
             <p className="ui-report-note">Sel merah menandai nilai di luar baku mutu.</p>
           </section>
         )}

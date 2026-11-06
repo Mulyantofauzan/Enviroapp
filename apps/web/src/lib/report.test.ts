@@ -28,6 +28,16 @@ describe('buildReport: air', () => {
     expect(s.rows[0].cells.di).toBe(11.6);
     expect(s.rows[0].cells.do).toBe(14.8);
   });
+  it('a no-flow day (outlet flow 0) is never flagged, reads "No flow" and is counted in the note', () => {
+    const s = air([entry('2026-11-02', 'a', { water: water({ ph_outlet: 0, tss_outlet: 0, debit_outlet_ls: 0, debit_outlet_m3d: 0 }) }), entry('2026-11-01', 'a', { water: water() })]);
+    expect(s.rows[0].bad).toEqual([]);
+    expect(s.rows[0].cells).toMatchObject({ pho: 'No flow', tsso: 'No flow', do: 'No flow' });
+    expect(s.rows[1].cells.pho).toBe(7);
+    expect(s.note).toBe('1 hari no flow dalam periode ini.');
+  });
+  it('has no note when there is no no-flow day', () => {
+    expect(air([entry('2026-11-02', 'a', { water: water() })]).note).toBeUndefined();
+  });
   it('flags only outlet values outside the pond limit', () => {
     const s = air([entry('2026-11-02', 'a', { water: water({ ph_outlet: 5.8, tss_outlet: 55, ph_inlet: 2, tss_inlet: 999 }) })]);
     expect(s.rows[0].bad.sort()).toEqual(['pho', 'tsso']);

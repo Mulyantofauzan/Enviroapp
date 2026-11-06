@@ -1,7 +1,7 @@
 import { formatNumber, isOutOfLimit, type Threshold } from '@evo/shared';
 import { labelAnchor, labeledIndexes } from '../lib/labels';
 
-export type TrendPoint = { date: string; inlet: number | null; outlet: number | null };
+export type TrendPoint = { date: string; inlet: number | null; outlet: number | null; noFlow?: boolean };
 
 const W = 340, H = 220, R = 12, T = 12, B = 28;
 const L_MIN = 38;
@@ -101,13 +101,14 @@ export function TrendChart({ name, series, limit, floorZero, decimals = 1, hide,
         })}
         {series.map((s, i) => {
           if (s.outlet === null) return null;
+          if (s.noFlow) return <circle key={s.date} data-noflow className="ui-chart__noflow" cx={x(i)} cy={y(s.outlet)} r={5} />;
           const bad = hasBand && isOutOfLimit(s.outlet, limit);
           return bad
             ? <circle key={s.date} data-abnormal className="ui-chart__bad" cx={x(i)} cy={y(s.outlet)} r={6} />
             : <circle key={s.date} className="ui-chart__dot" cx={x(i)} cy={y(s.outlet)} r={4} />;
         })}
         {series.map((s, i) => outIdx.has(i) && s.outlet !== null
-          && text(s.outlet, x(i), y(s.outlet) - 9, `lo${s.date}`, `ui-chart__label${hasBand && isOutOfLimit(s.outlet, limit) ? ' ui-chart__label--bad' : ''}`))}
+          && text(s.outlet, x(i), y(s.outlet) - 9, `lo${s.date}`, `ui-chart__label${hasBand && !s.noFlow && isOutOfLimit(s.outlet, limit) ? ' ui-chart__label--bad' : ''}`))}
         {series.map((s, i) => inIdx.has(i) && s.inlet !== null
           && text(s.inlet, x(i), y(s.inlet) + 16, `li${s.date}`, 'ui-chart__label ui-chart__label--inlet'))}
       </svg>
@@ -116,13 +117,14 @@ export function TrendChart({ name, series, limit, floorZero, decimals = 1, hide,
         {showInlet && <li><i className="ui-legend__line ui-legend__line--inlet" />{inletLabel}</li>}
         {hasBand && <li><i className="ui-legend__band" />{bandLabel(limit!)}</li>}
         {hasBand && <li><i className="ui-legend__bad" />Abnormal</li>}
+        {series.some((s) => s.noFlow) && <li><i className="ui-legend__noflow" />No flow (digambar 0)</li>}
       </ul>
       <table className="ui-sr">
         <caption>Data {name} per hari</caption>
         <thead><tr><th>Tanggal</th>{showInlet && <th>{name} inlet</th>}<th>{outletLabel === 'Outlet' ? `${name} outlet` : outletLabel}</th></tr></thead>
         <tbody>
           {series.map((s) => (
-            <tr key={s.date}><td>{s.date}</td>{showInlet && <td>{formatNumber(s.inlet)}</td>}<td>{formatNumber(s.outlet)}</td></tr>
+            <tr key={s.date}><td>{s.date}</td>{showInlet && <td>{formatNumber(s.inlet)}</td>}<td>{s.noFlow ? 'No flow' : formatNumber(s.outlet)}</td></tr>
           ))}
         </tbody>
       </table>

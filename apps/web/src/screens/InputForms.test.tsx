@@ -103,6 +103,13 @@ describe('Input Air Permukaan', () => {
     await waitFor(() => expect(puts(calls)).toHaveLength(1));
     expect(puts(calls)[0].body.ph_outlet).toBe(5.8);
   });
+  it('a no-flow day (outlet flow 0) is not judged against the outlet limits', async () => {
+    mockApi();
+    renderApp(`/input/air?date=${D}&sp=p1`);
+    await userEvent.type(await screen.findByLabelText('Debit outlet'), '0');
+    await userEvent.type(screen.getByLabelText('pH outlet'), '0');
+    expect(screen.queryByText(/Di luar baku mutu/)).toBeNull();
+  });
   it('inlet is never judged against the outlet limits', async () => {
     mockApi();
     renderApp(`/input/air?date=${D}&sp=p1`);

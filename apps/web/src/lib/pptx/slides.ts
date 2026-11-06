@@ -178,7 +178,7 @@ function pondSlide(pptx: Pptx, p: PondPage) {
   const tssLines = p.tss.limit !== null ? [{ name: 'BML MHU', color: LINE_RED, value: p.tss.limit }] : [];
   barChart({ ...base, title: 'pH Monitoring', x: M, y: top, decimals: 1 }, [{ name: 'pH Inlet', color: NAVY, values: p.ph.inlet }, { name: 'pH Outlet', color: YELLOW, values: p.ph.outlet }], phLines);
   barChart({ ...base, title: 'TSS Monitoring', x: M + pw + gap, y: top }, [{ name: 'TSS inlet (mg/l)', color: YELLOW, values: p.tss.inlet }, { name: 'TSS outlet (mg/l)', color: NAVY, values: p.tss.outlet }], tssLines);
-  barChart({ ...base, title: 'Debit Inlet & Outlet', x: M, y: top + ph + gap, decimals: 1 }, [{ name: 'Debit Inlet (L/S)', color: SERIES_BLUE, values: p.debit.inlet }, { name: 'Debit Outlet (L/S)', color: BLACK, values: p.debit.outlet }]);
+  barChart({ ...base, title: `Debit Inlet & Outlet${p.noFlowDays > 0 ? ` (${p.noFlowDays} hari no flow)` : ''}`, x: M, y: top + ph + gap, decimals: 1 }, [{ name: 'Debit Inlet (L/S)', color: SERIES_BLUE, values: p.debit.inlet }, { name: 'Debit Outlet (L/S)', color: BLACK, values: p.debit.outlet }]);
   barChart({ ...base, title: 'Jenis & Qty Koagulan (kg)', x: M + pw + gap, y: top + ph + gap }, [{ name: 'Tawas Batu (kg)', color: NAVY, values: p.coag.batu }, { name: 'Tawas Serbuk (kg)', color: YELLOW, values: p.coag.serbuk }]);
 
   const x = W - M - rightW;

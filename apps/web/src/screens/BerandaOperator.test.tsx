@@ -24,6 +24,13 @@ describe('Beranda Operator', () => {
     expect(within(card).getByText('Normal')).toBeInTheDocument();
     expect(within(card).getByText('14,8')).toBeInTheDocument();
   });
+  it('a no-flow day shows No flow instead of an Abnormal verdict', async () => {
+    mockApi({ handler: (u) => (u.startsWith('/api/day') ? json({ ...emptyDay, water: { ...water, ph_outlet: 0, tss_outlet: 0, debit_outlet_m3s: 0 } }) : undefined) });
+    renderApp('/');
+    const card = await screen.findByRole('region', { name: /Data hari ini/ });
+    expect((await within(card).findAllByText('No flow')).length).toBeGreaterThan(0);
+    expect(within(card).queryByText('Abnormal')).toBeNull();
+  });
   it('shows no verdict chip when the pond has no limits set', async () => {
     mockApi({
       ponds: [{ ...POND, thresholds: {} }],

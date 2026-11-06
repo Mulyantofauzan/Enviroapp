@@ -1,4 +1,4 @@
-import { FREQUENCY_LABEL, formatNumber, isOutOfLimit, type EventOccurrence } from '@evo/shared';
+import { FREQUENCY_LABEL, formatNumber, isNoFlow, isOutOfLimit, type EventOccurrence } from '@evo/shared';
 import type { Pond } from '../pond/PondContext';
 import { pondLabel } from '../ui/PondPicker';
 import { dateText } from './dates';
@@ -20,7 +20,11 @@ export type ReportKind = 'cuaca' | 'air' | 'koagulan' | 'event';
 export type Cell = string | number | null;
 export type ReportColumn = { key: string; header: string; kind: 'text' | 'number'; decimals?: number };
 export type ReportRow = { cells: Record<string, Cell>; bad: string[] };
-export type ReportSection = { id: ReportKind; title: string; columns: ReportColumn[]; rows: ReportRow[] };
+export type ReportSection = { id: ReportKind; title: string; columns: ReportColumn[]; rows: ReportRow[]; note?: string };
+
+/** A day with no water leaving the pond: outlet flow recorded as 0. */
+export const entryNoFlow = (w: NonNullable<HistoryEntry['water']>): boolean => isNoFlow(w.debit_outlet_ls ?? w.debit_outlet_m3d ?? null);
+export const NO_FLOW = 'No flow';
 
 const text = (key: string, header: string): ReportColumn => ({ key, header, kind: 'text' });
 const num = (key: string, header: string, decimals = 3): ReportColumn => ({ key, header, kind: 'number', decimals });
@@ -49,15 +53,21 @@ export function buildReport(input: { entries: HistoryEntry[]; events: EventOccur
 
   if (kinds.includes('air')) {
     const rows: ReportRow[] = [];
+    let noFlowDays = 0;
     for (const e of sorted) {
       const w = e.water;
       if (!w) continue;
       const th = e.sp_id ? byId.get(e.sp_id)?.thresholds : undefined;
+      const nf = entryNoFlow(w);
+      if (nf) noFlowDays += 1;
       const bad: string[] = [];
-      if (isOutOfLimit(w.ph_outlet, th?.ph_outlet)) bad.push('pho');
-      if (isOutOfLimit(w.tss_outlet, th?.tss_outlet)) bad.push('tsso');
+      if (!nf && isOutOfLimit(w.ph_outlet, th?.ph_outlet)) bad.push('pho');
+      if (!nf && isOutOfLimit(w.tss_outlet, th?.tss_outlet)) bad.push('tsso');
       rows.push({
-        cells: { date: dateText(e.date), pond: pondShort(e.sp_id), phi: w.ph_inlet, pho: w.ph_outlet, tssi: w.tss_inlet, tsso: w.tss_outlet, di: w.debit_inlet_ls ?? null, do: w.debit_outlet_ls ?? null },
+        cells: {
+          date: dateText(e.date), pond: pondShort(e.sp_id), phi: w.ph_inlet, pho: nf ? NO_FLOW : w.ph_outlet, tssi: w.tss_inlet, tsso: nf ? NO_FLOW : w.tss_outlet,
+          di: w.debit_inlet_ls ?? null, do: nf ? NO_FLOW : w.debit_outlet_ls ?? null,
+        },
         bad,
       });
     }
@@ -65,6 +75,7 @@ export function buildReport(input: { entries: HistoryEntry[]; events: EventOccur
       id: 'air', title: 'Air Permukaan',
       columns: [text('date', 'Tanggal'), text('pond', 'Pond'), num('phi', 'pH inlet'), num('pho', 'pH outlet'), num('tssi', 'TSS inlet (mg/L)'), num('tsso', 'TSS outlet (mg/L)'), num('di', 'Debit inlet (L/s)', 1), num('do', 'Debit outlet (L/s)', 1)],
       rows,
+      ...(noFlowDays > 0 ? { note: `${noFlowDays} hari no flow dalam periode ini.` } : {}),
     });
   }
 

@@ -34,6 +34,14 @@ describe('Riwayat table: Air permukaan', () => {
     expect(within(table).getByRole('cell', { name: '4' })).not.toHaveClass('is-bad');
     for (const c of within(table).getAllByRole('cell', { name: '3' })) expect(c).not.toHaveClass('is-bad');
   });
+  it('a no-flow day reads No flow in the outlet columns and is never marked red', async () => {
+    mockApi({ ponds: [POND], handler: api([{ ...e1, water: water({ ph_outlet: 0, tss_outlet: 0, debit_outlet_ls: 0, debit_outlet_m3d: 0 }) }]) });
+    renderApp('/riwayat');
+    const table = await screen.findByRole('table', { name: 'Air permukaan' });
+    const cells = within(table).getAllByRole('cell', { name: 'No flow' });
+    expect(cells).toHaveLength(3);
+    for (const c of cells) expect(c).not.toHaveClass('is-bad');
+  });
   it('formats numbers the Indonesian way and empty cells as a dash', async () => {
     mockApi({ ponds: [POND], handler: api([{ ...e1, water: water({ tss_inlet: null, debit_outlet_ls: 1278.7 }) }]) });
     renderApp('/riwayat');

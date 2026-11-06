@@ -21,6 +21,10 @@ describe('series', () => {
     expect(out[0].ph_outlet).toBeNull();
     expect(out[1]).toMatchObject({ ph_outlet: 7.2, tss_outlet: 30, debit_outlet_ls: 10.4 });
   });
+  it('waterByDate marks a no-flow day: outlet flow exactly 0', () => {
+    const out = waterByDate([e('2026-11-01', 'a', { water: water({ debit_outlet_ls: 0 }) }), e('2026-11-02', 'a', { water: water() })], 'a', '2026-11-01', '2026-11-03');
+    expect(out.map((d) => d.noFlow)).toEqual([true, false, false]);
+  });
   it('coagUsageDaily: sums Out across ponds per type; empty day stays null; empty Out on a recorded day is 0', () => {
     const out = coagUsageDaily([
       e('2026-11-02', 'a', { coagulant: [co('Kapur', 5), co('Tawas Serbuk', null)] }),
