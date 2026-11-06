@@ -7,7 +7,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 const T = '2026-11-04'; // a Wednesday in November 2026
 const ev = (over: Record<string, unknown> = {}) => ({
-  schedule_id: 's1', title: 'Cek Saluran Inlet', description: null, frequency: 'Daily', sp_id: null, assigned_to_name: null,
+  schedule_id: 's1', title: 'Cek Saluran Inlet', description: null, frequency: 'Daily', category_id: null, category_name: null, category_color: null, assigned_to_name: null,
   due_date: T, status: 'today', late: false, evidence_count: 0, completed_at: null, completed_by_name: null, ...over,
 });
 
@@ -27,24 +27,33 @@ function api({ week = [], overdue = [], total, urls = [], role = 'Operator', fai
 }
 
 describe('Kalender', () => {
-  it('shows the whole month of today, with a dot for each kind of event on a day', async () => {
+  const AIR = { category_id: 'k1', category_name: 'Air', category_color: '#2E7D32' };
+  const UDARA = { category_id: 'k2', category_name: 'Udara', category_color: '#1565C0' };
+  it('shows the whole month of today, with a dot for each category of event on a day', async () => {
     api({
       week: [
-        ev({ due_date: '2026-11-02', status: 'overdue' }), ev({ due_date: '2026-11-04' }), ev({ due_date: '2026-11-05', status: 'done' }),
-        ev({ due_date: '2026-11-20', status: 'upcoming' }), ev({ schedule_id: 's2', due_date: '2026-11-20', status: 'done' }),
+        ev({ due_date: '2026-11-02', status: 'overdue', ...AIR }), ev({ due_date: '2026-11-04' }), ev({ due_date: '2026-11-05', status: 'done', ...UDARA }),
+        ev({ due_date: '2026-11-20', status: 'upcoming', ...AIR }), ev({ schedule_id: 's2', due_date: '2026-11-20', status: 'done', ...UDARA }),
       ],
-      overdue: [ev({ due_date: '2026-11-02', status: 'overdue' })],
+      overdue: [ev({ due_date: '2026-11-02', status: 'overdue', ...AIR })],
     });
     renderApp('/kalender');
     expect(await screen.findByText('November 2026')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^\d+ November/ })).toHaveLength(30);
-    expect(await screen.findByRole('button', { name: /^2 November, ada overdue/ })).toHaveAttribute('data-marks', 'overdue');
+    expect(await screen.findByRole('button', { name: '2 November, Air' })).toHaveAttribute('data-marks', 'k1');
     expect(screen.getByRole('button', { name: /^4 November/ })).toHaveAttribute('aria-current', 'date');
-    expect(screen.getByRole('button', { name: /^4 November/ })).toHaveAttribute('data-marks', 'pending');
-    expect(screen.getByRole('button', { name: /^5 November/ })).toHaveAttribute('data-marks', 'done');
-    expect(screen.getByRole('button', { name: '20 November, menunggu, selesai' })).toHaveAttribute('data-marks', 'pending done');
+    expect(screen.getByRole('button', { name: '4 November, Tanpa kategori' })).toHaveAttribute('data-marks', 'none');
+    expect(screen.getByRole('button', { name: '5 November, Udara' })).toHaveAttribute('data-marks', 'k2');
+    expect(screen.getByRole('button', { name: '20 November, Air, Udara' })).toHaveAttribute('data-marks', 'k1 k2');
     expect(screen.getByRole('button', { name: '3 November' })).not.toHaveAttribute('data-marks');
-    expect(screen.getByRole('list', { name: 'Arti titik' })).toBeInTheDocument();
+    const legend = screen.getByRole('list', { name: 'Kategori' });
+    expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Air', 'Udara', 'Tanpa kategori']);
+  });
+  it('an event card names its category', async () => {
+    api({ week: [ev({ ...AIR })] });
+    renderApp('/kalender');
+    const card = await screen.findByRole('article', { name: 'Cek Saluran Inlet' });
+    expect(within(card).getByText('Air')).toBeInTheDocument();
   });
   it('overdue cards come first, with a way to upload for operators', async () => {
     api({ overdue: [ev({ due_date: '2026-11-03', status: 'overdue' })], week: [ev({ due_date: T, title: 'Kalibrasi pH Meter', frequency: 'Weekly' })] });

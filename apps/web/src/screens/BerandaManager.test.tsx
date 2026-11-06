@@ -139,8 +139,8 @@ describe('Dashboard: TSS, rainfall and calendar overview', () => {
     expect(screen.queryByRole('img', { name: /Grafik/ })).toBeNull();
   });
   it('shows this month\'s calendar with the overdue count and a way into the calendar', async () => {
-    const events = [{ schedule_id: 's1', title: 'Cek', description: null, frequency: 'Daily', sp_id: null, assigned_to_name: null, due_date: '2026-11-01', status: 'overdue', late: false, evidence_count: 0, completed_at: null, completed_by_name: null },
-      { schedule_id: 's1', title: 'Cek', description: null, frequency: 'Daily', sp_id: null, assigned_to_name: null, due_date: '2026-11-10', status: 'upcoming', late: false, evidence_count: 0, completed_at: null, completed_by_name: null }];
+    const events = [{ schedule_id: 's1', title: 'Cek', description: null, frequency: 'Daily', category_id: 'k1', category_name: 'Air', category_color: '#2E7D32', assigned_to_name: null, due_date: '2026-11-01', status: 'overdue', late: false, evidence_count: 0, completed_at: null, completed_by_name: null },
+      { schedule_id: 's1', title: 'Cek', description: null, frequency: 'Daily', category_id: null, category_name: null, category_color: null, assigned_to_name: null, due_date: '2026-11-10', status: 'upcoming', late: false, evidence_count: 0, completed_at: null, completed_by_name: null }];
     mockApi({
       role: 'Admin',
       handler: handler(true, (u) => (u.startsWith('/api/events/summary') ? json({ today: '2026-11-02', overdue: 2, due_today: 1 })
@@ -153,8 +153,8 @@ describe('Dashboard: TSS, rainfall and calendar overview', () => {
     expect(within(card).getByText('2 event overdue')).toBeInTheDocument();
     expect(within(card).getByText('1 event hari ini')).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: 'Buka Kalender' })).toHaveAttribute('href', '/kalender');
-    expect(within(card).getByTestId('day-2026-11-10')).toHaveAttribute('data-marks', 'pending');
-    expect(within(card).getByTestId('day-2026-11-01')).toHaveAttribute('data-marks', 'overdue');
+    expect(within(card).getByTestId('day-2026-11-10')).toHaveAttribute('data-marks', 'none');
+    expect(within(card).getByTestId('day-2026-11-01')).toHaveAttribute('data-marks', 'k1');
     expect(within(card).queryAllByRole('button')).toHaveLength(0);
   });
   it('a failing calendar summary hides the card without breaking the dashboard', async () => {

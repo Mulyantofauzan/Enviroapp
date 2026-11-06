@@ -34,29 +34,39 @@ describe('MonthGrid', () => {
     expect(screen.getByRole('button', { name: /^4 November/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: /^5 November/ })).toHaveAttribute('aria-pressed', 'false');
   });
-  it('shows one dot per kind of event that day and says so in words', () => {
-    render(<MonthGrid {...base} marks={{ '2026-11-03': ['overdue', 'pending', 'done'], '2026-11-05': ['pending'], '2026-11-06': ['done'] }} />);
-    const three = screen.getByRole('button', { name: '3 November, ada overdue, menunggu, selesai' });
-    expect(three).toHaveAttribute('data-marks', 'overdue pending done');
-    expect(three.querySelectorAll('.ui-dot')).toHaveLength(3);
-    expect(three.querySelector('.ui-dot.is-overdue')).not.toBeNull();
-    expect(three.querySelector('.ui-dot.is-pending')).not.toBeNull();
-    expect(three.querySelector('.ui-dot.is-done')).not.toBeNull();
-    expect(screen.getByRole('button', { name: '5 November, menunggu' })).toHaveAttribute('data-marks', 'pending');
-    expect(screen.getByRole('button', { name: '6 November, selesai' })).toHaveAttribute('data-marks', 'done');
+  const M = (key: string, name: string, color: string) => ({ key, name, color });
+  const AIR = M('k1', 'Air', '#2E7D32'), UDARA = M('k2', 'Udara', '#1565C0'), NONE = M('none', 'Tanpa kategori', '#9AA39A');
+  const dotsOf = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLElement>('.ui-ring .ui-dot'));
+  it('shows one dot per category around the date, starting at the top, and names them in words', () => {
+    render(<MonthGrid {...base} marks={{ '2026-11-03': [AIR, UDARA, NONE], '2026-11-05': [AIR] }} />);
+    const three = screen.getByRole('button', { name: '3 November, Air, Udara, Tanpa kategori' });
+    expect(three).toHaveAttribute('data-marks', 'k1 k2 none');
+    const dots = dotsOf(three);
+    expect(dots.map((d) => d.style.getPropertyValue('--bg'))).toEqual(['#2E7D32', '#1565C0', '#9AA39A']);
+    expect(dots.map((d) => d.style.getPropertyValue('--a'))).toEqual(['-90deg', '30deg', '150deg']);
+    const one = screen.getByRole('button', { name: '5 November, Air' });
+    expect(dotsOf(one).map((d) => d.style.getPropertyValue('--a'))).toEqual(['-90deg']);
   });
-  it('a day with nothing has no dot and no mark', () => {
+  it('more than eight categories: seven dots and one "more" dot, but every name is still said', () => {
+    const many = Array.from({ length: 9 }, (_, i) => M(`k${i}`, `Kat ${i}`, '#2E7D32'));
+    render(<MonthGrid {...base} marks={{ '2026-11-03': many }} />);
+    const day = screen.getByRole('button', { name: new RegExp(`^3 November, ${many.map((m) => m.name).join(', ')}$`) });
+    expect(dotsOf(day)).toHaveLength(8);
+    expect(day.querySelectorAll('.ui-dot.is-more')).toHaveLength(1);
+    expect(dotsOf(day)[7]).toHaveClass('is-more');
+  });
+  it('a day with nothing has no ring and no mark', () => {
     render(<MonthGrid {...base} marks={{}} />);
     const b = screen.getByRole('button', { name: '9 November' });
     expect(b).not.toHaveAttribute('data-marks');
-    expect(b.querySelectorAll('.ui-dot')).toHaveLength(0);
+    expect(b.querySelector('.ui-ring')).toBeNull();
   });
-  it('explains the three colours in words, so colour is not the only signal', () => {
-    render(<MonthGrid {...base} />);
-    const legend = screen.getByRole('list', { name: 'Arti titik' });
-    expect(within(legend).getByText('Overdue')).toBeInTheDocument();
-    expect(within(legend).getByText('Menunggu')).toBeInTheDocument();
-    expect(within(legend).getByText('Selesai')).toBeInTheDocument();
+  it('the legend lists the categories of this month, in order, and no status words', () => {
+    render(<MonthGrid {...base} marks={{ '2026-11-03': [UDARA, NONE], '2026-11-04': [AIR], '2026-10-30': [M('k9', 'Bulan lalu', '#C62828')] }} />);
+    const legend = screen.getByRole('list', { name: 'Kategori' });
+    expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Air', 'Udara', 'Tanpa kategori']);
+    expect(screen.queryByText('Overdue')).toBeNull();
+    expect(screen.queryByText('Menunggu')).toBeNull();
   });
   it('reports the chosen day and the month arrows', async () => {
     const sel = vi.fn(); const prev = vi.fn(); const next = vi.fn();
@@ -68,12 +78,12 @@ describe('MonthGrid', () => {
     expect(prev).toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
   });
-  it('read-only overview: no day buttons or arrows, but the marks are still said in words', () => {
-    render(<MonthGrid month="2026-11" today="2026-11-02" marks={{ '2026-11-03': ['overdue', 'done'] }} />);
+  it('read-only overview: no day buttons or arrows, but the categories are still said in words', () => {
+    render(<MonthGrid month="2026-11" today="2026-11-02" marks={{ '2026-11-03': [AIR, UDARA] }} />);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     const cell = screen.getByTestId('day-2026-11-03');
-    expect(within(cell).getByText(/ada overdue, selesai/)).toBeInTheDocument();
-    expect(cell).toHaveAttribute('data-marks', 'overdue done');
-    expect(cell.querySelectorAll('.ui-dot')).toHaveLength(2);
+    expect(within(cell).getByText(/Air, Udara/)).toBeInTheDocument();
+    expect(cell).toHaveAttribute('data-marks', 'k1 k2');
+    expect(dotsOf(cell)).toHaveLength(2);
   });
 });

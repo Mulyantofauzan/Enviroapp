@@ -98,7 +98,8 @@ body { font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .ui-tab.is-on { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
 
 .ui-rail { position: fixed; top: 0; bottom: 0; left: 0; width: 208px; padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; background: var(--surface); border-right: 1px solid var(--border); }
-.ui-rail__brand { font: 700 22px var(--font); color: var(--primary); padding: 0 12px 16px; }
+.ui-rail__brand { display: flex; align-items: center; gap: 10px; font: 700 22px var(--font); color: var(--primary); padding: 0 12px 16px; }
+.ui-rail__brand img { width: 28px; height: 28px; border-radius: 22%; }
 .ui-rail__item { display: flex; align-items: center; gap: 12px; min-height: 42px; padding: 0 14px; border-radius: 14px; color: var(--text-sub); font: 500 15px var(--font); text-decoration: none; }
 .ui-rail__item.is-on { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
 
@@ -112,6 +113,7 @@ body { font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 
 /* Login */
 .ui-login { max-width: 380px; margin: 0 auto; padding: 16dvh 20px 2rem; }
+.ui-login__logo { display: block; width: 96px; height: 96px; margin: 0 0 14px; border-radius: 22%; }
 .ui-login h1 { margin: 0; font: 700 36px var(--font); color: var(--primary); }
 .ui-login > p { margin: 4px 0 28px; color: var(--text-sub); }
 .ui-login__form { display: grid; gap: 14px; }
@@ -407,11 +409,12 @@ button.ui-mday { cursor: pointer; }
 a.ui-btn { text-decoration: none; }
 
 /* Day dots: red overdue, yellow waiting, green finished (Figma status colours) */
-.ui-dots { display: flex; justify-content: center; gap: 3px; min-height: 6px; }
-.ui-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex: none; }
-.ui-dot.is-overdue { background: var(--danger); }
-.ui-dot.is-pending { background: var(--warning); }
-.ui-dot.is-done { background: var(--success); }
+.ui-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex: none; background: var(--bg, var(--text-sub)); }
+/* Dots sit on a circle of radius 19px round the 30px date number, which is centred in the 44px cell. */
+.ui-mday { position: relative; }
+.ui-ring { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.ui-ring .ui-dot { position: absolute; margin: -3px 0 0 -3px; transform: rotate(var(--a)) translateX(19px) rotate(calc(-1 * var(--a))); }
+.ui-dot.is-more { background: transparent; border: 1.5px solid var(--text-sub); box-sizing: border-box; }
 .ui-month__legend { justify-content: center; margin-top: 10px; }
 .ui-month__legend .ui-dot { width: 8px; height: 8px; }
 
@@ -504,3 +507,5 @@ a.ui-btn { text-decoration: none; }
 .ui-outbox__list small { display: block; color: var(--text-sub); }
 .ui-outbox__actions, .ui-outbox__confirm { display: flex; flex-wrap: wrap; gap: 8px; }
 .ui-outbox__confirm p { flex-basis: 100%; margin: 0; }
+
+.ui-ev__cat { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 0; font-size: 12px; font-weight: 600; color: var(--text-sub); }
