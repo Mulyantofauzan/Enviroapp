@@ -93,6 +93,21 @@ export function buildXlsx(meta: ReportMeta, sections: ReportSection[]): Uint8Arr
     sheets.push({ name: sanitizeSheetName(sec.title, used), xml: sheetXml(rows, { freeze: true, widths }) });
   }
 
+  return pack(sheets, styles);
+}
+
+/** A plain workbook: one sheet per entry, the first row styled as a header when `header` is set. */
+export function buildSimpleXlsx(defs: { name: string; rows: string[][]; widths?: number[]; header?: boolean }[]): Uint8Array {
+  const styles = new Styles();
+  const used = new Set<string>();
+  const sheets = defs.map((d) => ({
+    name: sanitizeSheetName(d.name, used),
+    xml: sheetXml(d.rows.map((r, i): CellDef[] => r.map((v) => ({ v, s: d.header && i === 0 ? 1 : 0 }))), { freeze: !!d.header, widths: d.widths }),
+  }));
+  return pack(sheets, styles);
+}
+
+function pack(sheets: { name: string; xml: string }[], styles: Styles): Uint8Array {
   const files: Record<string, Uint8Array> = {
     '[Content_Types].xml': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`),
     '_rels/.rels': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`),
