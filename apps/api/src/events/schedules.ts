@@ -3,6 +3,8 @@ import type { Context } from 'hono';
 import { EVENT_FREQUENCIES, isValidDate, startDateInRange, todayInSite } from '@evo/shared';
 import type { AppEnv } from '../types';
 import { requireAuth, requireScheduler } from '../auth/guard';
+import { importHandler } from './import';
+import { LOCKED_SQL } from './locked';
 
 export const scheduleRoutes = new Hono<AppEnv>();
 scheduleRoutes.use('*', requireAuth);
@@ -18,8 +20,7 @@ const LOCKED_MSG = 'Frekuensi dan tanggal mulai tidak bisa diubah karena jadwal 
 const SELECT = `
   SELECT s.id, s.title, s.description, s.frequency, s.start_date, s.category_id, k.name AS category_name, k.color AS category_color,
     s.assigned_to, u.name AS assigned_to_name, s.ended_on,
-    (EXISTS (SELECT 1 FROM event_completions c WHERE c.schedule_id = s.id)
-     OR EXISTS (SELECT 1 FROM evidences e WHERE e.schedule_id = s.id)) AS locked
+    ${LOCKED_SQL} AS locked
   FROM event_schedules s LEFT JOIN users u ON u.id = s.assigned_to LEFT JOIN event_categories k ON k.id = s.category_id`;
 
 const present = (r: any) => ({ ...r, locked: !!r.locked });
@@ -85,6 +86,8 @@ scheduleRoutes.post('/', requireScheduler, async (c) => {
   ).bind(id, f.title, f.description ?? null, f.frequency, f.start_date, f.category_id ?? null, f.assigned_to ?? null, c.get('user').id, new Date().toISOString()).run();
   return c.json({ id }, 201);
 });
+
+scheduleRoutes.post('/import', requireScheduler, importHandler);
 
 scheduleRoutes.patch('/:id', requireScheduler, async (c) => {
   const row = await c.env.DB.prepare(`${SELECT} WHERE s.id = ?`).bind(c.req.param('id')).first<any>();
