@@ -15,26 +15,28 @@ const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00
 const MAX_RANGE_DAYS = 62;
 const OVERDUE_CAP = 200;
 
-type Sched = ScheduleRule & { id: string; title: string; description: string | null; sp_id: string | null; assigned_to_name: string | null };
+type Sched = ScheduleRule & {
+  id: string; title: string; description: string | null; category_id: string | null; category_name: string | null; category_color: string | null;
+  assigned_to_name: string | null;
+};
 type Completion = { schedule_id: string; due_date: string; completed_at: string; completed_on: string; completed_by_name: string };
 
-const BASE = `SELECT s.id, s.title, s.description, s.frequency, s.start_date, s.sp_id, s.ended_on, u.name AS assigned_to_name
-  FROM event_schedules s LEFT JOIN users u ON u.id = s.assigned_to`;
+const BASE = `SELECT s.id, s.title, s.description, s.frequency, s.start_date, s.category_id, k.name AS category_name, k.color AS category_color, s.ended_on, u.name AS assigned_to_name
+  FROM event_schedules s LEFT JOIN users u ON u.id = s.assigned_to LEFT JOIN event_categories k ON k.id = s.category_id`;
 
-type Filters = { frequency: EventFrequency | null; sp: string | null };
+type Filters = { frequency: EventFrequency | null };
 
-/** Reads and validates the optional frequency and pond filters. Returns a 400 response when invalid. */
+/** Reads and validates the optional frequency filter. Returns a 400 response when invalid. */
 function readFilters(c: Context<AppEnv>): Filters | Response {
   const frequency = c.req.query('frequency') || null;
   if (frequency !== null && !(EVENT_FREQUENCIES as readonly string[]).includes(frequency)) return c.json({ error: 'Pilih frekuensi yang benar.' }, 400);
-  return { frequency: frequency as EventFrequency | null, sp: c.req.query('sp') || null };
+  return { frequency: frequency as EventFrequency | null };
 }
 
 async function loadSchedules(db: D1Database, f: Filters): Promise<Sched[]> {
   const where: string[] = [];
   const args: unknown[] = [];
   if (f.frequency) { where.push('s.frequency = ?'); args.push(f.frequency); }
-  if (f.sp) { where.push('(s.sp_id IS NULL OR s.sp_id = ?)'); args.push(f.sp); }
   const sql = `${BASE} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY s.title, s.start_date`;
   return (await db.prepare(sql).bind(...args).all<Sched>()).results;
 }
@@ -42,7 +44,8 @@ async function loadSchedules(db: D1Database, f: Filters): Promise<Sched[]> {
 function occurrence(s: Sched, due: string, today: string, done: Completion | undefined, evidenceCount: number): EventOccurrence {
   const completedOn = done?.completed_on ?? null;
   return {
-    schedule_id: s.id, title: s.title, description: s.description, frequency: s.frequency, sp_id: s.sp_id,
+    schedule_id: s.id, title: s.title, description: s.description, frequency: s.frequency,
+    category_id: s.category_id, category_name: s.category_name, category_color: s.category_color,
     assigned_to_name: s.assigned_to_name, due_date: due, status: eventStatus(due, today, completedOn), late: isLate(due, completedOn),
     evidence_count: evidenceCount, completed_at: done?.completed_at ?? null, completed_by_name: done?.completed_by_name ?? null,
   };
@@ -110,7 +113,7 @@ eventRoutes.get('/overdue', async (c) => {
 eventRoutes.get('/summary', async (c) => {
   const db = c.env.DB;
   const today = todayInSite();
-  const schedules = await loadSchedules(db, { frequency: null, sp: null });
+  const schedules = await loadSchedules(db, { frequency: null });
   // Completions only exist on real due dates (timing is locked once records exist), so
   // overdue = due dates up to yesterday minus completions up to yesterday. No rows are read back.
   const yesterday = addDays(today, -1);

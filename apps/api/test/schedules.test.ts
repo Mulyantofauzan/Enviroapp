@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { env } from 'cloudflare:workers';
 import { todayInSite } from '@evo/shared';
-import { addPond, call, login, json } from './helpers';
+import { call, login, json } from './helpers';
 
 const body = (over: object = {}) => ({ title: 'Cek Saluran Inlet', frequency: 'Daily', start_date: '2026-11-01', ...over });
 const create = (cookie: string, over: object = {}) => call('/schedules', { method: 'POST', cookie, body: json(body(over)) });
+const category = async (name: string, active = true) => {
+  const id = crypto.randomUUID();
+  await env.DB.prepare('INSERT INTO event_categories (id,name,color,is_active,created_at) VALUES (?,?,?,?,?)').bind(id, name, '#2E7D32', active ? 1 : 0, new Date().toISOString()).run();
+  return id;
+};
 const errOf = async (r: Response) => ((await r.json()) as any).error as string;
 
 describe('schedules: who can do what', () => {
@@ -45,14 +50,18 @@ describe('schedules: validation', () => {
     const { cookie } = await login('Manager');
     expect((await create(cookie, { start_date: '2026-13-45' })).status).toBe(400);
   });
-  it('unknown pond is 404', async () => {
+  it('unknown category is 404', async () => {
     const { cookie } = await login('Manager');
-    expect((await create(cookie, { sp_id: 'nope' })).status).toBe(404);
+    const res = await create(cookie, { category_id: 'nope' });
+    expect(res.status).toBe(404);
+    expect(await errOf(res)).toBe('Kategori tidak ditemukan.');
   });
-  it('a known pond is accepted', async () => {
+  it('an inactive category cannot be newly picked', async () => {
     const { cookie } = await login('Manager');
-    const sp = await addPond();
-    expect((await create(cookie, { sp_id: sp })).status).toBe(201);
+    const k = await category('Lama', false);
+    const res = await create(cookie, { category_id: k });
+    expect(res.status).toBe(400);
+    expect(await errOf(res)).toBe('Kategori ini nonaktif.');
   });
   it('assigned_to must be an existing active user', async () => {
     const { cookie } = await login('Manager');
@@ -90,6 +99,44 @@ describe('schedules: start date window', () => {
     const r = (await (await call('/events/summary', { cookie })).json()) as any;
     expect(r.overdue).toBeGreaterThan(9000);
     expect(r.overdue).toBeLessThan(20000);
+  });
+});
+
+describe('schedules: category', () => {
+  const rows = async (cookie: string) => (await (await call('/schedules', { cookie })).json()) as any[];
+  it('is saved and listed with name and color, and the list has no sp_id', async () => {
+    const { cookie } = await login('Manager');
+    const k = await category('Air');
+    expect((await create(cookie, { category_id: k })).status).toBe(201);
+    const [row] = await rows(cookie);
+    expect(row).toMatchObject({ category_id: k, category_name: 'Air', category_color: '#2E7D32' });
+    expect(row).not.toHaveProperty('sp_id');
+  });
+  it('an old sp_id in the body is ignored', async () => {
+    const { cookie } = await login('Manager');
+    const res = await create(cookie, { sp_id: 'whatever' });
+    expect(res.status).toBe(201);
+    const row = await env.DB.prepare('SELECT sp_id FROM event_schedules').first<{ sp_id: string | null }>();
+    expect(row!.sp_id).toBeNull();
+  });
+  it('can be changed and cleared on edit', async () => {
+    const { cookie } = await login('Manager');
+    const k = await category('Air');
+    const id = ((await (await create(cookie)).json()) as any).id as string;
+    await call(`/schedules/${id}`, { method: 'PATCH', cookie, body: json({ category_id: k }) });
+    expect((await rows(cookie))[0].category_id).toBe(k);
+    await call(`/schedules/${id}`, { method: 'PATCH', cookie, body: json({ category_id: null }) });
+    expect((await rows(cookie))[0].category_id).toBeNull();
+  });
+  it('an event keeps an inactive category it already has, but cannot switch to another inactive one', async () => {
+    const { cookie } = await login('Manager');
+    const old = await category('Lama');
+    const id = ((await (await create(cookie, { category_id: old })).json()) as any).id as string;
+    await env.DB.prepare('UPDATE event_categories SET is_active = 0 WHERE id = ?').bind(old).run();
+    const same = await call(`/schedules/${id}`, { method: 'PATCH', cookie, body: json({ title: 'Baru', category_id: old }) });
+    expect(same.status).toBe(200);
+    const other = await category('Lain', false);
+    expect((await call(`/schedules/${id}`, { method: 'PATCH', cookie, body: json({ category_id: other }) })).status).toBe(400);
   });
 });
 

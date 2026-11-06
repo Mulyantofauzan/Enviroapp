@@ -10,9 +10,9 @@ export function StatusBadge({ e }: { e: EventOccurrence }) {
   return <Badge tone="water">{dayMonth(e.due_date)}</Badge>;
 }
 
-export function EventCard({ event: e, canAct, pondName }: { event: EventOccurrence; canAct: boolean; pondName?: string }) {
+export function EventCard({ event: e, canAct }: { event: EventOccurrence; canAct: boolean }) {
   const to = `/kalender/${e.schedule_id}/${e.due_date}`;
-  const meta = [FREQUENCY_LABEL[e.frequency], pondName, `tenggat ${dayMonth(e.due_date)}`].filter(Boolean).join(' - ');
+  const meta = [FREQUENCY_LABEL[e.frequency], e.category_name, `tenggat ${dayMonth(e.due_date)}`].filter(Boolean).join(' - ');
   return (
     <article className={`ui-ev ui-ev--${e.status}`} aria-label={e.title}>
       <div className="ui-ev__head">

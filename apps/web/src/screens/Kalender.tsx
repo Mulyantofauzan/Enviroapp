@@ -6,17 +6,14 @@ import { useEventSummary } from '../hooks/useEventSummary';
 import { useOverdue, useRangeEvents } from '../hooks/useEvents';
 import { addMonths, monthRange } from '../lib/dates';
 import { marksOf } from '../lib/marks';
-import { usePond } from '../pond/PondContext';
 import { EventCard } from '../components/EventCard';
 import { MonthGrid } from '../components/MonthGrid';
 import { ScreenHeader } from '../ui/ScreenHeader';
-import { pondLabel } from '../ui/PondPicker';
 import { localToday } from './input/DayScope';
 
 export function Kalender() {
   const { user } = useAuth();
   const nav = useNavigate();
-  const { ponds } = usePond();
   const { summary, error: summaryError } = useEventSummary();
   const today = summary?.today ?? (summaryError ? localToday() : null);
   const [month, setMonth] = useState<string | null>(null);
@@ -30,7 +27,6 @@ export function Kalender() {
   const [from, to] = month ? monthRange(month) : [null, null];
   const monthEvents = useRangeEvents(from, to, frequency);
   const overdue = useOverdue(frequency);
-  const pondName = useMemo(() => new Map(ponds.map((p) => [p.id, pondLabel(p)])), [ponds]);
   const marks = useMemo(() => marksOf(monthEvents.data ?? []), [monthEvents.data]);
 
   function goMonth(n: number) {
@@ -75,7 +71,7 @@ export function Kalender() {
                     <p className="ui-muted">Ada {overdue.data.total} event overdue, {overdue.data.events.length} teratas ditampilkan.</p>
                   )}
                   {overdue.data.events.map((e) => (
-                    <EventCard key={`${e.schedule_id}|${e.due_date}`} event={e} canAct={canAct} pondName={e.sp_id ? pondName.get(e.sp_id) : undefined} />
+                    <EventCard key={`${e.schedule_id}|${e.due_date}`} event={e} canAct={canAct} />
                   ))}
                 </section>
               )}
@@ -85,7 +81,7 @@ export function Kalender() {
                 {!monthEvents.data && !error && <p className="ui-muted">Memuat…</p>}
                 {monthEvents.data && dayEvents.length === 0 && <p className="ui-muted">Tidak ada event pada tanggal ini.</p>}
                 {dayShown.map((e) => (
-                  <EventCard key={`${e.schedule_id}|${e.due_date}`} event={e} canAct={canAct} pondName={e.sp_id ? pondName.get(e.sp_id) : undefined} />
+                  <EventCard key={`${e.schedule_id}|${e.due_date}`} event={e} canAct={canAct} />
                 ))}
               </section>
             </div>

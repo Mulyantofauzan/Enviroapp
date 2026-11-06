@@ -9,9 +9,9 @@ const add = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) 
 const d = (n: number) => add(T, n);
 
 async function schedule(by: string, over: Record<string, unknown> = {}) {
-  const s = { id: crypto.randomUUID(), title: 'Cek Saluran Inlet', description: 'Periksa saluran', frequency: 'Daily', start_date: d(-3), sp_id: null, assigned_to: null, ended_on: null, ...over };
-  await env.DB.prepare('INSERT INTO event_schedules (id,title,description,frequency,start_date,sp_id,assigned_to,ended_on,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
-    .bind(s.id, s.title, s.description, s.frequency, s.start_date, s.sp_id, s.assigned_to, s.ended_on, by, new Date().toISOString()).run();
+  const s = { id: crypto.randomUUID(), title: 'Cek Saluran Inlet', description: 'Periksa saluran', frequency: 'Daily', start_date: d(-3), sp_id: null, category_id: null, assigned_to: null, ended_on: null, ...over };
+  await env.DB.prepare('INSERT INTO event_schedules (id,title,description,frequency,start_date,sp_id,category_id,assigned_to,ended_on,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(s.id, s.title, s.description, s.frequency, s.start_date, s.sp_id, s.category_id, s.assigned_to, s.ended_on, by, new Date().toISOString()).run();
   return s;
 }
 const complete = (sid: string, due: string, by: string, on = due) =>
@@ -20,6 +20,33 @@ const evidence = (sid: string, due: string, by: string) =>
   env.DB.prepare('INSERT INTO evidences (id,schedule_id,due_date,r2_key,filename,mime,size,uploaded_by,uploaded_at) VALUES (?,?,?,?,?,?,?,?,?)')
     .bind(crypto.randomUUID(), sid, due, 'k', 'foto.jpg', 'image/jpeg', 1000, by, new Date().toISOString()).run();
 const list = async (cookie: string, q: string) => (await (await call(`/events?${q}`, { cookie })).json()) as any;
+
+describe('GET /events: category', () => {
+  const category = async (name: string, color: string) => {
+    const id = crypto.randomUUID();
+    await env.DB.prepare('INSERT INTO event_categories (id,name,color,created_at) VALUES (?,?,?,?)').bind(id, name, color, new Date().toISOString()).run();
+    return id;
+  };
+  it('every occurrence carries its category, or three nulls without one', async () => {
+    const { cookie, user } = await login('Manager');
+    const k = await category('Air', '#2E7D32');
+    await schedule(user.id, { title: 'Dengan', category_id: k, start_date: d(0) });
+    await schedule(user.id, { title: 'Tanpa', start_date: d(0) });
+    const r = await list(cookie, `from=${d(0)}&to=${d(0)}`);
+    const by = Object.fromEntries(r.events.map((e: any) => [e.title, e]));
+    expect(by['Dengan']).toMatchObject({ category_id: k, category_name: 'Air', category_color: '#2E7D32' });
+    expect(by['Tanpa']).toMatchObject({ category_id: null, category_name: null, category_color: null });
+  });
+  it('overdue and the day detail carry it too', async () => {
+    const { cookie, user } = await login('Manager');
+    const k = await category('Air', '#2E7D32');
+    const s = await schedule(user.id, { category_id: k, start_date: d(-2) });
+    const o = (await (await call('/events/overdue', { cookie })).json()) as any;
+    expect(o.events[0].category_name).toBe('Air');
+    const one = (await (await call(`/events/${s.id}/${d(-1)}`, { cookie })).json()) as any;
+    expect(one.event.category_color).toBe('#2E7D32');
+  });
+});
 
 describe('GET /events', () => {
   it('rejects a range longer than 62 days, bad dates, and missing dates', async () => {
@@ -63,7 +90,7 @@ describe('GET /events', () => {
     const r = await list(cookie, `from=${d(-1)}&to=${d(0)}`);
     expect(r.events.map((e: any) => e.evidence_count)).toEqual([2, 0]);
   });
-  it('filters by frequency, and by pond (pond-less schedules always included)', async () => {
+  it('filters by frequency; a pond id on an old row never hides an event and ?sp= is ignored', async () => {
     const { cookie, user } = await login('Manager');
     const a = await addPond('A');
     const b = await addPond('B');
@@ -72,7 +99,8 @@ describe('GET /events', () => {
     await schedule(user.id, { title: 'Semua', start_date: d(0) });
     await schedule(user.id, { title: 'Mingguan A', frequency: 'Weekly', sp_id: a, start_date: d(0) });
     const forA = await list(cookie, `from=${d(0)}&to=${d(0)}&sp=${a}`);
-    expect(forA.events.map((e: any) => e.title).sort()).toEqual(['Harian A', 'Mingguan A', 'Semua']);
+    expect(forA.events.map((e: any) => e.title).sort()).toEqual(['Harian A', 'Harian B', 'Mingguan A', 'Semua']);
+    expect(forA.events[0]).not.toHaveProperty('sp_id');
     const weekly = await list(cookie, `from=${d(0)}&to=${d(0)}&frequency=Weekly`);
     expect(weekly.events.map((e: any) => e.title)).toEqual(['Mingguan A']);
     expect((await call(`/events?from=${d(0)}&to=${d(0)}&frequency=Hourly`, { cookie })).status).toBe(400);
@@ -129,7 +157,7 @@ describe('GET /events/overdue and /events/summary', () => {
     await schedule(user.id, { start_date: d(0) });
     expect(((await (await call('/events/overdue', { cookie })).json()) as any).total).toBe(0);
   });
-  it('filters overdue by frequency and pond', async () => {
+  it('filters overdue by frequency; ?sp= is ignored', async () => {
     const { cookie, user } = await login('Manager');
     const a = await addPond('A');
     await schedule(user.id, { title: 'Harian', start_date: d(-2), sp_id: a });
@@ -138,6 +166,7 @@ describe('GET /events/overdue and /events/summary', () => {
     expect(w.events.map((e: any) => e.title)).toEqual(['Mingguan']);
     const p = (await (await call(`/events/overdue?sp=${a}`, { cookie })).json()) as any;
     expect(p.events.map((e: any) => e.title)).toEqual(['Harian', 'Harian', 'Mingguan']);
+    expect(p.events[0]).not.toHaveProperty('sp_id');
   });
   it('summary agrees with the overdue total and counts what is due today', async () => {
     const { cookie, user } = await login('Operator');

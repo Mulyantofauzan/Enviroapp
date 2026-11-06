@@ -8,7 +8,7 @@ const POND_B: Pond = { id: 'b', code: 'SP-01', name: 'Pit Utara', is_active: tru
 const water = (o: Partial<NonNullable<HistoryEntry['water']>> = {}) => ({ ph_inlet: 7, ph_outlet: 7, tss_inlet: 100, tss_outlet: 30, debit_inlet_m3d: 1000, debit_outlet_m3d: 1278.7, ...o });
 const entry = (date: string, sp: string | null, o: Partial<HistoryEntry> = {}): HistoryEntry => ({ date, sp_id: sp, weather: null, water: null, coagulant: [], ...o });
 const ev = (o: Partial<EventOccurrence> = {}): EventOccurrence => ({
-  schedule_id: 's1', title: 'Cek pompa', description: null, frequency: 'Daily', sp_id: null, assigned_to_name: null,
+  schedule_id: 's1', title: 'Cek pompa', description: null, frequency: 'Daily', category_id: null, category_name: null, category_color: null, assigned_to_name: null,
   due_date: '2026-11-02', status: 'upcoming', late: false, evidence_count: 0, completed_at: null, completed_by_name: null, ...o,
 });
 const air = (e: HistoryEntry[]) => buildReport({ entries: e, events: [], ponds: [POND_A, POND_B], kinds: ['air'] })[0];
@@ -55,20 +55,22 @@ describe('buildReport: cuaca and koagulan', () => {
 
 describe('buildReport: event', () => {
   const run = (events: EventOccurrence[]) => buildReport({ entries: [], events, ponds: [POND_A], kinds: ['event'] })[0];
-  it('status labels, place, completion time in WITA and newest first', () => {
+  it('status labels, category, completion time in WITA and newest first', () => {
     const s = run([
-      ev({ due_date: '2026-11-01', status: 'done', late: true, completed_by_name: 'Rudi', completed_at: '2026-11-02T00:21:00.000Z', evidence_count: 2, sp_id: 'a' }),
+      ev({ due_date: '2026-11-01', status: 'done', late: true, completed_by_name: 'Rudi', completed_at: '2026-11-02T00:21:00.000Z', evidence_count: 2, category_id: 'k1', category_name: 'Air', category_color: '#2E7D32' }),
       ev({ due_date: '2026-11-02', status: 'today' }),
       ev({ due_date: '2026-10-30', status: 'done' }), ev({ due_date: '2026-10-29', status: 'overdue' }), ev({ due_date: '2026-11-05', status: 'upcoming' }),
     ]);
     expect(s.title).toBe('Event');
     expect(s.rows.map((r) => r.cells.status)).toEqual(['Mendatang', 'Hari ini', 'Selesai (terlambat)', 'Selesai', 'Overdue']);
     const late = s.rows[2];
-    expect(late.cells.place).toBe('SP-02 Pit Selatan');
+    expect(late.cells.category).toBe('Air');
     expect(late.cells.at).toBe('2 Nov 2026 08:21');
     expect(late.cells.by).toBe('Rudi');
     expect(late.cells.evidence).toBe(2);
-    expect(s.rows[1].cells.place).toBe('Semua lokasi');
+    expect(s.rows[1].cells.category).toBe('Tanpa kategori');
+    expect(s.columns.map((c) => c.header)).toContain('Kategori');
+    expect(s.columns.map((c) => c.header)).not.toContain('Lokasi');
     expect(s.rows[1].cells.at).toBeNull();
     expect(s.rows[1].cells.freq).toBe('Harian');
   });

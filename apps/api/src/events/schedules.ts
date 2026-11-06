@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import { EVENT_FREQUENCIES, isValidDate, todayInSite } from '@evo/shared';
+import { EVENT_FREQUENCIES, isValidDate, startDateInRange, todayInSite } from '@evo/shared';
 import type { AppEnv } from '../types';
 import { requireAuth, requireScheduler } from '../auth/guard';
 
@@ -11,27 +11,25 @@ type Fail = { fail: Response };
 const isFail = (v: unknown): v is Fail => typeof v === 'object' && v !== null && 'fail' in v;
 const text = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
 
-/** A start date outside 2000-01-01 .. five years from now is almost certainly a typo (e.g. 0202). */
-const startDateOk = (d: string) => {
-  const today = todayInSite();
-  return d >= '2000-01-01' && d <= `${Number(today.slice(0, 4)) + 5}${today.slice(4)}`;
-};
+const startDateOk = (d: string) => startDateInRange(d, todayInSite());
 
 const LOCKED_MSG = 'Frekuensi dan tanggal mulai tidak bisa diubah karena jadwal ini sudah punya catatan.';
 
 const SELECT = `
-  SELECT s.id, s.title, s.description, s.frequency, s.start_date, s.sp_id, s.assigned_to, u.name AS assigned_to_name, s.ended_on,
+  SELECT s.id, s.title, s.description, s.frequency, s.start_date, s.category_id, k.name AS category_name, k.color AS category_color,
+    s.assigned_to, u.name AS assigned_to_name, s.ended_on,
     (EXISTS (SELECT 1 FROM event_completions c WHERE c.schedule_id = s.id)
      OR EXISTS (SELECT 1 FROM evidences e WHERE e.schedule_id = s.id)) AS locked
-  FROM event_schedules s LEFT JOIN users u ON u.id = s.assigned_to`;
+  FROM event_schedules s LEFT JOIN users u ON u.id = s.assigned_to LEFT JOIN event_categories k ON k.id = s.category_id`;
 
 const present = (r: any) => ({ ...r, locked: !!r.locked });
 
-/** Checks the optional references (pond, assignee). Returns null when fine. */
-async function checkRefs(c: Context<AppEnv>, sp: unknown, assignee: unknown): Promise<Response | null> {
-  if (sp !== null && sp !== undefined) {
-    const p = await c.env.DB.prepare('SELECT id FROM settling_ponds WHERE id = ?').bind(sp).first();
-    if (!p) return c.json({ error: 'Pond tidak ditemukan.' }, 404);
+/** Checks the optional references (category, assignee). `category` is only checked when it is being newly set. Returns null when fine. */
+async function checkRefs(c: Context<AppEnv>, category: unknown, assignee: unknown): Promise<Response | null> {
+  if (category !== null && category !== undefined) {
+    const k = await c.env.DB.prepare('SELECT is_active FROM event_categories WHERE id = ?').bind(category).first<{ is_active: number }>();
+    if (!k) return c.json({ error: 'Kategori tidak ditemukan.' }, 404);
+    if (!k.is_active) return c.json({ error: 'Kategori ini nonaktif.' }, 400);
   }
   if (assignee !== null && assignee !== undefined) {
     const u = await c.env.DB.prepare('SELECT id FROM users WHERE id = ? AND is_active = 1').bind(assignee).first();
@@ -58,7 +56,7 @@ function readFields(c: Context<AppEnv>, b: any, partial: boolean): Record<string
     if (!startDateOk(b.start_date)) return { fail: c.json({ error: 'Tanggal mulai harus antara 1 Jan 2000 dan 5 tahun dari sekarang.' }, 400) };
     out.start_date = b.start_date;
   }
-  if (b.sp_id !== undefined) out.sp_id = text(b.sp_id);
+  if (b.category_id !== undefined) out.category_id = text(b.category_id);
   if (b.assigned_to !== undefined) out.assigned_to = text(b.assigned_to);
   return out;
 }
@@ -79,12 +77,12 @@ scheduleRoutes.post('/', requireScheduler, async (c) => {
   const b: any = await c.req.json().catch(() => ({}));
   const f = readFields(c, b, false);
   if (isFail(f)) return f.fail;
-  const bad = await checkRefs(c, f.sp_id, f.assigned_to);
+  const bad = await checkRefs(c, f.category_id, f.assigned_to);
   if (bad) return bad;
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
-    'INSERT INTO event_schedules (id,title,description,frequency,start_date,sp_id,assigned_to,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?)',
-  ).bind(id, f.title, f.description ?? null, f.frequency, f.start_date, f.sp_id ?? null, f.assigned_to ?? null, c.get('user').id, new Date().toISOString()).run();
+    'INSERT INTO event_schedules (id,title,description,frequency,start_date,category_id,assigned_to,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?)',
+  ).bind(id, f.title, f.description ?? null, f.frequency, f.start_date, f.category_id ?? null, f.assigned_to ?? null, c.get('user').id, new Date().toISOString()).run();
   return c.json({ id }, 201);
 });
 
@@ -97,11 +95,11 @@ scheduleRoutes.patch('/:id', requireScheduler, async (c) => {
   const changesTiming = (f.frequency !== undefined && f.frequency !== row.frequency) || (f.start_date !== undefined && f.start_date !== row.start_date);
   if (changesTiming && row.locked) return c.json({ error: LOCKED_MSG }, 409);
   // An assignee deactivated after the schedule was made can stay; only a new, unknown or inactive pick is refused.
-  const bad = await checkRefs(c, f.sp_id, f.assigned_to === row.assigned_to ? undefined : f.assigned_to);
+  const bad = await checkRefs(c, f.category_id === row.category_id ? undefined : f.category_id, f.assigned_to === row.assigned_to ? undefined : f.assigned_to);
   if (bad) return bad;
   const next = { ...row, ...f };
-  await c.env.DB.prepare('UPDATE event_schedules SET title = ?, description = ?, frequency = ?, start_date = ?, sp_id = ?, assigned_to = ? WHERE id = ?')
-    .bind(next.title, next.description ?? null, next.frequency, next.start_date, next.sp_id ?? null, next.assigned_to ?? null, row.id).run();
+  await c.env.DB.prepare('UPDATE event_schedules SET title = ?, description = ?, frequency = ?, start_date = ?, category_id = ?, assigned_to = ? WHERE id = ?')
+    .bind(next.title, next.description ?? null, next.frequency, next.start_date, next.category_id ?? null, next.assigned_to ?? null, row.id).run();
   return c.json({ id: row.id });
 });
 

@@ -81,10 +81,9 @@ export function buildReport(input: { entries: HistoryEntry[]; events: EventOccur
 
   if (kinds.includes('event')) {
     const rows: ReportRow[] = [...events].sort((a, b) => (a.due_date < b.due_date ? 1 : a.due_date > b.due_date ? -1 : 0)).map((e) => {
-      const p = e.sp_id ? byId.get(e.sp_id) : undefined;
       return {
         cells: {
-          due: dateText(e.due_date), title: e.title, freq: FREQUENCY_LABEL[e.frequency], place: p ? pondLabel(p) : 'Semua lokasi', status: statusText(e),
+          due: dateText(e.due_date), title: e.title, freq: FREQUENCY_LABEL[e.frequency], category: e.category_name ?? 'Tanpa kategori', status: statusText(e),
           by: e.completed_by_name, at: e.completed_at ? witaStamp(new Date(e.completed_at)) : null, evidence: e.evidence_count,
         },
         bad: [],
@@ -92,7 +91,7 @@ export function buildReport(input: { entries: HistoryEntry[]; events: EventOccur
     });
     out.push({
       id: 'event', title: 'Event',
-      columns: [text('due', 'Tenggat'), text('title', 'Judul'), text('freq', 'Frekuensi'), text('place', 'Lokasi'), text('status', 'Status'), text('by', 'Diselesaikan oleh'), text('at', 'Waktu selesai (WITA)'), num('evidence', 'Jumlah eviden', 0)],
+      columns: [text('due', 'Tenggat'), text('title', 'Judul'), text('freq', 'Frekuensi'), text('category', 'Kategori'), text('status', 'Status'), text('by', 'Diselesaikan oleh'), text('at', 'Waktu selesai (WITA)'), num('evidence', 'Jumlah eviden', 0)],
       rows,
     });
   }

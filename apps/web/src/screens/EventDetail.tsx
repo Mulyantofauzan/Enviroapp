@@ -9,14 +9,12 @@ import { Icon } from '../icons';
 import { dayMonth } from '../lib/dates';
 import { completeEvent, saveEvidence, type SaveResult } from '../lib/outbox/save';
 import { useOutbox } from '../hooks/useOutbox';
-import { usePond } from '../pond/PondContext';
 import { Badge } from '../ui/Badge';
 import { CameraCapture, type CameraPhoto } from '../components/CameraCapture';
 import { EvidenceMeta } from '../components/EvidenceMeta';
 import { EvidenceViewer } from '../components/EvidenceViewer';
 import { Banner } from '../ui/Banner';
 import { Button } from '../ui/Button';
-import { pondLabel } from '../ui/PondPicker';
 import { ScreenHeader } from '../ui/ScreenHeader';
 
 type Evidence = {
@@ -40,7 +38,6 @@ export function EventDetail() {
   const { user } = useAuth();
   const nav = useNavigate();
   const toast = useToast();
-  const { ponds } = usePond();
   const outbox = useOutbox();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState('');
@@ -77,7 +74,6 @@ export function EventDetail() {
   const queuedPhotos = outbox.items.filter((i) => i.kind === 'evidence' && i.group === group);
   const completing = outbox.items.some((i) => i.kind === 'complete' && i.group === group);
   const photoCount = evidences.length + queuedPhotos.length;
-  const pond = ponds.find((p) => p.id === e.sp_id);
   const acts = !!user && canWrite(user.role);
   const open = e.status === 'overdue' || e.status === 'today';
   const canUse = acts && open;
@@ -132,7 +128,7 @@ export function EventDetail() {
 
   return (
     <>
-      {header(e.title, pond ? pondLabel(pond) : 'Semua lokasi')}
+      {header(e.title, e.category_name ?? 'Tanpa kategori')}
       <div className="ui-page">
         {back}
         <section className={`ui-card ui-evbox${e.status === 'overdue' ? ' is-overdue' : ''}`}>
@@ -206,7 +202,7 @@ export function EventDetail() {
           </>
         )}
       </div>
-      {camera && <CameraCapture title={`${e.title}${pond ? ` - ${pondLabel(pond)}` : ''}`} onClose={() => setCamera(false)} onUse={useCameraPhoto} onGallery={galleryFromCamera} />}
+      {camera && <CameraCapture title={e.title} onClose={() => setCamera(false)} onUse={useCameraPhoto} onGallery={galleryFromCamera} />}
       {viewing && <EvidenceViewer item={{ ...viewing.item, title: e.title, due_date: e.due_date }} onClose={closeViewer} />}
     </>
   );
