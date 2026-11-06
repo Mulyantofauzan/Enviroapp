@@ -509,3 +509,9 @@ a.ui-btn { text-decoration: none; }
 .ui-outbox__confirm p { flex-basis: 100%; margin: 0; }
 
 .ui-ev__cat { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 0; font-size: 12px; font-weight: 600; color: var(--text-sub); }
+
+.ui-dot--lg { width: 12px; height: 12px; }
+.ui-catname { display: inline-flex; align-items: center; gap: 8px; }
+.ui-swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+.ui-swatch { aspect-ratio: 1; border-radius: 50%; border: 2px solid transparent; background: var(--bg); cursor: pointer; padding: 0; }
+.ui-swatch[aria-pressed='true'] { outline: 2px solid var(--text); outline-offset: 2px; }

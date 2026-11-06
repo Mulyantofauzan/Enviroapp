@@ -7,7 +7,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 const T = '2026-11-02';
 const sch = (over: Record<string, unknown> = {}) => ({
-  id: 's1', title: 'Cek Saluran Inlet', description: null, frequency: 'Daily', start_date: '2026-10-01', sp_id: 'p1', assigned_to: null,
+  id: 's1', title: 'Cek Saluran Inlet', description: null, frequency: 'Daily', start_date: '2026-10-01', category_id: 'k1', category_name: 'Air', assigned_to: null,
   assigned_to_name: null, ended_on: null, locked: false, ...over,
 });
 
@@ -17,6 +17,11 @@ function setup(schedules: unknown[] = [sch()], extra?: (u: string, i?: RequestIn
     handler: (u, i) => {
       const m = i?.method ?? 'GET';
       if (u.startsWith('/api/events/summary')) return json({ today: T, overdue: 0, due_today: 0 });
+      if (u.startsWith('/api/event-categories')) return json([
+        { id: 'k1', name: 'Air', color: '#2E7D32', is_active: true, event_count: 1 },
+        { id: 'k3', name: 'Udara', color: '#1565C0', is_active: true, event_count: 0 },
+        { id: 'k2', name: 'Lama', color: '#EF6C00', is_active: false, event_count: 0 },
+      ]);
       if (u.startsWith('/api/schedules/assignees')) return json([{ id: 'u1', name: 'Rudi Hartono' }, { id: 'u2', name: 'Sinta Maharani' }]);
       if (u.startsWith('/api/schedules') && m === 'GET') return json(schedules);
       return extra?.(u, i);
@@ -26,14 +31,14 @@ function setup(schedules: unknown[] = [sch()], extra?: (u: string, i?: RequestIn
 const changes = (calls: { method: string; url: string; body: any }[]) => calls.filter((c) => c.method !== 'GET');
 
 describe('Atur jadwal', () => {
-  it('lists schedules with frequency, pond and status chip', async () => {
-    setup([sch(), sch({ id: 's2', title: 'Uji Air Bulanan', frequency: 'Monthly', sp_id: null, ended_on: '2026-10-20' })]);
+  it('lists schedules with frequency, category and status chip', async () => {
+    setup([sch(), sch({ id: 's2', title: 'Uji Air Bulanan', frequency: 'Monthly', category_id: null, category_name: null, ended_on: '2026-10-20' })]);
     renderApp('/kalender/jadwal');
     const a = await screen.findByRole('article', { name: 'Cek Saluran Inlet' });
-    expect(within(a).getByText(/Harian - SP-02 Pit Selatan/)).toBeInTheDocument();
+    expect(within(a).getByText(/Harian - Air - mulai/)).toBeInTheDocument();
     expect(within(a).getByText('Aktif')).toBeInTheDocument();
     const b = screen.getByRole('article', { name: 'Uji Air Bulanan' });
-    expect(within(b).getByText(/Bulanan - Semua lokasi/)).toBeInTheDocument();
+    expect(within(b).getByText(/Bulanan - Tanpa kategori - mulai/)).toBeInTheDocument();
     expect(within(b).getByText('Berhenti')).toBeInTheDocument();
     expect(within(b).queryByRole('button', { name: /Hentikan/ })).toBeNull();
   });
@@ -49,21 +54,22 @@ describe('Atur jadwal', () => {
     expect(screen.getByLabelText('Tanggal mulai')).toHaveValue(T);
     await userEvent.type(screen.getByLabelText('Judul'), 'Kalibrasi pH Meter');
     await userEvent.selectOptions(screen.getByLabelText('Frekuensi'), 'Weekly');
-    await userEvent.selectOptions(screen.getByLabelText('Settling Pond'), 'p1');
+    await userEvent.selectOptions(screen.getByLabelText('Kategori'), 'k1');
     await userEvent.selectOptions(screen.getByLabelText('Ditugaskan ke'), 'u1');
     await userEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
     await waitFor(() => expect(changes(calls)).toHaveLength(1));
-    expect(changes(calls)[0]).toMatchObject({ method: 'POST', url: '/api/schedules', body: { title: 'Kalibrasi pH Meter', frequency: 'Weekly', start_date: T, sp_id: 'p1', assigned_to: 'u1' } });
+    expect(changes(calls)[0]).toMatchObject({ method: 'POST', url: '/api/schedules', body: { title: 'Kalibrasi pH Meter', frequency: 'Weekly', start_date: T, category_id: 'k1', assigned_to: 'u1' } });
+    expect(changes(calls)[0].body).not.toHaveProperty('sp_id');
     expect(await screen.findByText('Jadwal tersimpan')).toBeInTheDocument();
   });
-  it('"Semua lokasi" and nobody assigned are sent as null', async () => {
+  it('"Tanpa kategori" and nobody assigned are sent as null', async () => {
     const calls = setup([]);
     renderApp('/kalender/jadwal');
     await userEvent.click(await screen.findByRole('button', { name: 'Tambah jadwal' }));
     await userEvent.type(screen.getByLabelText('Judul'), 'Cek');
     await userEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
     await waitFor(() => expect(changes(calls)).toHaveLength(1));
-    expect(changes(calls)[0].body).toMatchObject({ sp_id: null, assigned_to: null });
+    expect(changes(calls)[0].body).toMatchObject({ category_id: null, assigned_to: null });
   });
   it('a locked schedule keeps frequency and start date fixed and says why', async () => {
     const calls = setup([sch({ locked: true })]);
@@ -134,6 +140,31 @@ describe('Atur jadwal', () => {
     renderApp('/kalender/jadwal');
     await userEvent.click(await screen.findByRole('button', { name: 'Tambah jadwal' }));
     expect(screen.getByLabelText('Tanggal mulai')).toHaveAttribute('min', '2000-01-01');
+  });
+  it('has no pond picker, and only active categories can be newly picked', async () => {
+    setup([]);
+    renderApp('/kalender/jadwal');
+    await userEvent.click(await screen.findByRole('button', { name: 'Tambah jadwal' }));
+    expect(screen.queryByLabelText('Settling Pond')).toBeNull();
+    const names = within(screen.getByLabelText('Kategori')).getAllByRole('option').map((o) => o.textContent);
+    expect(names).toEqual(['Tanpa kategori', 'Air', 'Udara']);
+  });
+  it('keeps an inactive category on an event that already has it', async () => {
+    const calls = setup([sch({ category_id: 'k2', category_name: 'Lama' })]);
+    renderApp('/kalender/jadwal');
+    await userEvent.click(await screen.findByRole('button', { name: 'Ubah Cek Saluran Inlet' }));
+    const select = screen.getByLabelText('Kategori') as HTMLSelectElement;
+    expect(select.value).toBe('k2');
+    expect(within(select).getByRole('option', { name: 'Lama (nonaktif)' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
+    await waitFor(() => expect(changes(calls)).toHaveLength(1));
+    expect(changes(calls)[0].body.category_id).toBe('k2');
+  });
+  it('links to the category master and to the Excel import', async () => {
+    setup([]);
+    renderApp('/kalender/jadwal');
+    expect(await screen.findByRole('link', { name: 'Kategori' })).toHaveAttribute('href', '/kalender/kategori');
+    expect(screen.getByRole('link', { name: 'Impor Excel' })).toHaveAttribute('href', '/kalender/jadwal/impor');
   });
   it('has a way back to the calendar', async () => {
     setup();

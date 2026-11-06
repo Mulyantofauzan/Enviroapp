@@ -21,6 +21,7 @@ import { Laporan } from './screens/Laporan';
 import { Riwayat } from './screens/Riwayat';
 import { Pengguna } from './screens/Pengguna';
 import { Master } from './screens/Master';
+import { KategoriEvent } from './screens/KategoriEvent';
 import { Kalender } from './screens/Kalender';
 import { EventDetail } from './screens/EventDetail';
 import { AturJadwal } from './screens/AturJadwal';
@@ -57,6 +58,7 @@ export function App() {
             <Route path="/input/koagulan" element={<KoagulanRedirect />} />
             <Route path="/kalender" element={<Kalender />} />
             <Route path="/kalender/jadwal" element={<RequireRole role={role} allow={['Manager', 'Admin']}><AturJadwal /></RequireRole>} />
+            <Route path="/kalender/kategori" element={<RequireRole role={role} allow={['Manager', 'Admin']}><KategoriEvent /></RequireRole>} />
             <Route path="/kalender/:scheduleId/:date" element={<EventDetail />} />
             <Route path="/eviden" element={<Eviden />} />
             <Route path="/laporan" element={<RequireRole role={role} allow={['Manager', 'Admin', 'Auditor']}><Laporan /></RequireRole>} />
