@@ -4,3 +4,5 @@ export * from './thresholds';
 export * from './validate';
 export * from './format';
 export * from './events';
+export * from './categories';
+export * from './import';

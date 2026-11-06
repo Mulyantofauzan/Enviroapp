@@ -18,7 +18,9 @@ export type EventOccurrence = {
   title: string;
   description: string | null;
   frequency: EventFrequency;
-  sp_id: string | null;
+  category_id: string | null;
+  category_name: string | null;
+  category_color: string | null;
   assigned_to_name: string | null;
   due_date: string;
   status: EventStatus;
