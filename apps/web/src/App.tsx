@@ -22,6 +22,7 @@ import { Riwayat } from './screens/Riwayat';
 import { Pengguna } from './screens/Pengguna';
 import { Master } from './screens/Master';
 import { KategoriEvent } from './screens/KategoriEvent';
+import { ImporEvent } from './screens/ImporEvent';
 import { Kalender } from './screens/Kalender';
 import { EventDetail } from './screens/EventDetail';
 import { AturJadwal } from './screens/AturJadwal';
@@ -58,6 +59,7 @@ export function App() {
             <Route path="/input/koagulan" element={<KoagulanRedirect />} />
             <Route path="/kalender" element={<Kalender />} />
             <Route path="/kalender/jadwal" element={<RequireRole role={role} allow={['Manager', 'Admin']}><AturJadwal /></RequireRole>} />
+            <Route path="/kalender/jadwal/impor" element={<RequireRole role={role} allow={['Manager', 'Admin']}><ImporEvent /></RequireRole>} />
             <Route path="/kalender/kategori" element={<RequireRole role={role} allow={['Manager', 'Admin']}><KategoriEvent /></RequireRole>} />
             <Route path="/kalender/:scheduleId/:date" element={<EventDetail />} />
             <Route path="/eviden" element={<Eviden />} />
