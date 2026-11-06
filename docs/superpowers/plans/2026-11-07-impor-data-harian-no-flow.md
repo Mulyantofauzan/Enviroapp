@@ -22,7 +22,7 @@
 
 ## Review Focus
 - Pembulatan konversi: 0,123 m³/s ↔ 123 L/s harus bolak-balik tanpa ekor desimal (123.00000000000001).
-- Angka berformat Indonesia di Excel ("0,0", "1,5") dibaca benar; "no data" dan "No Flow" tidak jadi error.
+- Angka berformat Indonesia di Excel ("0,0", "1,5", "1.234,5") dibaca benar; "1.234" tunggal dibaca 1,234 (didokumentasikan di Petunjuk); "no data" dan "No Flow" tidak jadi error.
 - Hari no flow dengan pH 0: tidak merah di form, riwayat, laporan, grafik, dan beranda.
 - Mengimpor berkas yang sama dua kali: hasil kedua semua "tidak berubah", tidak ada duplikat.
 - Sel kosong pada baris yang sudah ada di aplikasi tidak menghapus nilai lama.
@@ -64,8 +64,9 @@
   - `type DailyRowBad = { ok: false; error: string }`
   - `validateDailyRow(r: DailyInputRow, today: string): DailyRowOk | DailyRowBad`
   - `isBlankCell(raw: string | null): boolean` (kosong, "no data", "no flow", "-" → true)
+  - `parseFlexibleNumber(raw: string): number | 'invalid'` — pembaca angka impor: bila ada titik dan koma, yang terakhir adalah desimal dan yang lain pemisah ribuan (`1.234,5` dan `1,234.5` → 1234.5); dua titik atau lebih → ribuan (`1.234.567` → 1234567); koma tunggal → desimal (`0,0`, `1,5`); titik tunggal → desimal (`1.234` → 1.234, sama dengan penyimpanan angka asli Excel); selain itu `'invalid'`
 
-- [ ] **Step 1: Write the failing tests**: tanggal wajib ("Tanggal wajib diisi."), tanggal tak dikenali ("Tanggal tidak dikenali."), tanggal masa depan ("Tanggal tidak boleh di masa depan."), tanggal sebelum 2000 ditolak; pond wajib ("Pond wajib diisi."), pond dipangkas dan dikembalikan apa adanya (pencocokan kode dilakukan API); `"0,0"` → 0 dan `"1,5"` → 1.5; `"no data"`, `"No Flow"`, `""`, `null` → `null` tanpa error; teks lain ("abc") → error "pH inlet harus berupa angka." (nama kolom di pesan); pH di luar 0 sampai 14 → error; nilai negatif → error; `rain_hours` > 24 → error; `debit_outlet "250"` → `debit_outlet_m3s === 0.25`; koagulan hanya muncul di `coagulant` bila setidaknya satu sel (masuk atau keluar) terisi.
+- [ ] **Step 1: Write the failing tests**: tanggal wajib ("Tanggal wajib diisi."), tanggal tak dikenali ("Tanggal tidak dikenali."), tanggal masa depan ("Tanggal tidak boleh di masa depan."), tanggal sebelum 2000 ditolak; pond wajib ("Pond wajib diisi."), pond dipangkas dan dikembalikan apa adanya (pencocokan kode dilakukan API); `"0,0"` → 0 dan `"1,5"` → 1.5; `"1.234,5"` dan `"1,234.5"` → 1234.5; `"1.234.567"` → 1234567; `"1.234"` → 1.234; `"1,2,3"` dan `"12a"` → error; `"no data"`, `"No Flow"`, `""`, `null` → `null` tanpa error; teks lain ("abc") → error "pH inlet harus berupa angka." (nama kolom di pesan); pH di luar 0 sampai 14 → error; nilai negatif → error; `rain_hours` > 24 → error; `debit_outlet "250"` → `debit_outlet_m3s === 0.25`; koagulan hanya muncul di `coagulant` bila setidaknya satu sel (masuk atau keluar) terisi.
 - [ ] **Step 2: Run** `npm test --workspace packages/shared -- daily-import`. Expected: FAIL.
 - [ ] **Step 3: Implement** `validateDailyRow` dengan rentang yang sama dengan rute PUT (pH 0..14, lainnya ≥ 0, jam hujan 0..24). Pesan galat memakai nama kolom Indonesia (`pH inlet`, `TSS outlet`, `Debit inlet`, `Curah hujan`, `Jam hujan`, `Tawas Serbuk masuk`, dst.).
 - [ ] **Step 4: Run** perintah yang sama. Expected: PASS.
@@ -165,7 +166,7 @@
 
 - [ ] **Step 1: Write the failing tests**: templat berisi lembar `Data` (judul kolom persis sesuai spec: `Tanggal`, `Pond`, `Curah hujan (mm)`, `Jam hujan`, `pH inlet`, `pH outlet`, `TSS inlet`, `TSS outlet`, `Debit inlet (L/S)`, `Debit outlet (L/S)`, `Tawas Serbuk masuk (kg)`, `Tawas Serbuk keluar (kg)`, `Tawas Batu masuk (kg)`, `Tawas Batu keluar (kg)`, `Kapur masuk (kg)`, `Kapur keluar (kg)`) dan lembar `Petunjuk`; templat dibaca balik oleh `readXlsx` + `rowsToDaily` menjadi baris contoh; judul kolom dikenali tanpa membedakan huruf besar kecil dan spasi; kolom tambahan tak dikenal diabaikan; berkas tanpa kolom Tanggal dan Pond → Error "Kolom Tanggal dan Pond tidak ditemukan. Pakai templat."; baris kosong dilewati; nomor baris (`row`) = nomor baris Excel; lebih dari 1.000 baris → Error "Berkas harus berisi 1 sampai 1000 baris."
 - [ ] **Step 2: Run** `npm test --workspace apps/web -- dailyImport`. Expected: FAIL.
-- [ ] **Step 3: Implement** mengikuti `eventImport.ts` (cari baris judul di 5 baris pertama, lembar bernama `Data` atau lembar pertama). Lembar `Petunjuk` menjelaskan aturan: satuan, "No Flow"/"no data", sel kosong tidak menimpa, no flow = debit outlet 0, koagulan dalam kg, batas 1.000 baris.
+- [ ] **Step 3: Implement** mengikuti `eventImport.ts` (cari baris judul di 5 baris pertama, lembar bernama `Data` atau lembar pertama). Lembar `Petunjuk` menjelaskan aturan: satuan, "No Flow"/"no data", sel kosong tidak menimpa, no flow = debit outlet 0, koagulan dalam kg, batas 1.000 baris, dan aturan angka (titik tunggal tiga angka dibaca desimal; isi angka ribuan sebagai angka biasa).
 - [ ] **Step 4: Run** perintah yang sama. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(web): templat dan pembaca impor data harian`.
 
