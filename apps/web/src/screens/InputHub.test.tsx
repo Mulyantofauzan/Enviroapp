@@ -20,6 +20,20 @@ describe('Input hub', () => {
   });
 });
 
+describe('Input hub: import link', () => {
+  it('shows Impor Excel to Admin only', async () => {
+    mockApi({ role: 'Admin' });
+    renderApp('/input');
+    expect(await screen.findByRole('link', { name: /Impor Excel/ })).toHaveAttribute('href', '/input/impor');
+  });
+  it('hides it from Operator', async () => {
+    mockApi({ role: 'Operator' });
+    renderApp('/input');
+    await screen.findByRole('link', { name: /Cuaca/ });
+    expect(screen.queryByRole('link', { name: /Impor Excel/ })).toBeNull();
+  });
+});
+
 describe('InputHub when the pond list fails to load', () => {
   it('names the failure and offers a retry instead of saying there are no ponds', async () => {
     mockApi({ role: 'Operator', handler: pondsFailOnce() });

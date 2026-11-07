@@ -7,10 +7,12 @@ import { PondsUnavailable } from '../pond/PondsUnavailable';
 import { ScreenHeader } from '../ui/ScreenHeader';
 import { PondPicker, pondLabel } from '../ui/PondPicker';
 import { Badge } from '../ui/Badge';
+import { useAuth } from '../auth/AuthContext';
 import { localToday } from './input/DayScope';
 
 export function InputHub() {
   const nav = useNavigate();
+  const { user } = useAuth();
   const { ponds, current, setCurrent, loading } = usePond();
   const today = localToday();
   const { data, error } = useDay(today, current);
@@ -41,6 +43,15 @@ export function InputHub() {
                 </Link>
               ))}
             </section>
+            {user?.role === 'Admin' && (
+              <section className="ui-card ui-rows" aria-label="Impor data">
+                <Link to="/input/impor" className="ui-row">
+                  <span className="ui-bubble ui-bubble--water"><Icon name="download" /></span>
+                  <strong>Impor Excel</strong>
+                  <Icon name="chevron-right" size={18} />
+                </Link>
+              </section>
+            )}
           </>
         )}
       </div>
