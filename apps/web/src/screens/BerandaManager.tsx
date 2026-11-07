@@ -45,8 +45,9 @@ export function BerandaManager() {
   const th = data?.thresholds ?? {};
   const t = data?.today ?? null;
   const range = data && data.series.length ? `${dayMonth(data.series[0].date)} s/d ${full(data.series[data.series.length - 1].date)}` : '';
-  const hasPh = !!data?.series.some((s) => s.ph_inlet !== null || s.ph_outlet !== null);
-  const hasTss = !!data?.series.some((s) => (s.tss_inlet ?? null) !== null || (s.tss_outlet ?? null) !== null);
+  const flowless = (s: { debit_outlet_m3s?: number | null }) => isNoFlow(s.debit_outlet_m3s);
+  const hasPh = !!data?.series.some((s) => s.ph_inlet !== null || s.ph_outlet !== null || flowless(s));
+  const hasTss = !!data?.series.some((s) => (s.tss_inlet ?? null) !== null || (s.tss_outlet ?? null) !== null || flowless(s));
   const hasRain = !!data?.series.some((s) => (s.rainfall_mm ?? null) !== null);
 
   return (
@@ -74,12 +75,12 @@ export function BerandaManager() {
                 <div className="ui-dash-grid">
                   <section className="ui-card">
                     <h2>pH Inlet vs Outlet</h2>
-                    {hasPh ? <PhChart series={data.series} band={th.ph_outlet} /> : <p className="ui-muted">Belum ada data pH pada rentang ini.</p>}
+                    {hasPh ? <PhChart series={data.series.map((s) => ({ ...s, ph_outlet: flowless(s) ? 0 : s.ph_outlet, noFlow: flowless(s) }))} band={th.ph_outlet} /> : <p className="ui-muted">Belum ada data pH pada rentang ini.</p>}
                   </section>
                   <section className="ui-card">
                     <h2>TSS Inlet vs Outlet</h2>
                     {hasTss
-                      ? <TrendChart name="TSS" unit="mg/L" floorZero limit={th.tss_outlet} series={data.series.map((s) => ({ date: s.date, inlet: s.tss_inlet ?? null, outlet: s.tss_outlet ?? null }))} />
+                      ? <TrendChart name="TSS" unit="mg/L" floorZero limit={th.tss_outlet} series={data.series.map((s) => ({ date: s.date, inlet: s.tss_inlet ?? null, outlet: flowless(s) ? 0 : s.tss_outlet ?? null, noFlow: flowless(s) }))} />
                       : <p className="ui-muted">Belum ada data TSS pada rentang ini.</p>}
                   </section>
                   <section className="ui-card">

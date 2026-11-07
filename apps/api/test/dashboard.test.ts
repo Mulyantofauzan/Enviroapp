@@ -34,7 +34,8 @@ describe('GET /dashboard', () => {
     expect(d.series).toHaveLength(7);
     expect(d.series.map((s: any) => s.date)).toEqual(['2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31','2026-11-01','2026-11-02']);
     expect(d.series[0]).toMatchObject({ ph_inlet: null, ph_outlet: null });
-    expect(d.series[6]).toMatchObject({ ph_inlet: 6.1, ph_outlet: 5.6 });
+    expect(d.series[6]).toMatchObject({ ph_inlet: 6.1, ph_outlet: 5.6, debit_outlet_m3s: 0.0148 });
+    expect(d.series[0].debit_outlet_m3s).toBeNull();
   });
   it('each day also carries TSS inlet/outlet and the site-wide rainfall, null when missing', async () => {
     const { cookie } = await login('Operator');

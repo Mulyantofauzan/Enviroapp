@@ -41,7 +41,7 @@ dashboardRoutes.get('/', async (c) => {
     const w = byDate.get(d);
     return {
       date: d, ph_inlet: w?.ph_inlet ?? null, ph_outlet: w?.ph_outlet ?? null,
-      tss_inlet: w?.tss_inlet ?? null, tss_outlet: w?.tss_outlet ?? null, rainfall_mm: weatherByDate.get(d)?.rainfall_mm ?? null,
+      tss_inlet: w?.tss_inlet ?? null, tss_outlet: w?.tss_outlet ?? null, debit_outlet_m3s: w?.debit_outlet_m3s ?? null, rainfall_mm: weatherByDate.get(d)?.rainfall_mm ?? null,
     };
   });
 

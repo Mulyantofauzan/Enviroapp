@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { pondsFailOnce, json, mockApi, renderApp } from '../test-utils';
 
@@ -41,6 +41,14 @@ describe('Dashboard Manager', () => {
     const ph = await screen.findByRole('group', { name: 'pH Outlet hari ini' });
     expect(within(ph).getByText('No flow')).toBeInTheDocument();
     expect(within(ph).queryByText('Abnormal')).toBeNull();
+  });
+  it('a no-flow day in the trend charts is drawn at zero with its own marker, not as abnormal', async () => {
+    const s = series(7).map((p, i) => (i === 6 ? { ...p, ph_outlet: 0, tss_outlet: 0, debit_outlet_m3s: 0 } : p));
+    mockApi({ role: 'Manager', handler: dash({ series: s, today: { ...base.today, ph_outlet: 7, debit_outlet_m3s: 0.01 } }) });
+    const { container } = renderApp('/');
+    await screen.findByRole('group', { name: 'pH Outlet hari ini' });
+    await waitFor(() => expect(container.querySelectorAll('[data-noflow]').length).toBeGreaterThan(0));
+    expect(container.querySelector('[data-abnormal]')).toBeNull();
   });
   it('asks for 7 days first and 30 when chosen', async () => {
     const urls: string[] = [];
