@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { CoagulantType, Threshold } from '@evo/shared';
+import type { CoagulantType, PeriodSummary, Threshold } from '@evo/shared';
 import { api } from '../api/client';
 
 export type Dashboard = {
@@ -8,6 +8,8 @@ export type Dashboard = {
   series: { date: string; ph_inlet: number | null; ph_outlet: number | null; tss_inlet?: number | null; tss_outlet?: number | null; debit_outlet_m3s?: number | null; rainfall_mm?: number | null }[];
   coagulant: Record<CoagulantType, { remaining: number | null; max: number | null; updated: string | null }>;
   thresholds: Record<string, Threshold>;
+  /** Absent in responses cached before the summary existed. */
+  summary?: { current: PeriodSummary; previous: PeriodSummary };
 };
 
 export function useDashboard(sp: string | null, days: 7 | 30 | 90, date: string) {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { COAGULANT_TYPES, ROLE_LABEL, formatNumber, isNoFlow, isOutOfLimit, type Threshold } from '@evo/shared';
+import { COAGULANT_TYPES, ROLE_LABEL, formatNumber, isNoFlow, isOutOfLimit, m3sToLs, type Threshold } from '@evo/shared';
 import { useAuth } from '../auth/AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
 import { usePond } from '../pond/PondContext';
@@ -11,6 +11,7 @@ import { Segmented } from '../ui/Segmented';
 import { Badge } from '../ui/Badge';
 import { PhChart } from '../components/PhChart';
 import { TrendChart } from '../components/TrendChart';
+import { PeriodSummary } from '../components/PeriodSummary';
 import { RainChart } from '../components/RainChart';
 import { CalendarOverview } from '../components/CalendarOverview';
 import { StockBars } from '../components/StockBars';
@@ -36,6 +37,8 @@ function Kpi({ label, value, unit, sub, tone }: { label: string; value: number |
 const judge = (v: number | null, t: Threshold | undefined): 'abnormal' | 'normal' | null =>
   v === null || !t || (t.min === null && t.max === null) ? null : isOutOfLimit(v, t) ? 'abnormal' : 'normal';
 
+const avgSub = (v: number | null | undefined, days: Days) => (v == null ? undefined : `Rata-rata ${days} hari: ${formatNumber(v, 1)}`);
+
 export function BerandaManager() {
   const { user } = useAuth();
   const nav = useNavigate();
@@ -48,6 +51,7 @@ export function BerandaManager() {
   const flowless = (s: { debit_outlet_m3s?: number | null }) => isNoFlow(s.debit_outlet_m3s);
   const hasPh = !!data?.series.some((s) => s.ph_inlet !== null || s.ph_outlet !== null || flowless(s));
   const hasTss = !!data?.series.some((s) => (s.tss_inlet ?? null) !== null || (s.tss_outlet ?? null) !== null || flowless(s));
+  const hasFlow = !!data?.series.some((s) => (s.debit_outlet_m3s ?? null) !== null);
   const hasRain = !!data?.series.some((s) => (s.rainfall_mm ?? null) !== null);
 
   return (
@@ -64,14 +68,15 @@ export function BerandaManager() {
               <>
                 {t ? (
                   <div className="ui-kpis">
-                    <Kpi label="pH Outlet hari ini" value={t.ph_outlet} tone={isNoFlow(t.debit_outlet_m3s) ? 'noflow' : judge(t.ph_outlet, th.ph_outlet)} />
-                    <Kpi label="TSS Outlet" value={t.tss_outlet} unit="mg/L" tone={isNoFlow(t.debit_outlet_m3s) ? 'noflow' : judge(t.tss_outlet, th.tss_outlet)} />
+                    <Kpi label="pH Outlet hari ini" value={t.ph_outlet} tone={isNoFlow(t.debit_outlet_m3s) ? 'noflow' : judge(t.ph_outlet, th.ph_outlet)} sub={avgSub(data.summary?.current.avg_ph_outlet, days)} />
+                    <Kpi label="TSS Outlet" value={t.tss_outlet} unit="mg/L" tone={isNoFlow(t.debit_outlet_m3s) ? 'noflow' : judge(t.tss_outlet, th.tss_outlet)} sub={avgSub(data.summary?.current.avg_tss_outlet, days)} />
                     <Kpi label="Debit outlet" value={t.debit_outlet_ls} unit="L/s" />
                     <Kpi label="Curah hujan" value={t.rainfall_mm} unit="mm" sub={t.rain_hours === null ? undefined : `${formatNumber(t.rain_hours)} jam hujan`} />
                   </div>
                 ) : (
                   <section className="ui-card"><p className="ui-muted">Belum ada data hari ini.</p></section>
                 )}
+                {data.summary && <PeriodSummary days={Number(days)} current={data.summary.current} previous={data.summary.previous} />}
                 <div className="ui-dash-grid">
                   <section className="ui-card">
                     <h2>pH Inlet vs Outlet</h2>
@@ -82,6 +87,12 @@ export function BerandaManager() {
                     {hasTss
                       ? <TrendChart name="TSS" unit="mg/L" floorZero limit={th.tss_outlet} series={data.series.map((s) => ({ date: s.date, inlet: s.tss_inlet ?? null, outlet: flowless(s) ? 0 : s.tss_outlet ?? null, noFlow: flowless(s) }))} />
                       : <p className="ui-muted">Belum ada data TSS pada rentang ini.</p>}
+                  </section>
+                  <section className="ui-card">
+                    <h2>Debit outlet (L/s)</h2>
+                    {hasFlow
+                      ? <TrendChart name="Debit" hide="inlet" outletLabel="Debit outlet (L/s)" floorZero limit={undefined} series={data.series.map((s) => ({ date: s.date, inlet: null, outlet: s.debit_outlet_m3s == null ? null : m3sToLs(s.debit_outlet_m3s), noFlow: flowless(s) }))} />
+                      : <p className="ui-muted">Belum ada data debit pada rentang ini.</p>}
                   </section>
                   <section className="ui-card">
                     <h2>Curah hujan (mm)</h2>

@@ -66,6 +66,35 @@ describe('Dashboard Manager', () => {
     expect(await screen.findByRole('img', { name: /pH inlet dan outlet/ })).toBeInTheDocument();
     expect(screen.getByRole('meter', { name: 'Kapur' })).toBeInTheDocument();
   });
+  it('shows the period summary and compares today with the period average', async () => {
+    const sum = { ph: { checked: 7, violations: 1, compliant_pct: 86 }, tss: { checked: 7, violations: 0, compliant_pct: 100 }, noflow_days: 1, rain_total_mm: 30, coag_out_kg: 90, avg_ph_outlet: 7.2, avg_tss_outlet: 45 };
+    mockApi({ role: 'Manager', handler: dash({ summary: { current: sum, previous: sum } }) });
+    renderApp('/');
+    expect(await screen.findByRole('group', { name: 'Patuh pH' })).toHaveTextContent('86%');
+    expect(screen.getByRole('group', { name: 'Hari no flow' })).toHaveTextContent('1');
+    expect(screen.getByRole('group', { name: 'TSS Outlet' })).toHaveTextContent('Rata-rata 7 hari: 45');
+    expect(screen.getByRole('group', { name: 'pH Outlet hari ini' })).toHaveTextContent('Rata-rata 7 hari: 7,2');
+  });
+  it('still renders when the response has no summary (older cached response)', async () => {
+    mockApi({ role: 'Manager', handler: dash() });
+    renderApp('/');
+    await screen.findByRole('group', { name: 'pH Outlet hari ini' });
+    expect(screen.queryByRole('group', { name: 'Patuh pH' })).toBeNull();
+  });
+  it('draws the outlet debit in L/s with no-flow days marked', async () => {
+    const s = series(7).map((p, i) => ({ ...p, debit_outlet_m3s: i === 6 ? 0 : 0.0148 }));
+    mockApi({ role: 'Manager', handler: dash({ series: s }) });
+    const { container } = renderApp('/');
+    expect(await screen.findByRole('img', { name: /Grafik Debit/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Debit outlet (L/s)' })).toBeInTheDocument();
+    expect(screen.getAllByText('14,8', { selector: 'text' }).length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[data-noflow]').length).toBeGreaterThan(0);
+  });
+  it('no debit in the range: honest empty message', async () => {
+    mockApi({ role: 'Manager', handler: dash() });
+    renderApp('/');
+    expect(await screen.findByText('Belum ada data debit pada rentang ini.')).toBeInTheDocument();
+  });
   it('no data today: says so and shows no verdict', async () => {
     mockApi({ role: 'Manager', handler: dash({ today: null }) });
     renderApp('/');

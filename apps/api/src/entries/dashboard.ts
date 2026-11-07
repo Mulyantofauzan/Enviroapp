@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { COAGULANT_TYPES, isValidDate, m3sToLs, m3sToM3d, type Threshold } from '@evo/shared';
+import { COAGULANT_TYPES, isValidDate, m3sToLs, m3sToM3d, summarizePeriod, type PeriodDay, type Threshold } from '@evo/shared';
 import type { AppEnv } from '../types';
 import { requireAuth } from '../auth/guard';
 
@@ -20,18 +20,20 @@ dashboardRoutes.get('/', async (c) => {
   if (!pond) return c.json({ error: 'Pond tidak ditemukan.' }, 404);
 
   const start = addDays(date, -(days - 1));
+  // Periode sebelumnya (sama panjang) dibaca lewat query yang sama dengan rentang dilebarkan.
+  const prevStart = addDays(start, -days);
   const water = (await db.prepare(
     'SELECT date,ph_inlet,ph_outlet,tss_inlet,tss_outlet,debit_outlet_m3s FROM surface_water WHERE sp_id = ? AND date BETWEEN ? AND ?',
-  ).bind(sp, start, date).all<any>()).results;
-  const weatherRows = (await db.prepare('SELECT date,rainfall_mm,rain_hours FROM weather WHERE date BETWEEN ? AND ?').bind(start, date).all<any>()).results;
+  ).bind(sp, prevStart, date).all<any>()).results;
+  const weatherRows = (await db.prepare('SELECT date,rainfall_mm,rain_hours FROM weather WHERE date BETWEEN ? AND ?').bind(prevStart, date).all<any>()).results;
   const weatherByDate = new Map(weatherRows.map((w) => [w.date, w]));
   const weather = weatherByDate.get(date);
   // Hanya baris dalam rentang, ditambah satu baris terbaru per jenis (bisa sebelum rentang). Riwayat lama tidak dibaca.
-  const latest = 'SELECT * FROM (SELECT date,type,stock_remaining FROM coagulant WHERE sp_id = ? AND type = ? AND date <= ? ORDER BY date DESC LIMIT 1)';
+  const latest = 'SELECT * FROM (SELECT date,type,stock_out,stock_remaining FROM coagulant WHERE sp_id = ? AND type = ? AND date <= ? ORDER BY date DESC LIMIT 1)';
   const coag = (await db.prepare(
-    `SELECT date,type,stock_remaining FROM coagulant WHERE sp_id = ? AND date BETWEEN ? AND ?
+    `SELECT date,type,stock_out,stock_remaining FROM coagulant WHERE sp_id = ? AND date BETWEEN ? AND ?
      UNION ${Array(COAGULANT_TYPES.length).fill(latest).join(' UNION ')}`,
-  ).bind(sp, start, date, ...COAGULANT_TYPES.flatMap((t) => [sp, t, date])).all<any>()).results
+  ).bind(sp, prevStart, date, ...COAGULANT_TYPES.flatMap((t) => [sp, t, date])).all<any>()).results
     .sort((a, b) => (a.type < b.type ? -1 : a.type > b.type ? 1 : a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   const th = (await db.prepare('SELECT key,min,max FROM pond_thresholds WHERE sp_id = ?').bind(sp).all<any>()).results;
 
@@ -42,6 +44,17 @@ dashboardRoutes.get('/', async (c) => {
     return {
       date: d, ph_inlet: w?.ph_inlet ?? null, ph_outlet: w?.ph_outlet ?? null,
       tss_inlet: w?.tss_inlet ?? null, tss_outlet: w?.tss_outlet ?? null, debit_outlet_m3s: w?.debit_outlet_m3s ?? null, rainfall_mm: weatherByDate.get(d)?.rainfall_mm ?? null,
+    };
+  });
+
+  const coagOutByDate = new Map<string, number>();
+  for (const r of coag) if (r.stock_out != null) coagOutByDate.set(r.date, (coagOutByDate.get(r.date) ?? 0) + r.stock_out);
+  const periodDays = (from: string): PeriodDay[] => Array.from({ length: days }, (_, i) => {
+    const d = addDays(from, i);
+    const w = byDate.get(d);
+    return {
+      ph_outlet: w?.ph_outlet ?? null, tss_outlet: w?.tss_outlet ?? null, debit_outlet_m3s: w?.debit_outlet_m3s ?? null,
+      rainfall_mm: weatherByDate.get(d)?.rainfall_mm ?? null, coag_out_kg: coagOutByDate.get(d) ?? null,
     };
   });
 
@@ -71,5 +84,6 @@ dashboardRoutes.get('/', async (c) => {
   }));
 
   const thresholds: Record<string, Threshold> = Object.fromEntries(th.map((r) => [r.key, { min: r.min, max: r.max }]));
-  return c.json({ date, days, today, series, coagulant, thresholds });
+  const summary = { current: summarizePeriod(periodDays(start), thresholds), previous: summarizePeriod(periodDays(prevStart), thresholds) };
+  return c.json({ date, days, today, series, coagulant, thresholds, summary });
 });

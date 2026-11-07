@@ -139,4 +139,40 @@ describe('GET /dashboard', () => {
     expect(res.status).toBe(200);
     expect(q).toBeLessThanOrEqual(6);
   });
+
+  describe('summary', () => {
+    const put = (cookie: string, path: string, b: object) => call(path, { method: 'PUT', cookie, body: json(b) });
+    it('compares this period with the previous one of the same length', async () => {
+      const { cookie } = await login('Operator');
+      const sp = await addPond();
+      await env.DB.prepare("INSERT INTO pond_thresholds (sp_id,key,min,max) VALUES (?,?,?,?)").bind(sp, 'tss_outlet', null, 50).run();
+      // current 7 days: 2026-10-27..2026-11-02 ; previous: 2026-10-20..2026-10-26
+      await put(cookie, `/water/${D}/${sp}`, { tss_outlet: 60, debit_outlet_m3s: 0.01 });
+      await put(cookie, `/water/2026-11-01/${sp}`, { tss_outlet: 40, debit_outlet_m3s: 0.01 });
+      await put(cookie, `/water/2026-10-31/${sp}`, { tss_outlet: 0, debit_outlet_m3s: 0 });
+      await put(cookie, `/water/2026-10-25/${sp}`, { tss_outlet: 55, debit_outlet_m3s: 0.01 });
+      await put(cookie, `/weather/${D}`, { rainfall_mm: 12.5, rain_hours: 3 });
+      await put(cookie, `/weather/2026-10-24`, { rainfall_mm: 7, rain_hours: 1 });
+      await put(cookie, `/coagulant/2026-11-01/${sp}/Kapur`, { stock_in: 100, stock_out: 30 });
+      await put(cookie, `/coagulant/${D}/${sp}/Tawas Batu`, { stock_in: 50, stock_out: 20 });
+      await put(cookie, `/coagulant/2026-10-21/${sp}/Kapur`, { stock_in: 0, stock_out: 8 });
+      const d = await (await call(`/dashboard?sp=${sp}&days=7&date=${D}`, { cookie })).json() as any;
+      expect(d.summary.current.tss).toEqual({ checked: 2, violations: 1, compliant_pct: 50 });
+      expect(d.summary.current.noflow_days).toBe(1);
+      expect(d.summary.current.rain_total_mm).toBe(12.5);
+      expect(d.summary.current.coag_out_kg).toBe(50);
+      expect(d.summary.current.avg_tss_outlet).toBe(50);
+      expect(d.summary.previous.tss).toEqual({ checked: 1, violations: 1, compliant_pct: 0 });
+      expect(d.summary.previous.rain_total_mm).toBe(7);
+      expect(d.summary.previous.coag_out_kg).toBe(8);
+      expect(d.series).toHaveLength(7);
+    });
+    it('is empty, not an error, when there is no data', async () => {
+      const { cookie } = await login('Operator');
+      const sp = await addPond();
+      const d = await (await call(`/dashboard?sp=${sp}&days=30&date=${D}`, { cookie })).json() as any;
+      expect(d.summary.current.ph.compliant_pct).toBeNull();
+      expect(d.summary.previous.coag_out_kg).toBeNull();
+    });
+  });
 });
