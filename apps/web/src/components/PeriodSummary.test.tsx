@@ -9,31 +9,23 @@ const s = (o: Partial<S> = {}): S => ({
 });
 
 describe('PeriodSummary', () => {
-  it('shows compliance, violation days, no-flow days, rain and coagulant totals for the period', () => {
+  it('shows no-flow days, rain and coagulant totals for the period, without compliance cards', () => {
     render(<PeriodSummary days={30} current={s()} previous={s()} />);
-    const ph = screen.getByRole('group', { name: 'Patuh pH' });
-    expect(within(ph).getByText('86%')).toBeInTheDocument();
-    expect(within(ph).getByText('1 dari 7 hari melanggar')).toBeInTheDocument();
-    expect(within(screen.getByRole('group', { name: 'Patuh TSS' })).getByText('57%')).toBeInTheDocument();
     expect(within(screen.getByRole('group', { name: 'Hari no flow' })).getByText('2')).toBeInTheDocument();
     expect(within(screen.getByRole('group', { name: 'Total hujan' })).getByText('41,5')).toBeInTheDocument();
     expect(within(screen.getByRole('group', { name: 'Koagulan keluar' })).getByText('120')).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Patuh pH' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Patuh TSS' })).toBeNull();
   });
   it('compares with the previous period of the same length', () => {
-    render(<PeriodSummary days={7} current={s()} previous={s({ ph: { checked: 7, violations: 3, compliant_pct: 57 }, noflow_days: 0, rain_total_mm: 50 })} />);
-    expect(within(screen.getByRole('group', { name: 'Patuh pH' })).getByText('Naik 29 poin dari 7 hari sebelumnya')).toBeInTheDocument();
+    render(<PeriodSummary days={7} current={s()} previous={s({ noflow_days: 0, rain_total_mm: 50 })} />);
+    expect(within(screen.getByRole('group', { name: 'Hari no flow' })).getByText('7 hari sebelumnya: 0')).toBeInTheDocument();
     expect(within(screen.getByRole('group', { name: 'Total hujan' })).getByText('7 hari sebelumnya: 50')).toBeInTheDocument();
   });
-  it('says there is no data instead of a percentage or a made-up comparison', () => {
-    const none = s({ ph: { checked: 0, violations: 0, compliant_pct: null }, rain_total_mm: null, coag_out_kg: null });
+  it('says there is no data instead of a made-up number', () => {
+    const none = s({ rain_total_mm: null, coag_out_kg: null });
     render(<PeriodSummary days={7} current={none} previous={none} />);
-    const ph = screen.getByRole('group', { name: 'Patuh pH' });
-    expect(within(ph).getByText('Belum ada data')).toBeInTheDocument();
-    expect(within(ph).queryByText(/sebelumnya/)).toBeNull();
     expect(within(screen.getByRole('group', { name: 'Total hujan' })).getByText('Belum ada data')).toBeInTheDocument();
-  });
-  it('says Sama when nothing changed', () => {
-    render(<PeriodSummary days={7} current={s()} previous={s()} />);
-    expect(within(screen.getByRole('group', { name: 'Patuh pH' })).getByText('Sama seperti 7 hari sebelumnya')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Koagulan keluar' })).getByText('Belum ada data')).toBeInTheDocument();
   });
 });

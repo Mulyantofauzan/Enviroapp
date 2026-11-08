@@ -70,8 +70,7 @@ describe('Dashboard Manager', () => {
     const sum = { ph: { checked: 7, violations: 1, compliant_pct: 86 }, tss: { checked: 7, violations: 0, compliant_pct: 100 }, noflow_days: 1, rain_total_mm: 30, coag_out_kg: 90, avg_ph_outlet: 7.2, avg_tss_outlet: 45 };
     mockApi({ role: 'Manager', handler: dash({ summary: { current: sum, previous: sum } }) });
     renderApp('/');
-    expect(await screen.findByRole('group', { name: 'Patuh pH' })).toHaveTextContent('86%');
-    expect(screen.getByRole('group', { name: 'Hari no flow' })).toHaveTextContent('1');
+    expect(await screen.findByRole('group', { name: 'Hari no flow' })).toHaveTextContent('1');
     expect(screen.getByRole('group', { name: 'TSS Outlet' })).toHaveTextContent('Rata-rata 7 hari: 45');
     expect(screen.getByRole('group', { name: 'pH Outlet hari ini' })).toHaveTextContent('Rata-rata 7 hari: 7,2');
   });
@@ -79,7 +78,7 @@ describe('Dashboard Manager', () => {
     mockApi({ role: 'Manager', handler: dash() });
     renderApp('/');
     await screen.findByRole('group', { name: 'pH Outlet hari ini' });
-    expect(screen.queryByRole('group', { name: 'Patuh pH' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Hari no flow' })).toBeNull();
   });
   it('draws the outlet debit in L/s with no-flow days marked', async () => {
     const s = series(7).map((p, i) => ({ ...p, debit_outlet_m3s: i === 6 ? 0 : 0.0148 }));
