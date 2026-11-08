@@ -67,3 +67,8 @@ Tanpa sinyal, Operator dan Admin tetap bisa membuka Input Cuaca, Air, Koagulan d
 
 ## Backup
 Cron Trigger `0 18 * * *` (02.00 WITA) mengekspor semua tabel D1 (kecuali `sessions`) ke bucket R2 `enviro-backup` sebagai `db/YYYY-MM-DD.json.gz`, menyimpan 30 file terbaru. Buat bucket sekali: `npx wrangler r2 bucket create enviro-backup`. Eviden di `evo-evidence` belum punya cadangan.
+
+### Backup ke Google Drive (mingguan)
+Workflow `.github/workflows/backup-drive.yml` (Senin 03.00 WITA, atau jalankan manual dari tab Actions) menyalin `evo-evidence` ke `evidence/` dan `enviro-backup/db` ke `db/` di folder Drive. Hanya menambah, tidak pernah menghapus di Drive. Gagal bila backup database terbaru di Drive lebih tua dari 3 hari; GitHub mengirim email saat workflow gagal.
+
+Secret repo yang dibutuhkan: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (token R2 read-only untuk kedua bucket), `GDRIVE_RCLONE_CONF` (isi bagian `[gdrive]` dari `rclone.conf`, dengan `root_folder_id` folder tujuan).

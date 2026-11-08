@@ -1,0 +1,53 @@
+name: Backup ke Google Drive
+
+on:
+  schedule:
+    - cron: '0 19 * * 0' # Minggu 19.00 UTC = Senin 03.00 WITA
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: 'true'
+    steps:
+      - name: Pasang rclone
+        run: |
+          curl -fsSL https://downloads.rclone.org/v1.68.2/rclone-v1.68.2-linux-amd64.zip -o rclone.zip
+          unzip -q rclone.zip
+          sudo install rclone-*/rclone /usr/local/bin/rclone
+          rclone version | head -1
+
+      - name: Tulis konfigurasi Drive
+        env:
+          GDRIVE_RCLONE_CONF: ${{ secrets.GDRIVE_RCLONE_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$GDRIVE_RCLONE_CONF" > ~/.config/rclone/rclone.conf
+          chmod 600 ~/.config/rclone/rclone.conf
+          rclone lsd gdrive: >/dev/null
+
+      # copy hanya menambah: berkas yang terhapus di R2 tidak dihapus di Drive.
+      - name: Salin eviden (R2 evo-evidence ke Drive)
+        run: rclone copy R2:evo-evidence gdrive:evidence --transfers 8 --checksum --stats-one-line -v
+
+      - name: Salin backup database (R2 enviro-backup ke Drive)
+        run: rclone copy R2:enviro-backup/db gdrive:db --checksum --stats-one-line -v
+
+      - name: Pastikan backup database terbaru ada di Drive
+        run: |
+          latest=$(rclone lsf gdrive:db | sort | tail -1)
+          echo "Backup terbaru di Drive: $latest"
+          test -n "$latest"
+          age_days=$(( ( $(date -u +%s) - $(date -u -d "${latest%%.*}" +%s) ) / 86400 ))
+          echo "Umur: $age_days hari"
+          test "$age_days" -le 3
