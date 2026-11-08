@@ -14,6 +14,8 @@ import { scheduleRoutes } from './events/schedules';
 import { eventRoutes } from './events/events';
 import { categoryRoutes } from './events/categories';
 import { evidenceRoutes } from './events/evidence';
+import { nightlyBackup } from './backup';
+import type { Env } from './types';
 
 export const app = new Hono<AppEnv>().basePath('/api');
 
@@ -37,4 +39,9 @@ app.onError((err, c) => {
   return c.json({ error: 'Terjadi kesalahan. Coba lagi.' }, 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(nightlyBackup(env));
+  },
+};

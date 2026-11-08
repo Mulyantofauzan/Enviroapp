@@ -1,4 +1,4 @@
-# EVO — Environment Operations
+# ENVIRO — Environmental Information & Reporting Operations
 
 Phone-first PWA for logging weather, settling-pond water quality and coagulant stock.
 Stack: Cloudflare Workers + Hono + D1 (API), React + Vite PWA (web). Spec: `docs/superpowers/specs/`.
@@ -64,3 +64,6 @@ Tanpa sinyal, Operator dan Admin tetap bisa membuka Input Cuaca, Air, Koagulan d
 - Eviden membawa `client_id` sehingga kirim ulang tidak menggandakan; "Selesaikan event" menunggu semua fotonya terunggah. Foto ke event yang sudah selesai dibuang; data yang ditolak server ditandai gagal dengan pesannya.
 - Antrean milik pengguna yang membuatnya: keluar akun tidak menghapusnya, dan hanya pemiliknya yang mengunggah. Keluar saat ada antrean meminta konfirmasi.
 - Batas: unggah hanya berjalan saat aplikasi terbuka (iOS tidak punya Background Sync). Laporan, Eviden, dan Dashboard tetap butuh koneksi. Migrasi `0005_offline.sql` perlu dijalankan (`wrangler d1 migrations apply evo`).
+
+## Backup
+Cron Trigger `0 18 * * *` (02.00 WITA) mengekspor semua tabel D1 (kecuali `sessions`) ke bucket R2 `enviro-backup` sebagai `db/YYYY-MM-DD.json.gz`, menyimpan 30 file terbaru. Buat bucket sekali: `npx wrangler r2 bucket create enviro-backup`. Eviden di `evo-evidence` belum punya cadangan.

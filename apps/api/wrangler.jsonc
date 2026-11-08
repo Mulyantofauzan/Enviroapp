@@ -8,7 +8,11 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
-  "r2_buckets": [{ "binding": "EVIDENCE", "bucket_name": "evo-evidence" }],
+  "r2_buckets": [
+    { "binding": "EVIDENCE", "bucket_name": "evo-evidence" },
+    { "binding": "BACKUP", "bucket_name": "enviro-backup" }
+  ],
+  "triggers": { "crons": ["0 18 * * *"] },
   "d1_databases": [
     { "binding": "DB", "database_name": "evo", "database_id": "642ef8ae-dff6-4401-9707-58b6d4d50fb9", "migrations_dir": "migrations" }
   ]
