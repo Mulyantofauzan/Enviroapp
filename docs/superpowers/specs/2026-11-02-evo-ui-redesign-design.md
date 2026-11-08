@@ -1,4 +1,4 @@
-# EVO UI Redesign (Bagian 1) Design
+# ENVIRO UI Redesign (Bagian 1) Design
 
 Sumber desain: folder `design/` (10 + 5 gambar Figma, termasuk `EVO Foundations.png` dan `EVO Components.png`). Melanjutkan MVP di `docs/superpowers/specs/2026-11-02-evo-mvp-design.md`. Antislop (mode "selama bekerja") berlaku.
 

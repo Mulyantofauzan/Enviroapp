@@ -1,4 +1,4 @@
-# EVO Bagian 4b: PDF laporan bergaya slide (Cuaca dan Pond)
+# ENVIRO Bagian 4b: PDF laporan bergaya slide (Cuaca dan Pond)
 
 Menggantikan bagian PDF di `2026-11-02-evo-report-design.md` (bagian 5, "PDF", dan penyertaan grafik layar ke PDF). Desain acuan: `Design/Laporan Cuaca.pdf` dan `Design/Laporan pond.pdf`. Antislop mode "selama bekerja" berlaku.
 

@@ -1,4 +1,4 @@
-# Delivery Gate: EVO UI redesign (Bagian 1)
+# Delivery Gate: ENVIRO UI redesign (Bagian 1)
 
 Mode antislop: selama bekerja. Arah desain: `design/` (Figma pemilik produk). Dial: ENERGY 2 / RHYTHM 2 / MOTION 1 (Design Read: aplikasi operasional lapangan untuk operator dan manajer, bahasa visual hijau-biru Figma).
 
@@ -12,7 +12,7 @@ Bukti diambil pada 2026-11-02: `npm test` (shared 40, api 92, web 110, semua lul
 | R-03 mobile | PASS | 10 halaman pada 360px: `scrollWidth` 360, tanpa overflow horizontal (sebelumnya 447/427/398 pada Input Air, Koagulan, Riwayat; diperbaiki dengan `minmax(0,1fr)`). Target sentuh: tidak ada kontrol interaktif < 40px kecuali saklar 52x30, yang diberi area sentuh 44px lewat `::after` |
 | R-17 statistik | PASS | Semua angka berasal dari database. Tanpa data: "Belum diisi" atau "Belum ada data ..." |
 | R-18 testimoni | PASS | Tidak ada |
-| R-23 aset | PASS | Logo berupa teks "EVO"; avatar inisial. Data contoh di Figma (nama, nilai) tidak dibawa ke aplikasi |
+| R-23 aset | PASS | Logo berupa teks "ENVIRO"; avatar inisial. Data contoh di Figma (nama, nilai) tidak dibawa ke aplikasi |
 | R-24 navigasi | PASS | Semua tujuan di `nav.ts` punya rute di `App.tsx`. Kalender, Laporan, Eviden tidak ditampilkan karena belum ada |
 | R-25 kontras | **FAIL (keputusan pemilik produk)** | Pemilik memilih warna persis Figma. Rasio teks kecil: warning `#D97706` di `#FFF1D6` 2,85; success `#12A150` di `#DDF5E6` 2,93; danger `#D92D20` di `#FEE4E2` 4,01; water `#1C7ED6` di `#E4F0FB` 3,63; batas input `#DAE3E0` di putih 1,31 (komponen perlu 3:1). Terdampak: chip Normal, Sudah diisi, Aktif, badge Manager dan Operator, nilai abnormal, batas kolom. Mitigasi: chip selalu berisi kata, tidak hanya warna. Lolos: teks utama 16,8; primary di putih 5,13; putih di primary 5,13; text-sub 4,98 sampai 5,37; danger di putih 4,83; Auditor `#5B3FA8` di `#EDE9FB` 6,49 |
 | R-26 kontrol berfungsi | PASS | Tidak ada tombol tanpa penangan (grep). Tiap tombol simpan, toggle, tab, filter diuji dengan `userEvent` di tes layar |

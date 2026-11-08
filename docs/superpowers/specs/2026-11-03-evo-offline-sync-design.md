@@ -1,4 +1,4 @@
-# EVO Bagian 5: Antrean luring dan sinkronisasi otomatis
+# ENVIRO Bagian 5: Antrean luring dan sinkronisasi otomatis
 
 Memenuhi PRD 3.2 (Mode Luring & Sinkronisasi). Antislop mode "selama bekerja" berlaku.
 

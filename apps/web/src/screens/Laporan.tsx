@@ -83,7 +83,7 @@ export function Laporan() {
 
   const lokasi = pond ? pondLabel(pond) : 'Semua pond';
   const meta = (): ReportMeta => ({
-    title: 'Laporan EVO', lokasi, periode: `${dateText(from)} - ${dateText(to)}`,
+    title: 'Laporan ENVIRO', lokasi, periode: `${dateText(from)} - ${dateText(to)}`,
     dibuatOleh: user?.name ?? '-', dibuatPada: `${witaStamp(new Date())} WITA`,
   });
 

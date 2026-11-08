@@ -1,4 +1,4 @@
-# EVO Bagian 2: Kalender Enviro Events dan Riwayat Tabel
+# ENVIRO Bagian 2: Kalender Enviro Events dan Riwayat Tabel
 
 Melanjutkan `2026-11-02-evo-ui-redesign-design.md`. Desain acuan: `design/06 Kalender Enviro Events.png`, `design/07 Eksekusi Event & Eviden.png` (tanpa tombol kamera). Antislop mode "selama bekerja" berlaku.
 

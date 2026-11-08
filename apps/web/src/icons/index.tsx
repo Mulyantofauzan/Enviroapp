@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-// Hand-drawn line icons, 24px grid. Shapes follow the EVO Figma components.
+// Hand-drawn line icons, 24px grid. Shapes follow the ENVIRO Figma components.
 const PATHS = {
   home: <><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v9.5h13V10" /><path d="M10 19.5v-5h4v5" /></>,
   clipboard: <><rect x="5" y="4.5" width="14" height="16.5" rx="2.5" /><rect x="9" y="2.8" width="6" height="3.4" rx="1.2" /></>,

@@ -29,8 +29,9 @@ export function Login() {
 
   return (
     <main className="ui-login">
-      <h1>EVO</h1>
-      <p>Environment Operations</p>
+      <img className="ui-login__logo" src="/logo.png" srcSet="/logo.png 1x, /logo@2x.png 2x" width="96" height="96" alt="" />
+      <h1>ENVIRO</h1>
+      <p>Environmental Information &amp; Reporting Operations</p>
       {waiting > 0 && <p className="ui-muted" role="status">Ada {waiting} data belum terunggah di HP ini. Masuk dengan akun pemiliknya untuk mengunggah.</p>}
       <form onSubmit={submit} className="ui-login__form">
         <label>

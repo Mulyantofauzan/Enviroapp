@@ -1,12 +1,12 @@
 # Product Requirements Document (PRD)
 
-**Product Name:** EVO (Environment Operations)
+**Product Name:** ENVIRO (Environmental Information & Reporting Operations)
 **Platform:** Mobile-First (Mobile App & Desktop Web)
 **Document Status:** Final Draft v2
 
 ## 1. Ringkasan Eksekutif (Executive Summary)
 
-**EVO (Environment Operations)** adalah platform *mobile-first* yang dikembangkan untuk mendigitalisasi operasional dan pemantauan lingkungan. Aplikasi ini berfokus pada pencatatan parameter cuaca, kualitas air permukaan, konsumsi koagulan, dan kepatuhan jadwal kegiatan lingkungan (*Enviro Events*). Dibangun dengan arsitektur modern dan infrastruktur Cloudflare, EVO menjamin performa cepat, stabilitas di area minim sinyal (*Offline-Sync*), serta memberikan keleluasaan bagi tim lapangan untuk beroperasi tanpa hambatan birokrasi sistem yang kaku.
+**ENVIRO (Environmental Information & Reporting Operations)** adalah platform *mobile-first* yang dikembangkan untuk mendigitalisasi operasional dan pemantauan lingkungan. Aplikasi ini berfokus pada pencatatan parameter cuaca, kualitas air permukaan, konsumsi koagulan, dan kepatuhan jadwal kegiatan lingkungan (*Enviro Events*). Dibangun dengan arsitektur modern dan infrastruktur Cloudflare, ENVIRO menjamin performa cepat, stabilitas di area minim sinyal (*Offline-Sync*), serta memberikan keleluasaan bagi tim lapangan untuk beroperasi tanpa hambatan birokrasi sistem yang kaku.
 
 ## 2. Target Pengguna & Hak Akses (User Roles)
 

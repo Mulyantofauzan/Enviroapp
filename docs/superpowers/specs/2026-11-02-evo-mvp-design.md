@@ -1,4 +1,4 @@
-# EVO MVP Design
+# ENVIRO MVP Design
 
 Source: `prd_evo_environment_operations.md` (v2). This spec covers the MVP only.
 

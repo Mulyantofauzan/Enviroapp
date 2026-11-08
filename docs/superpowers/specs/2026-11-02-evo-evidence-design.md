@@ -1,4 +1,4 @@
-# EVO Bagian 3: Bukti (kamera, geotag, layar Eviden)
+# ENVIRO Bagian 3: Bukti (kamera, geotag, layar Eviden)
 
 Melanjutkan `2026-11-02-evo-calendar-design.md`. Desain acuan: `design/08 Kamera Live (Geotag).png`, `design/07 Eksekusi Event & Eviden.png`, `design/Eviden Auditor (Read-only).png`. Antislop mode "selama bekerja" berlaku.
 

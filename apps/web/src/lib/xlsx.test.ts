@@ -3,7 +3,7 @@ import { unzipSync, strFromU8 } from 'fflate';
 import { buildXlsx, sanitizeSheetName, xmlEscape, type ReportMeta } from './xlsx';
 import type { ReportSection } from './report';
 
-const meta: ReportMeta = { title: 'Laporan EVO', lokasi: 'SP-02 Pit Selatan', periode: '1 Okt 2026 - 2 Nov 2026', dibuatOleh: 'Budi & Co', dibuatPada: '2 Nov 2026 08:21' };
+const meta: ReportMeta = { title: 'Laporan ENVIRO', lokasi: 'SP-02 Pit Selatan', periode: '1 Okt 2026 - 2 Nov 2026', dibuatOleh: 'Budi & Co', dibuatPada: '2 Nov 2026 08:21' };
 const air: ReportSection = {
   id: 'air', title: 'Air Permukaan',
   columns: [{ key: 'date', header: 'Tanggal', kind: 'text' }, { key: 'pho', header: 'pH outlet', kind: 'number', decimals: 2 }, { key: 'tsso', header: 'TSS outlet', kind: 'number' }],
@@ -28,7 +28,7 @@ describe('buildXlsx structure', () => {
   });
   it('the summary carries the meta and one count per section', () => {
     const t = strFromU8(f['xl/worksheets/sheet1.xml']);
-    for (const s of ['Laporan EVO', 'SP-02 Pit Selatan', '1 Okt 2026 - 2 Nov 2026', 'Budi &amp; Co', '2 Nov 2026 08:21', 'Air Permukaan']) expect(t).toContain(s);
+    for (const s of ['Laporan ENVIRO', 'SP-02 Pit Selatan', '1 Okt 2026 - 2 Nov 2026', 'Budi &amp; Co', '2 Nov 2026 08:21', 'Air Permukaan']) expect(t).toContain(s);
   });
   it('a section with zero rows still has its header row', () => {
     const rows = read(f, 'xl/worksheets/sheet3.xml').getElementsByTagName('row');
