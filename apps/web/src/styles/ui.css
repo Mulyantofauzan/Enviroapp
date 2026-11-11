@@ -517,3 +517,7 @@ a.ui-btn { text-decoration: none; }
 .ui-swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
 .ui-swatch { aspect-ratio: 1; border-radius: 50%; border: 2px solid transparent; background: var(--bg); cursor: pointer; padding: 0; }
 .ui-swatch[aria-pressed='true'] { outline: 2px solid var(--text); outline-offset: 2px; }
+.ui-chart__sub { fill: var(--text-sub); font: 500 10px var(--font); }
+.ui-chart__nodata { fill: var(--text-sub); font: 600 12px var(--font); }
+.ui-chart__dot--small { stroke-width: 1.5; }
+.ui-chart__grid { stroke-opacity: 0.6; }

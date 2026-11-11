@@ -100,7 +100,7 @@ describe('TrendChart (TSS)', () => {
 
 describe('TrendChart: no-flow days', () => {
   const series = [d(1, 7, 7.5), { ...d(2, 7, 0), noFlow: true }, d(3, 7, 7.2)];
-  it('draws a no-flow outlet point at zero with its own marker, never as abnormal', () => {
+  it('draws a no-flow day as a marker on the baseline, never as abnormal', () => {
     const { container } = render(<TrendChart name="pH" series={series} limit={{ min: 6, max: 9 }} />);
     expect(container.querySelectorAll('[data-noflow]')).toHaveLength(1);
     expect(container.querySelector('[data-abnormal]')).toBeNull();
@@ -109,5 +109,19 @@ describe('TrendChart: no-flow days', () => {
   it('says No flow in the screen-reader table', () => {
     render(<TrendChart name="pH" series={series} limit={undefined} />);
     expect(screen.getByRole('cell', { name: 'No flow' })).toBeInTheDocument();
+  });
+  it('keeps no-flow days out of the scale and breaks the line there', () => {
+    const { container } = render(<TrendChart name="pH" series={series} limit={{ min: 6, max: 9 }} floorZero />);
+    expect(container.querySelectorAll('path[data-line="outlet"]')).toHaveLength(0);
+    const ticks = [...container.querySelectorAll('text.ui-chart__tick')].filter((t) => t.getAttribute('text-anchor') === 'end').map((t) => Number((t.textContent ?? '').replace(',', '.')));
+    expect(Math.min(...ticks)).toBeGreaterThan(0);
+    const cy = Number(container.querySelector('[data-noflow]')!.getAttribute('cy'));
+    const grid = [...container.querySelectorAll('line.ui-chart__grid')].map((l) => Number(l.getAttribute('y1')));
+    expect(cy).toBeGreaterThanOrEqual(Math.max(...grid));
+  });
+  it('does not repeat an inlet label that equals the outlet label', () => {
+    const same = [d(1, 7, 7), d(2, 7, 7)];
+    const { container } = render(<TrendChart name="pH" series={same} limit={undefined} />);
+    expect(container.querySelectorAll('text.ui-chart__label')).toHaveLength(2);
   });
 });

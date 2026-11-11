@@ -51,11 +51,19 @@ describe('BarChart', () => {
     expect(screen.getByText('Kapur', { selector: 'li' })).toBeInTheDocument();
     expect(screen.getByText('Tawas Batu', { selector: 'li' })).toBeInTheDocument();
   });
-  it('twelve categories never print the last two labels on top of each other', () => {
-    const { container } = render(<BarChart name="x" unit="kg" categories={cats(12)} series={[{ name: 'x', values: Array.from({ length: 12 }, (_, i) => i + 1) }]} />);
+  it('wide labels are thinned so the last two never print on top of each other', () => {
+    const wide = cats(12).map((c) => ({ ...c, label: `${c.label}xxxx` }));
+    const { container } = render(<BarChart name="x" unit="kg" categories={wide} series={[{ name: 'x', values: Array.from({ length: 12 }, (_, i) => i + 1) }]} />);
     const ticks = [...container.querySelectorAll('text.ui-chart__tick')].map((t) => t.textContent);
-    expect(ticks).toContain('L11*');
-    expect(ticks).not.toContain('L10');
+    expect(ticks).toContain('L11xxxx*');
+    expect(ticks).not.toContain('L10xxxx');
+  });
+  it('short labels are all shown, and a missing value is marked instead of drawn as zero', () => {
+    const { container } = render(<BarChart name="x" unit="mm" categories={cats(12)} series={[{ name: 'x', values: [...Array.from({ length: 11 }, (_, i) => i + 1), null] }]} />);
+    const ticks = [...container.querySelectorAll('text.ui-chart__tick')].map((t) => t.textContent);
+    expect(ticks).toContain('L10');
+    expect(container.querySelectorAll('[data-nodata]')).toHaveLength(1);
+    expect(container.querySelectorAll('rect[data-bar]')).toHaveLength(11);
   });
   it('a running week or month is marked on the chart itself, so it also shows in the PDF image', () => {
     const { container } = render(<BarChart name="x" unit="kg" categories={cats(3)} series={[{ name: 'x', values: [10, 20, 5] }]} />);

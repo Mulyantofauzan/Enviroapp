@@ -1,4 +1,5 @@
 import { formatNumber, isOutOfLimit, type Threshold } from '@evo/shared';
+import { dayMonth } from '../lib/dates';
 import { labelAnchor, labeledIndexes } from '../lib/labels';
 
 export type TrendPoint = { date: string; inlet: number | null; outlet: number | null; noFlow?: boolean };
@@ -40,8 +41,12 @@ type Props = {
 
 export function TrendChart({ name, series, limit, floorZero, decimals = 1, hide, outletLabel = 'Outlet', inletLabel = 'Inlet' }: Props) {
   const showInlet = hide !== 'inlet';
-  const values = series.flatMap((s) => (showInlet ? [s.inlet, s.outlet] : [s.outlet])).filter((v): v is number => v !== null);
-  if (values.length === 0) return null;
+  const hasNoFlow = series.some((s) => s.noFlow);
+  // A no-flow day has no reading. It is drawn as a marker on the baseline, never as a value on the scale or the line.
+  const outOf = (s: TrendPoint) => (s.noFlow ? null : s.outlet);
+  const values = series.flatMap((s) => (showInlet ? [s.inlet, outOf(s)] : [outOf(s)])).filter((v): v is number => v !== null);
+  if (values.length === 0 && !hasNoFlow) return null;
+  if (values.length === 0) values.push(0, 1);
   const hasBand = !!limit && (limit.min !== null || limit.max !== null);
   const lows = [...values, ...(hasBand && limit!.min !== null ? [limit!.min] : [])];
   const highs = [...values, ...(hasBand && limit!.max !== null ? [limit!.max] : [])];
@@ -60,16 +65,18 @@ export function TrendChart({ name, series, limit, floorZero, decimals = 1, hide,
   const x = (i: number) => (n === 1 ? L + iw / 2 : L + (i * iw) / (n - 1));
   const y = (v: number) => T + ih - ((v - lo) / (hi - lo)) * ih;
   const every = Math.ceil(n / 7);
+  const dense = n > 14;
+  const base = T + ih;
 
   const line = (key: 'inlet' | 'outlet', cls: string) =>
-    runs(series.map((s, i) => ({ x: x(i), y: s[key] === null ? null : y(s[key] as number) }))).map((r, k) =>
+    runs(series.map((s, i) => { const v = key === 'outlet' ? outOf(s) : s.inlet; return { x: x(i), y: v === null ? null : y(v) }; })).map((r, k) =>
       r.length > 1 ? <path key={`${key}${k}`} data-line={key} className={cls} fill="none" d={r.map((p, j) => `${j ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')} /> : null);
 
-  const lastOut = [...series].reverse().find((s) => s.outlet !== null)?.outlet ?? null;
+  const lastOut = [...series].reverse().find((s) => outOf(s) !== null)?.outlet ?? null;
   const label = showInlet
     ? `Grafik ${name} inlet dan outlet, ${n} hari.${lastOut !== null ? ` Nilai outlet terakhir ${formatNumber(lastOut)}.` : ''}`
     : `Grafik ${name}, ${n} hari.${lastOut !== null ? ` Nilai terakhir ${formatNumber(lastOut)}.` : ''}`;
-  const outIdx = labeledIndexes(series.map((s) => s.outlet));
+  const outIdx = labeledIndexes(series.map(outOf));
   const inIdx = showInlet ? labeledIndexes(series.map((s) => s.inlet)) : new Set<number>();
   const text = (v: number, xi: number, yy: number, key: string, cls: string) => {
     const t = formatNumber(v, decimals);
@@ -90,7 +97,7 @@ export function TrendChart({ name, series, limit, floorZero, decimals = 1, hide,
           </g>
         ))}
         {series.map((s, i) => (i % every === 0 || i === n - 1) && (
-          <text key={s.date} className="ui-chart__tick" x={x(i)} y={H - 8} textAnchor="middle">{Number(s.date.slice(8))}</text>
+          <text key={s.date} className="ui-chart__tick" x={x(i)} y={H - 8} textAnchor={i === 0 ? labelAnchor(x(i), L, W - R, 36) : 'middle'}>{i === 0 ? dayMonth(s.date) : Number(s.date.slice(8))}</text>
         ))}
         {showInlet && line('inlet', 'ui-chart__inlet')}
         {line('outlet', 'ui-chart__outlet')}
@@ -100,16 +107,16 @@ export function TrendChart({ name, series, limit, floorZero, decimals = 1, hide,
           return <circle key={`i${s.date}`} data-inlet-dot className="ui-chart__idot" cx={x(i)} cy={y(v)} r={3.5} />;
         })}
         {series.map((s, i) => {
+          if (s.noFlow) return <circle key={s.date} data-noflow className="ui-chart__noflow" cx={x(i)} cy={base} r={dense ? 3 : 4.5} />;
           if (s.outlet === null) return null;
-          if (s.noFlow) return <circle key={s.date} data-noflow className="ui-chart__noflow" cx={x(i)} cy={y(s.outlet)} r={5} />;
           const bad = hasBand && isOutOfLimit(s.outlet, limit);
           return bad
-            ? <circle key={s.date} data-abnormal className="ui-chart__bad" cx={x(i)} cy={y(s.outlet)} r={6} />
-            : <circle key={s.date} className="ui-chart__dot" cx={x(i)} cy={y(s.outlet)} r={4} />;
+            ? <circle key={s.date} data-abnormal className="ui-chart__bad" cx={x(i)} cy={y(s.outlet)} r={dense ? 4 : 6} />
+            : <circle key={s.date} className={`ui-chart__dot${dense ? ' ui-chart__dot--small' : ''}`} cx={x(i)} cy={y(s.outlet)} r={dense ? 2.5 : 4} />;
         })}
         {series.map((s, i) => outIdx.has(i) && s.outlet !== null
           && text(s.outlet, x(i), y(s.outlet) - 9, `lo${s.date}`, `ui-chart__label${hasBand && !s.noFlow && isOutOfLimit(s.outlet, limit) ? ' ui-chart__label--bad' : ''}`))}
-        {series.map((s, i) => inIdx.has(i) && s.inlet !== null
+        {series.map((s, i) => inIdx.has(i) && s.inlet !== null && !(outOf(s) !== null && formatNumber(outOf(s), decimals) === formatNumber(s.inlet, decimals))
           && text(s.inlet, x(i), y(s.inlet) + 16, `li${s.date}`, 'ui-chart__label ui-chart__label--inlet'))}
       </svg>
       <ul className="ui-legend">
@@ -117,7 +124,7 @@ export function TrendChart({ name, series, limit, floorZero, decimals = 1, hide,
         {showInlet && <li><i className="ui-legend__line ui-legend__line--inlet" />{inletLabel}</li>}
         {hasBand && <li><i className="ui-legend__band" />{bandLabel(limit!)}</li>}
         {hasBand && <li><i className="ui-legend__bad" />Abnormal</li>}
-        {series.some((s) => s.noFlow) && <li><i className="ui-legend__noflow" />No flow (digambar 0)</li>}
+        {series.some((s) => s.noFlow) && <li><i className="ui-legend__noflow" />No flow (tidak ada aliran)</li>}
       </ul>
       <table className="ui-sr">
         <caption>Data {name} per hari</caption>

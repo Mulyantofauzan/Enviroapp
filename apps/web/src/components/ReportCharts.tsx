@@ -3,9 +3,10 @@ import { meanByMonth, meanByWeek, sumByMonth, sumByWeek, type Bucket } from '../
 import { addDays } from '../lib/dates';
 import type { HistoryEntry, ReportKind } from '../lib/report';
 import { coagUsageBuckets, fillDates, rainByDate, tawasByDate, waterByDate } from '../lib/reportSeries';
-import { BarChart } from './BarChart';
+import { BarChart, type BarCategory } from './BarChart';
 import { PhChart } from './PhChart';
 import { TrendChart } from './TrendChart';
+import { dayMonth } from '../lib/dates';
 
 type Props = {
   kinds: ReportKind[];
@@ -37,6 +38,10 @@ function Card({ kind, title, note, children }: { kind: ReportKind; title: string
 }
 
 const cats = (b: Bucket[]) => b.map((x) => ({ key: x.key, label: x.label, partial: x.partial }));
+/** Month buckets read "Des 25"; on the axis that is the month, with the year under the first bar and each January. */
+const monthCats = (b: Bucket[]): BarCategory[] => b.map((x, i) => ({
+  key: x.key, label: x.label.split(' ')[0], partial: x.partial, sub: i === 0 || x.key.endsWith('-01') ? `20${x.label.split(' ')[1]}` : undefined,
+}));
 
 /** The nine report charts, shown for the chips that are on. Each card keeps its svg so the PDF can reuse it. */
 export function ReportCharts({ kinds, entries, ytd, ytdError = '', spId, thresholds, from, to, today }: Props) {
@@ -59,15 +64,13 @@ export function ReportCharts({ kinds, entries, ytd, ytdError = '', spId, thresho
       const mo = meanByMonth(rain, today);
       cards.push(
         <Card kind="cuaca" key={t1} title={t1} note={stats(week.map((w) => w.outlet), 'mm')}>
-          {week.some((w) => w.outlet !== null)
-            ? <TrendChart name="Curah hujan" unit="mm" series={week} limit={undefined} hide="inlet" outletLabel="Curah hujan (mm)" floorZero decimals={1} />
-            : <p className="ui-muted">Belum ada data pada rentang ini.</p>}
+          <BarChart name="Curah hujan" unit="mm" minMax={4} categories={week.map((w) => ({ key: w.date, label: dayMonth(w.date) }))} series={[{ name: 'Curah hujan (mm)', values: week.map((w) => w.outlet) }]} />
         </Card>,
         <Card kind="cuaca" key={t2} title={t2} note={stats(wk.map((b) => b.value), 'mm/hari', 1, wk[wk.length - 1].partial)}>
-          <BarChart name="Rata-rata curah hujan per minggu" unit="mm/hari" categories={cats(wk)} series={[{ name: 'Rata-rata (mm/hari)', values: wk.map((b) => b.value) }]} />
+          <BarChart name="Rata-rata curah hujan per minggu" unit="mm/hari" categories={cats(wk)} footnote="Tanggal = awal minggu" series={[{ name: 'Rata-rata (mm/hari)', values: wk.map((b) => b.value) }]} />
         </Card>,
         <Card kind="cuaca" key={t3} title={t3} note={stats(mo.map((b) => b.value), 'mm/hari', 1, mo[mo.length - 1].partial)}>
-          <BarChart name="Rata-rata curah hujan per bulan" unit="mm/hari" categories={cats(mo)} series={[{ name: 'Rata-rata (mm/hari)', values: mo.map((b) => b.value) }]} />
+          <BarChart name="Rata-rata curah hujan per bulan" unit="mm/hari" categories={monthCats(mo)} series={[{ name: 'Rata-rata (mm/hari)', values: mo.map((b) => b.value) }]} />
         </Card>,
       );
     }
@@ -89,7 +92,7 @@ export function ReportCharts({ kinds, entries, ytd, ytdError = '', spId, thresho
       const zero = (d: (typeof w)[number], v: number | null) => (d.noFlow ? 0 : v);
       cards.push(
         <Card kind="air" key={titles[0]} title={titles[0]} note={withNoFlow(stats(real.map((d) => d.ph_outlet), 'pH outlet', 2))}>
-          {has('ph_outlet') || has('ph_inlet') ? <PhChart series={w.map((d) => ({ ...d, ph_outlet: zero(d, d.ph_outlet) }))} band={thresholds?.ph_outlet} /> : empty}
+          {has('ph_outlet') || has('ph_inlet') ? <PhChart series={w} band={thresholds?.ph_outlet} /> : empty}
         </Card>,
         <Card kind="air" key={titles[1]} title={titles[1]} note={withNoFlow(stats(real.map((d) => d.tss_outlet), 'mg/L outlet'))}>
           {has('tss_outlet') || has('tss_inlet') ? <TrendChart name="TSS" unit="mg/L" floorZero limit={thresholds?.tss_outlet} decimals={1} series={w.map((d) => ({ date: d.date, inlet: d.tss_inlet, outlet: zero(d, d.tss_outlet), noFlow: d.noFlow }))} /> : empty}
@@ -121,10 +124,10 @@ export function ReportCharts({ kinds, entries, ytd, ytdError = '', spId, thresho
       const mo = sumByMonth(tawas, today);
       cards.push(
         <Card kind="koagulan" key={t2} title={t2} note={`Tawas Serbuk ditambah Tawas Batu. ${stats(wk.map((b) => b.value), 'kg', 1, wk[wk.length - 1].partial) ?? ''}`.trim()}>
-          <BarChart name="Penggunaan tawas per minggu" unit="kg" categories={cats(wk)} series={[{ name: 'Tawas (kg)', values: wk.map((b) => b.value) }]} />
+          <BarChart name="Penggunaan tawas per minggu" unit="kg" categories={cats(wk)} footnote="Tanggal = awal minggu" series={[{ name: 'Tawas (kg)', values: wk.map((b) => b.value) }]} />
         </Card>,
         <Card kind="koagulan" key={t3} title={t3} note={`Tawas Serbuk ditambah Tawas Batu. ${stats(mo.map((b) => b.value), 'kg', 1, mo[mo.length - 1].partial) ?? ''}`.trim()}>
-          <BarChart name="Penggunaan tawas per bulan" unit="kg" categories={cats(mo)} series={[{ name: 'Tawas (kg)', values: mo.map((b) => b.value) }]} />
+          <BarChart name="Penggunaan tawas per bulan" unit="kg" categories={monthCats(mo)} series={[{ name: 'Tawas (kg)', values: mo.map((b) => b.value) }]} />
         </Card>,
       );
     }
