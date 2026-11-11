@@ -222,7 +222,7 @@ export async function buildSlidePptx(input: SlideInput): Promise<Blob> {
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'A4_LANDSCAPE', width: W, height: H });
   pptx.layout = 'A4_LANDSCAPE';
-  pptx.title = 'Laporan ENVIRO';
+  pptx.title = 'Laporan EVOS';
 
   let started = false;
   if (input.weather) { weatherSlide(pptx, input.weather); started = true; }

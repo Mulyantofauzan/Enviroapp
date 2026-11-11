@@ -26,7 +26,7 @@ function Matrix() {
   return (
     <section className="ui-card">
       <h2>Hak akses peran</h2>
-      <p className="ui-muted">Fungsi utama setiap peran dalam ENVIRO</p>
+      <p className="ui-muted">Fungsi utama setiap peran dalam EVOS</p>
       <table className="ui-matrix" aria-label="Hak akses peran">
         <thead><tr><th scope="col">Fungsi</th><th scope="col">Admin</th><th scope="col">Mgr</th><th scope="col">Opr</th><th scope="col">Aud</th></tr></thead>
         <tbody>

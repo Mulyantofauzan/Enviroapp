@@ -68,7 +68,7 @@ export function AturJadwal() {
 
   return (
     <>
-      <ScreenHeader title="Atur Jadwal" subtitle="Kalender Enviro Events" onProfile={() => nav('/akun')} />
+      <ScreenHeader title="Atur Jadwal" subtitle="Kalender EVOS Events" onProfile={() => nav('/akun')} />
       <div className="ui-page ui-page--mid">
         <Link to="/kalender" className="ui-back"><Icon name="chevron-left" /> Kembali ke Kalender</Link>
         <div className="ui-two">

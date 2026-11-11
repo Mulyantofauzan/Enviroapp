@@ -78,7 +78,7 @@ export function ImporEvent() {
 
   return (
     <>
-      <ScreenHeader title="Impor Event" subtitle="Kalender Enviro Events" onProfile={() => nav('/akun')} />
+      <ScreenHeader title="Impor Event" subtitle="Kalender EVOS Events" onProfile={() => nav('/akun')} />
       <div className="ui-page ui-page--mid">
         <Link to="/kalender/jadwal" className="ui-back"><Icon name="chevron-left" /> Kembali ke Atur Jadwal</Link>
         <section className="ui-card ui-module">

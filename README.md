@@ -1,4 +1,4 @@
-# ENVIRO — Environmental Information & Reporting Operations
+# EVOS — Environment Operation System
 
 Phone-first PWA for logging weather, settling-pond water quality and coagulant stock.
 Stack: Cloudflare Workers + Hono + D1 (API), React + Vite PWA (web). Spec: `docs/superpowers/specs/`.

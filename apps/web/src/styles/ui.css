@@ -1,4 +1,4 @@
-/* New ENVIRO components. Every class is prefixed ui- so old screens keep working until replaced. */
+/* New EVOS components. Every class is prefixed ui- so old screens keep working until replaced. */
 html, body { background: var(--bg); color: var(--text); font-family: var(--font); }
 body { font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 :focus-visible { outline: 3px solid var(--water); outline-offset: 2px; }

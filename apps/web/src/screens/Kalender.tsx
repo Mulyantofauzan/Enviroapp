@@ -45,7 +45,7 @@ export function Kalender() {
 
   return (
     <>
-      <ScreenHeader title="Kalender" subtitle={title ? `Enviro Events - ${title}` : 'Enviro Events'} onProfile={() => nav('/akun')} />
+      <ScreenHeader title="Kalender" subtitle={title ? `EVOS Events - ${title}` : 'EVOS Events'} onProfile={() => nav('/akun')} />
       <div className="ui-page ui-page--wide">
         {canSchedule && <Link to="/kalender/jadwal" className="ui-btn ui-btn--outline">Atur jadwal</Link>}
         {error && <p className="ui-error" role="alert">{error}</p>}

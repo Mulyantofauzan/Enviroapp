@@ -54,7 +54,7 @@ describe('Beranda Operator', () => {
     await screen.findByRole('heading', { name: 'Halo, Rudi' });
     expect(screen.getByRole('link', { name: /Cuaca/ })).toHaveAttribute('href', '/input/cuaca');
     expect(screen.getByRole('link', { name: /Air & Koagulan/ })).toHaveAttribute('href', '/input/air');
-    expect(screen.getByRole('link', { name: /Event Enviro/ })).toHaveAttribute('href', '/kalender');
+    expect(screen.getByRole('link', { name: /Event EVOS/ })).toHaveAttribute('href', '/kalender');
   });
   it('no ponds: explains what to do', async () => {
     mockApi({ ponds: [] });

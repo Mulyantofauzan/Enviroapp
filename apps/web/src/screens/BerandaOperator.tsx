@@ -66,7 +66,7 @@ export function BerandaOperator() {
               ))}
               <Link to="/kalender" className="ui-card ui-tile">
                 <span className={`ui-bubble ui-bubble--${summary && summary.overdue > 0 ? 'danger' : 'primary'}`}><Icon name="calendar" /></span>
-                <strong>Event Enviro</strong>
+                <strong>Event EVOS</strong>
                 <small>{eventSub(summary?.overdue)}</small>
               </Link>
             </div>

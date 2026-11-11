@@ -53,7 +53,7 @@ export function KategoriEvent() {
 
   return (
     <>
-      <ScreenHeader title="Kategori Event" subtitle="Kalender Enviro Events" onProfile={() => nav('/akun')} />
+      <ScreenHeader title="Kategori Event" subtitle="Kalender EVOS Events" onProfile={() => nav('/akun')} />
       <div className="ui-page ui-page--mid">
         <Link to="/kalender/jadwal" className="ui-back"><Icon name="chevron-left" /> Kembali ke Atur Jadwal</Link>
         <Button block onClick={openNew} disabled={!list}><Icon name="plus" /> Tambah kategori</Button>
