@@ -9,6 +9,8 @@ import { Banner } from '../ui/Banner';
 import { Button } from '../ui/Button';
 import { NumberInput } from '../ui/NumberInput';
 import { DayScope, type DayCtx } from './input/DayScope';
+import { WhatsappShare } from '../components/WhatsappShare';
+import { pondLabel } from '../ui/PondPicker';
 import { effectiveRemaining, hasInvalid, initialCoag, type CoagState } from './input/coag';
 
 type N = number | null;
@@ -16,7 +18,7 @@ type Point = { ph: N; tss: N; flow: N };
 type Side = 'inlet' | 'outlet';
 const SIDE_LABEL: Record<Side, string> = { inlet: 'Inlet', outlet: 'Outlet' };
 
-function AirKoagulanForm({ date, sp, data, thresholds, canEdit, reload }: DayCtx) {
+function AirKoagulanForm({ date, sp, data, pond, thresholds, canEdit, reload }: DayCtx) {
   const toast = useToast();
   const { user } = useAuth();
   const root = useRef<HTMLDivElement>(null);
@@ -27,6 +29,7 @@ function AirKoagulanForm({ date, sp, data, thresholds, canEdit, reload }: DayCtx
   });
   const [coag, setCoag] = useState(() => initialCoag(data));
   const [busy, setBusy] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const patchCoag = (t: CoagulantType, v: Partial<CoagState>) => setCoag((c) => ({ ...c, [t]: { ...c[t], ...v } }));
   const set = (s: Side, patch: Partial<Point>) => setPts((p) => ({ ...p, [s]: { ...p[s], ...patch } }));
 
@@ -107,6 +110,8 @@ function AirKoagulanForm({ date, sp, data, thresholds, canEdit, reload }: DayCtx
       })}
       <Banner tone="warning" title="Nilai abnormal hanya disorot">Data tetap tersimpan, tidak diblokir</Banner>
       {canEdit && <Button block disabled={busy} onClick={save}>{busy ? 'Menyimpan…' : 'Simpan data air & koagulan'}</Button>}
+      {pond && (data.water || Object.values(data.coagulant).some(Boolean)) && <Button block variant="outline" onClick={() => setSharing(true)}>Kirim ke WhatsApp</Button>}
+      {sharing && pond && <WhatsappShare title={pondLabel(pond)} placeCode={pond.code ?? pond.name} date={date} data={data} onClose={() => setSharing(false)} />}
     </div>
   );
 }
