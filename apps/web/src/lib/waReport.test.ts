@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildWaReport, longDate, weatherText, whatsappUrl, witaTime, type WaExtras } from './waReport';
+import { defaultExtras, buildWaReport, longDate, weatherText, whatsappUrl, witaTime, type WaExtras } from './waReport';
 
 const extras: WaExtras = { places: [{ label: 'SP-11', sack: '0' }, { label: 'CB-2', sack: '2' }], batu: '0', serbuk: '1', remain: '289', pintu: 'Terbuka', pompa: '' };
 const water = { ph_inlet: 6, ph_outlet: 6, tss_inlet: 28, tss_outlet: 48, debit_inlet_m3s: null, debit_outlet_m3s: 0.00441 };
@@ -38,5 +38,13 @@ describe('waReport', () => {
   });
   it('builds a wa.me link with the encoded text', () => {
     expect(whatsappUrl('a b\n*c*')).toBe('https://wa.me/?text=a%20b%0A*c*');
+  });
+  it('works out sacks at 25 kg each', () => {
+    const x = defaultExtras('SP-11', { batuOutKg: 50, serbukOutKg: 30, remainKg: 7225 });
+    expect(x.batu).toBe('2');
+    expect(x.serbuk).toBe('1,2');
+    expect(x.places[0]).toEqual({ label: 'SP-11', sack: '3,2' });
+    expect(x.remain).toBe('289');
+    expect(defaultExtras('SP-11', { batuOutKg: null, serbukOutKg: null, remainKg: null }).remain).toBe('');
   });
 });

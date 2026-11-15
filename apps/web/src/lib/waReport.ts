@@ -72,4 +72,20 @@ export function buildWaReport({ title, date, time, weather, water, extras: x }: 
   return lines.join('\n');
 }
 
+/** One sack of coagulant is 25 kg. */
+export const SACK_KG = 25;
+const sackOf = (kg: N) => (kg === null ? '' : formatNumber(kg / SACK_KG, 2));
+
+/** Starting values for the message: sacks worked out from the kg the app records. Only Batu and Serbuk are in the template. */
+export function defaultExtras(placeCode: string, c: { batuOutKg: N; serbukOutKg: N; remainKg: N }): WaExtras {
+  const out = (c.batuOutKg ?? 0) + (c.serbukOutKg ?? 0);
+  return {
+    places: [{ label: placeCode, sack: sackOf(out) || '0' }, { label: '', sack: '0' }],
+    batu: sackOf(c.batuOutKg ?? 0), serbuk: sackOf(c.serbukOutKg ?? 0), remain: sackOf(c.remainKg), pintu: 'Terbuka', pompa: '',
+  };
+}
+
 export const whatsappUrl = (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+/** Hands the message to WhatsApp (the app on a phone) in this window, so the browser does not block it as a popup. */
+export const openWhatsapp = (text: string) => { window.location.assign(whatsappUrl(text)); };

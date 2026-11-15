@@ -3,6 +3,9 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { json, mockApi, renderApp, emptyDay } from '../test-utils';
 import { listItems } from '../lib/outbox/queue';
+import { openWhatsapp } from '../lib/waReport';
+
+vi.mock('../lib/waReport', async (orig) => ({ ...(await orig<typeof import('../lib/waReport')>()), openWhatsapp: vi.fn() }));
 
 const offlinePut = (u: string, init?: RequestInit): Response | undefined => { if (init?.method === 'PUT') throw new TypeError('offline'); return undefined; };
 const QUEUED = 'Tersimpan di HP, menunggu sinyal';
@@ -78,6 +81,7 @@ describe('Input Air Permukaan', () => {
     expect(puts(calls)[0].url).toBe(`/api/water/${D}/p1`);
     expect(puts(calls)[0].body).toMatchObject({ ph_inlet: 6.8, ph_outlet: 7.1 });
     expect(await screen.findByText('Data air & koagulan tersimpan')).toBeInTheDocument();
+    expect(openWhatsapp).toHaveBeenCalledWith(expect.stringContaining('Hasil Pemantauan SP'));
   });
   it('flow is typed in L/s and sent to the server as m3/s', async () => {
     const calls = mockApi();

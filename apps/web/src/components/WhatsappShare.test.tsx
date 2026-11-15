@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import * as wa from '../lib/waReport';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from './Toast';
@@ -18,15 +19,16 @@ describe('WhatsappShare', () => {
     const preview = screen.getByLabelText('Pratinjau pesan');
     expect(preview).toHaveTextContent('TSS Outlet : 48 mg/L');
     expect(preview).toHaveTextContent('Debit Outlet : 4,41 L/s');
+    await userEvent.clear(screen.getByLabelText('Remain (sack)'));
     await userEvent.type(screen.getByLabelText('Remain (sack)'), '289');
     expect(preview).toHaveTextContent('Remain : 289 sack');
-    expect(screen.getByText('Di aplikasi: 50 kg keluar')).toBeInTheDocument();
+    expect(screen.getByLabelText('Batu (sack)')).toHaveValue('2'); // 50 kg at 25 kg a sack
   });
   it('opens WhatsApp with the message', async () => {
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const open = vi.spyOn(wa, 'openWhatsapp').mockImplementation(() => {});
     render(<ToastProvider><WhatsappShare title="SP-11" placeCode="SP-11" date="2026-11-09" data={data} onClose={() => {}} /></ToastProvider>);
     await userEvent.click(screen.getByRole('button', { name: 'Kirim ke WhatsApp' }));
-    expect(open).toHaveBeenCalledWith(expect.stringMatching(/^https:\/\/wa\.me\/\?text=.*Pengelolaan/), '_blank', 'noopener');
+    expect(open).toHaveBeenCalledWith(expect.stringContaining('Pengelolaan Kualitas Air'));
     open.mockRestore();
   });
 });

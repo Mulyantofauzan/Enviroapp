@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatNumber } from '@evo/shared';
 import type { DayData } from '../hooks/useDay';
-import { buildWaReport, whatsappUrl, witaTime, type WaExtras } from '../lib/waReport';
+import { defaultExtras, buildWaReport, openWhatsapp, witaTime, type WaExtras } from '../lib/waReport';
+import { effectiveRemaining } from '../screens/input/coag';
 import { Button } from '../ui/Button';
 import { useToast } from './Toast';
 
@@ -17,15 +17,24 @@ function Field({ label, value, onChange, placeholder, hint }: { label: string; v
   );
 }
 
+/** Kg used and left of Batu and Serbuk, from the saved day. */
+export function coagKg(data: DayData) {
+  const rem = (t: 'Tawas Batu' | 'Tawas Serbuk') => {
+    const r = data.coagulant[t];
+    return effectiveRemaining(data.previousRemaining[t], { stock_in: r?.stock_in ?? null, stock_out: r?.stock_out ?? null, stock_remaining: r?.stock_remaining ?? null });
+  };
+  const any = data.coagulant['Tawas Batu'] || data.coagulant['Tawas Serbuk'];
+  return { batuOutKg: data.coagulant['Tawas Batu']?.stock_out ?? null, serbukOutKg: data.coagulant['Tawas Serbuk']?.stock_out ?? null, remainKg: any ? rem('Tawas Batu') + rem('Tawas Serbuk') : null };
+}
+
 /** The report message for one pond and day, filled from the saved data, ready to send to a WhatsApp group. */
 export function WhatsappShare({ title, placeCode, date, data, onClose }: Props) {
   const toast = useToast();
   const [time] = useState(() => witaTime());
-  const [x, setX] = useState<WaExtras>({ places: [{ label: placeCode, sack: '0' }, { label: '', sack: '0' }], batu: '0', serbuk: '0', remain: '', pintu: 'Terbuka', pompa: '' });
+  const [x, setX] = useState<WaExtras>(() => defaultExtras(placeCode, coagKg(data)));
   const set = (patch: Partial<WaExtras>) => setX((p) => ({ ...p, ...patch }));
   const setPlace = (i: number, patch: Partial<WaExtras['places'][number]>) => set({ places: x.places.map((p, k) => (k === i ? { ...p, ...patch } : p)) });
   const text = useMemo(() => buildWaReport({ title, date, time, weather: data.weather, water: data.water, extras: x }), [title, date, time, data, x]);
-  const kg = (t: 'Tawas Batu' | 'Tawas Serbuk') => { const o = data.coagulant[t]?.stock_out; return o == null ? undefined : `Di aplikasi: ${formatNumber(o)} kg keluar`; };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -53,8 +62,8 @@ export function WhatsappShare({ title, placeCode, date, data, onClose }: Props) 
             </div>
           ))}
           <div className="ui-two">
-            <Field label="Batu (sack)" value={x.batu} onChange={(v) => set({ batu: v })} hint={kg('Tawas Batu')} />
-            <Field label="Serbuk (sack)" value={x.serbuk} onChange={(v) => set({ serbuk: v })} hint={kg('Tawas Serbuk')} />
+            <Field label="Batu (sack)" value={x.batu} onChange={(v) => set({ batu: v })} />
+            <Field label="Serbuk (sack)" value={x.serbuk} onChange={(v) => set({ serbuk: v })} />
           </div>
           <Field label="Remain (sack)" value={x.remain} onChange={(v) => set({ remain: v })} />
           <Field label="Pintu air" value={x.pintu} onChange={(v) => set({ pintu: v })} placeholder="mis. Terbuka 9 valve" />
@@ -62,7 +71,7 @@ export function WhatsappShare({ title, placeCode, date, data, onClose }: Props) 
         </div>
         <pre className="ui-wa__preview" aria-label="Pratinjau pesan">{text}</pre>
         <div className="ui-outbox__actions">
-          <Button onClick={() => { window.open(whatsappUrl(text), '_blank', 'noopener'); }}>Kirim ke WhatsApp</Button>
+          <Button onClick={() => { openWhatsapp(text); }}>Kirim ke WhatsApp</Button>
           <Button variant="outline" onClick={copy}>Salin teks</Button>
         </div>
       </div>
