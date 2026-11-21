@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { json, mockApi, renderApp, emptyDay } from '../test-utils';
 import { listItems } from '../lib/outbox/queue';
@@ -82,6 +82,23 @@ describe('Input Air Permukaan', () => {
     expect(puts(calls)[0].body).toMatchObject({ ph_inlet: 6.8, ph_outlet: 7.1 });
     expect(await screen.findByText('Data air & koagulan tersimpan')).toBeInTheDocument();
     expect(openWhatsapp).toHaveBeenCalledWith(expect.stringContaining('Hasil Pemantauan SP'));
+    expect(openWhatsapp).toHaveBeenCalledWith(expect.stringContaining('Periode : Senin 2 November 2026'));
+  });
+  it('the WhatsApp report carries the date picked in the date field, not today', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-21T03:00:00Z'));
+    try {
+      const calls = mockApi();
+      renderApp('/input/air?sp=p1');
+      const date = await screen.findByLabelText('Tanggal pencatatan');
+      expect(date).toHaveValue('2026-11-21');
+      fireEvent.change(date, { target: { value: '2026-11-20' } });
+      await userEvent.type(await screen.findByLabelText('pH inlet'), '6,8');
+      await userEvent.click(screen.getByRole('button', { name: 'Simpan data air & koagulan' }));
+      await waitFor(() => expect(puts(calls)).toHaveLength(1));
+      expect(puts(calls)[0].url).toBe('/api/water/2026-11-20/p1');
+      expect(openWhatsapp).toHaveBeenLastCalledWith(expect.stringContaining('Periode : Jumat 20 November 2026'));
+    } finally { vi.useRealTimers(); }
   });
   it('flow is typed in L/s and sent to the server as m3/s', async () => {
     const calls = mockApi();
