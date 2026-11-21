@@ -47,8 +47,8 @@ describe('Dashboard Manager', () => {
     mockApi({ role: 'Manager', handler: dash({ series: s, today: { ...base.today, ph_outlet: 7, debit_outlet_m3s: 0.01 } }) });
     const { container } = renderApp('/');
     await screen.findByRole('group', { name: 'pH Outlet hari ini' });
-    await waitFor(() => expect(container.querySelectorAll('[data-noflow]').length).toBeGreaterThan(0));
-    expect(container.querySelector('[data-abnormal]')).toBeNull();
+    await waitFor(() => expect(screen.getAllByText('No flow (tidak ada aliran)').length).toBeGreaterThan(0));
+    expect(container.querySelectorAll('.ui-echart svg').length).toBeGreaterThan(0);
   });
   it('asks for 7 days first and 30 when chosen', async () => {
     const urls: string[] = [];
@@ -87,7 +87,7 @@ describe('Dashboard Manager', () => {
     expect(await screen.findByRole('img', { name: /Grafik Debit/ })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Debit outlet (L/s)' })).toBeInTheDocument();
     expect(screen.getAllByText('14,8', { selector: 'text' }).length).toBeGreaterThan(0);
-    expect(container.querySelectorAll('[data-noflow]').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('No flow (tidak ada aliran)').length).toBeGreaterThan(0);
   });
   it('no debit in the range: honest empty message', async () => {
     mockApi({ role: 'Manager', handler: dash() });
@@ -155,7 +155,8 @@ describe('Dashboard: TSS, rainfall and calendar overview', () => {
     mockApi({ role: 'Manager', handler: handler() });
     const { container } = renderApp('/');
     await screen.findByRole('img', { name: /Grafik TSS inlet dan outlet/ });
-    expect(container.querySelectorAll('circle[data-abnormal]').length).toBeGreaterThanOrEqual(1);
+    await waitFor(() => expect(container.querySelectorAll('.ui-echart svg').length).toBeGreaterThan(0));
+    expect(screen.getAllByText('Abnormal').length).toBeGreaterThan(0);
     expect(screen.getByText('Baku mutu (maks. 40)')).toBeInTheDocument();
   });
   it('each chart has its own honest empty message', async () => {

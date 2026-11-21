@@ -13,3 +13,6 @@ beforeEach(() => {
   closeOutbox();
   globalThis.indexedDB = new IDBFactory();
 });
+
+// jsdom has no canvas. ECharts measures label text through one, so give it a rough text width.
+HTMLCanvasElement.prototype.getContext = (() => ({ font: '', measureText: (t: string) => ({ width: t.length * 6 }) })) as unknown as HTMLCanvasElement['getContext'];

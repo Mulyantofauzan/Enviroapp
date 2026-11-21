@@ -1,52 +1,25 @@
+import { useMemo } from 'react';
 import { formatNumber } from '@evo/shared';
-import { labelAnchor, labeledIndexes } from '../lib/labels';
-import { clean, niceStep } from '../lib/scale';
+import { barOption } from '../lib/chartOptions';
+import { dayMonth } from '../lib/dates';
+import { EChart } from './EChart';
 
 export type RainPoint = { date: string; value: number | null };
 
-const W = 340, H = 200, L = 38, R = 12, T = 18, B = 28;
-
 export function RainChart({ series }: { series: RainPoint[] }) {
+  const option = useMemo(() => barOption({
+    categories: series.map((s, i) => ({ key: s.date, label: i === 0 || s.date.endsWith('-01') ? dayMonth(s.date) : String(Number(s.date.slice(8))) })),
+    series: [{ name: 'Curah hujan (mm)', values: series.map((s) => s.value) }],
+    hideZeroLabels: true,
+  }), [series]);
   const vals = series.map((s) => s.value).filter((v): v is number => v !== null);
   if (vals.length === 0) return null;
-  const max = Math.max(...vals, 1);
-  const step = niceStep(max);
-  const hi = clean(Math.ceil(max / step) * step);
-  const n = series.length;
-  const iw = W - L - R, ih = H - T - B;
-  const slot = iw / n;
-  const bw = Math.max(2, slot * 0.7);
-  const y = (v: number) => T + ih - (v / hi) * ih;
-  const ticks: number[] = [];
-  for (let t = 0; t <= hi + 1e-9; t = clean(t + step)) ticks.push(t);
-  const every = Math.ceil(n / 7);
-  const shown = labeledIndexes(series.map((s) => s.value));
   const total = vals.reduce((a, b) => a + b, 0);
 
   return (
     <figure className="ui-chart">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Grafik curah hujan, ${n} hari. Total ${formatNumber(total)} mm.`}>
-        {ticks.map((t) => (
-          <g key={t}>
-            <line className="ui-chart__grid" x1={L} x2={W - R} y1={y(t)} y2={y(t)} />
-            <text className="ui-chart__tick" x={L - 6} y={y(t) + 4} textAnchor="end">{formatNumber(t)}</text>
-          </g>
-        ))}
-        {series.map((s, i) => (i % every === 0 || i === n - 1) && (
-          <text key={s.date} className="ui-chart__tick" x={L + slot * i + slot / 2} y={H - 8} textAnchor="middle">{Number(s.date.slice(8))}</text>
-        ))}
-        {series.map((s, i) => s.value === null ? null : (
-          <rect key={s.date} data-bar className="ui-chart__bar" rx={2} x={L + slot * i + (slot - bw) / 2} width={bw}
-            y={y(s.value)} height={T + ih - y(s.value)} />
-        ))}
-        {series.map((s, i) => {
-          if (s.value === null || !shown.has(i)) return null;
-          const cx = L + slot * i + slot / 2;
-          const t = formatNumber(s.value, 1);
-          return <text key={`l${s.date}`} className="ui-chart__label" x={cx} y={y(s.value) - 5} textAnchor={labelAnchor(cx, L, W - R, t.length * 6.5)}>{t}</text>;
-        })}
-      </svg>
-      <ul className="ui-legend"><li><i className="ui-legend__bar" />Curah hujan (mm)</li></ul>
+      <EChart option={option} height={200} label={`Grafik curah hujan, ${series.length} hari. Total ${formatNumber(total)} mm.`} />
+      <ul className="ui-legend"><li><i className="ui-legend__bar ui-legend__bar--0" />Curah hujan (mm)</li></ul>
       <table className="ui-sr">
         <caption>Data curah hujan per hari</caption>
         <thead><tr><th>Tanggal</th><th>Curah hujan (mm)</th></tr></thead>

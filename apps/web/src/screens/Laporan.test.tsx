@@ -143,7 +143,7 @@ describe('Laporan: charts', () => {
     expect(screen.getByRole('heading', { name: 'Rata-rata curah hujan per minggu, 5 minggu terakhir' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Rata-rata curah hujan per bulan, 12 bulan terakhir' })).toBeInTheDocument();
     const card = screen.getByRole('heading', { name: 'Curah hujan, 7 hari terakhir' }).closest('section')!;
-    expect(card.querySelectorAll('text.ui-chart__label').length).toBeGreaterThan(0);
+    await waitFor(() => expect(card.querySelectorAll('.ui-echart svg text').length).toBeGreaterThan(0));
   });
   it('water charts need one location; coagulant charts still work for all locations', async () => {
     setup();
