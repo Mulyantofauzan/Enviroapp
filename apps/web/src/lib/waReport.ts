@@ -42,6 +42,9 @@ export function weatherText(w: WaWeather): string {
 const num = (v: N, unit: string, noFlow: boolean, noFlowLabel: boolean) =>
   v !== null ? `${formatNumber(v, 2)}${unit ? ` ${unit}` : ''}` : noFlow && noFlowLabel ? '(No flow)' : '-';
 
+/** A pond named "CB ..." is a CB; everything else is an SP. Decides which word the report uses. */
+export const pondKind = (name: string): 'SP' | 'CB' => (/^\s*CB\b/i.test(name) ? 'CB' : 'SP');
+
 export function buildWaReport({ title, date, time, weather, water, extras: x }: WaInput): string {
   const noFlow = water?.debit_outlet_m3s === 0;
   const ls = (m3s: N) => (m3s === null ? null : m3s * 1000);
@@ -55,7 +58,7 @@ export function buildWaReport({ title, date, time, weather, water, extras: x }: 
     `Jam : ${time} WITA`,
     `Cuaca : ${weatherText(weather)}`,
     '',
-    '*Hasil Pemantauan SP*',
+    `*Hasil Pemantauan ${pondKind(title)}*`,
     `• TSS Inlet : ${num(water?.tss_inlet ?? null, 'mg/L', noFlow, true)}`,
     `• TSS Outlet : ${num(water?.tss_outlet ?? null, 'mg/L', noFlow, true)}`,
     `• pH Inlet : ${num(water?.ph_inlet ?? null, '', noFlow, false)}`,

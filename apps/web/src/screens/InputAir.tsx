@@ -11,7 +11,6 @@ import { NumberInput } from '../ui/NumberInput';
 import { DayScope, type DayCtx } from './input/DayScope';
 import { WhatsappShare } from '../components/WhatsappShare';
 import { buildWaReport, defaultExtras, openWhatsapp, witaTime } from '../lib/waReport';
-import { pondLabel } from '../ui/PondPicker';
 import { effectiveRemaining, hasInvalid, initialCoag, type CoagState } from './input/coag';
 
 type N = number | null;
@@ -66,10 +65,10 @@ function AirKoagulanForm({ date, sp, data, pond, thresholds, canEdit, reload }: 
         // The message is built from what was just saved, so it is right even when the upload is still queued.
         const kgOf = (t: CoagulantType) => coag[t].stock_out;
         const left = (t: CoagulantType) => effectiveRemaining(data.previousRemaining[t], coag[t]);
-        const extras = defaultExtras(pond.code ?? pond.name, { batuOutKg: kgOf('Tawas Batu'), serbukOutKg: kgOf('Tawas Serbuk'), remainKg: left('Tawas Batu') + left('Tawas Serbuk') });
+        const extras = defaultExtras(pond.name, { batuOutKg: kgOf('Tawas Batu'), serbukOutKg: kgOf('Tawas Serbuk'), remainKg: left('Tawas Batu') + left('Tawas Serbuk') });
         const m3s = (v: number | null) => (v === null ? null : lsToM3s(v));
         const water = { ph_inlet: pts.inlet.ph, ph_outlet: pts.outlet.ph, tss_inlet: pts.inlet.tss, tss_outlet: pts.outlet.tss, debit_inlet_m3s: m3s(pts.inlet.flow), debit_outlet_m3s: m3s(pts.outlet.flow) };
-        openWhatsapp(buildWaReport({ title: pondLabel(pond), date, time: witaTime(), weather: data.weather, water, extras }));
+        openWhatsapp(buildWaReport({ title: pond.name, date, time: witaTime(), weather: data.weather, water, extras }));
       }
     } catch (e) {
       toast((e as Error).message);
@@ -120,7 +119,7 @@ function AirKoagulanForm({ date, sp, data, pond, thresholds, canEdit, reload }: 
       <Banner tone="warning" title="Nilai abnormal hanya disorot">Data tetap tersimpan, tidak diblokir</Banner>
       {canEdit && <Button block disabled={busy} onClick={save}>{busy ? 'Menyimpan…' : 'Simpan data air & koagulan'}</Button>}
       {pond && (data.water || Object.values(data.coagulant).some(Boolean)) && <Button block variant="outline" onClick={() => setSharing(true)}>Kirim ke WhatsApp</Button>}
-      {sharing && pond && <WhatsappShare title={pondLabel(pond)} placeCode={pond.code ?? pond.name} date={date} data={data} onClose={() => setSharing(false)} />}
+      {sharing && pond && <WhatsappShare title={pond.name} placeCode={pond.name} date={date} data={data} onClose={() => setSharing(false)} />}
     </div>
   );
 }
