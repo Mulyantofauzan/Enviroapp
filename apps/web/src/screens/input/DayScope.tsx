@@ -20,23 +20,24 @@ export type DayCtx = {
  * Header, date and pond pickers, and loading of one day. The form below is keyed on date, pond and load,
  * and is not rendered while loading or after an error, so numbers from another day or pond never carry over.
  */
-export function DayScope({ title, children }: { title: string; children: (c: DayCtx) => ReactNode }) {
+export function DayScope({ title, children, perPond = true }: { title: string; children: (c: DayCtx) => ReactNode; perPond?: boolean }) {
   const { user } = useAuth();
   const nav = useNavigate();
   const { ponds, current, setCurrent, loading: pondsLoading } = usePond();
   const [params, setParams] = useSearchParams();
   const date = params.get('date') || localToday();
-  const sp = params.get('sp') || current;
+  // Day-level data (weather) has no pond of its own. The day is still read through some pond, so use the first active one.
+  const sp = perPond ? params.get('sp') || current : current || ponds.find((p) => p.is_active)?.id || ponds[0]?.id || '';
   const pond = ponds.find((p) => p.id === sp);
   const { data, error, reload, version } = useDay(date, sp);
   const setQuery = (patch: Record<string, string>) => setParams({ date, ...(sp ? { sp } : {}), ...patch }, { replace: true });
-  const pondActive = !!pond;
+  const pondActive = !perPond || !!pond;
 
   return (
     <>
-      <ScreenHeader title={title} subtitle={`${pond ? pondLabel(pond) : 'Pilih pond'} - ${formatDateId(date)}`} onProfile={() => nav('/akun')} />
+      <ScreenHeader title={title} subtitle={perPond ? `${pond ? pondLabel(pond) : 'Pilih pond'} - ${formatDateId(date)}` : formatDateId(date)} onProfile={() => nav('/akun')} />
       <div className="ui-page">
-        <section className="ui-card ui-pickers" aria-label="Tanggal dan pond">
+        <section className="ui-card ui-pickers" aria-label={perPond ? 'Tanggal dan pond' : 'Tanggal'}>
           <label className="ui-date">
             <span>Tanggal pencatatan</span>
             <span className="ui-date__box">
@@ -44,10 +45,10 @@ export function DayScope({ title, children }: { title: string; children: (c: Day
               <input type="date" value={date} onChange={(e) => e.target.value && setQuery({ date: e.target.value })} />
             </span>
           </label>
-          <PondPicker ponds={ponds} value={sp} onChange={(id) => { setCurrent(id); setQuery({ sp: id }); }} />
+          {perPond && <PondPicker ponds={ponds} value={sp} onChange={(id) => { setCurrent(id); setQuery({ sp: id }); }} />}
         </section>
 
-        {!pondsLoading && !pondActive && (
+        {perPond && !pondsLoading && !pondActive && (
           <Banner tone="info" title="Settling pond ini nonaktif">Anda bisa melihat hari ini tapi tidak bisa mengubahnya.</Banner>
         )}
         {error && <p className="ui-error" role="alert">{error}</p>}

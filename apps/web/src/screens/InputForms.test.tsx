@@ -15,6 +15,13 @@ const D = '2026-11-02';
 const puts = (calls: { method: string; url: string; body: any }[]) => calls.filter((c) => c.method === 'PUT');
 
 describe('Input Cuaca', () => {
+  it('has no pond picker: weather is one record per day', async () => {
+    mockApi();
+    renderApp(`/input/cuaca?date=${D}`);
+    expect(await screen.findByLabelText('Rainfall')).toBeInTheDocument();
+    expect(screen.queryByText('Settling Pond')).toBeNull();
+    expect(screen.getByLabelText('Tanggal pencatatan')).toBeInTheDocument();
+  });
   it('saves rainfall and rain hours with comma decimals', async () => {
     const calls = mockApi();
     renderApp(`/input/cuaca?date=${D}&sp=p1`);
@@ -35,11 +42,11 @@ describe('Input Cuaca', () => {
   });
   it('hides the form while another pond is loading, so old numbers cannot go to it', async () => {
     mockApi({ handler: (u) => (u.includes('sp=p2') ? new Promise<Response>(() => {}) : undefined) });
-    renderApp(`/input/cuaca?date=${D}&sp=p1`);
-    await userEvent.type(await screen.findByLabelText('Rainfall'), '5');
+    renderApp(`/input/air?date=${D}&sp=p1`);
+    await userEvent.type(await screen.findByLabelText('pH inlet'), '5');
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Settling Pond' }), 'p2');
-    expect(screen.queryByLabelText('Rainfall')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Simpan data cuaca' })).toBeNull();
+    expect(screen.queryByLabelText('pH inlet')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Simpan data air & koagulan' })).toBeNull();
   });
   it('a failed load shows the error and no save button', async () => {
     mockApi({ handler: (u) => (u.startsWith('/api/day') ? json({ error: 'Terjadi kesalahan. Coba lagi.' }, 500) : undefined) });
@@ -49,9 +56,9 @@ describe('Input Cuaca', () => {
   });
   it('a pond that is not active opens read-only', async () => {
     mockApi();
-    renderApp(`/input/cuaca?date=${D}&sp=GONE`);
+    renderApp(`/input/air?date=${D}&sp=GONE`);
     expect(await screen.findByText(/Settling pond ini nonaktif/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Simpan data cuaca' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Simpan data air & koagulan' })).toBeNull();
   });
   it('loads saved values for the day', async () => {
     mockApi({ handler: (u) => (u.startsWith('/api/day') ? json({ ...emptyDay, weather: { rainfall_mm: 7, rain_hours: 2 } }) : undefined) });

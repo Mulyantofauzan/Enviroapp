@@ -51,5 +51,5 @@ function CuacaForm({ date, data, canEdit, reload }: DayCtx) {
 }
 
 export function InputCuaca() {
-  return <DayScope title="Pencatatan Cuaca">{(c) => <CuacaForm {...c} />}</DayScope>;
+  return <DayScope title="Pencatatan Cuaca" perPond={false}>{(c) => <CuacaForm {...c} />}</DayScope>;
 }
