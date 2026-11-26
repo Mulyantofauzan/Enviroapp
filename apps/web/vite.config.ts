@@ -23,6 +23,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['push-sw.js'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         // Reads the input screens need, so they open without signal. Network first: online always shows fresh data.

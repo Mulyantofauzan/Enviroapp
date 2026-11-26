@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../types';
 import { requireAuth, requireWrite } from '../auth/guard';
+import { notifyLimitBreaches } from '../push/jobs';
 import { activePond, badDate, isFail, ONLY_IF_NOT_OLDER, readBody, readNumbers, readRecordedAt } from './common';
 
 export const waterRoutes = new Hono<AppEnv>();
@@ -32,5 +33,11 @@ waterRoutes.put('/:date/:sp', requireWrite, async (c) => {
      ${at.explicit ? ONLY_IF_NOT_OLDER : ''}`,
   ).bind(crypto.randomUUID(), date, sp, v.ph_inlet, v.ph_outlet, v.tss_inlet, v.tss_outlet,
     v.debit_inlet_m3s, v.debit_outlet_m3s, c.get('user').id, at.iso).run();
-  return c.json({ date, sp_id: sp, ...v, applied: res.meta.changes > 0 });
+  const applied = res.meta.changes > 0;
+  if (applied) {
+    // A failed push must never fail the save; run after the response when the runtime allows it.
+    const job = notifyLimitBreaches(c.env, date, sp, v).catch((e) => console.error('limit push failed', e));
+    try { c.executionCtx.waitUntil(job); } catch { await job; }
+  }
+  return c.json({ date, sp_id: sp, ...v, applied });
 });

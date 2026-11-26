@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Role } from '@evo/shared';
 import { api, post, setUnauthorizedHandler } from '../api/client';
 import { clearReadCache } from '../api/readCache';
+import { disablePush } from '../lib/push';
 
 export type User = { id: string; name: string; role: Role };
 type Ctx = { user: User | null; loading: boolean; login(email: string, pw: string): Promise<void>; logout(): Promise<void> };
@@ -26,6 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(u);
     },
     async logout() {
+      // This phone may be handed to someone else; stop sending them this person's notifications. Needs the session, so first.
+      await disablePush().catch(() => {});
       await post('/auth/logout', {}).catch(() => {});
       // The read cache holds this person's days and events; the outbox stays until its owner signs in again.
       await clearReadCache();

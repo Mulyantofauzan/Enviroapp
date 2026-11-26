@@ -48,3 +48,51 @@ describe('Login note', () => {
     expect(await screen.findByText(/Ada 1 data belum terunggah di HP ini/)).toBeInTheDocument();
   });
 });
+
+describe('Notifikasi', () => {
+  const stubPush = (subscribed = false) => {
+    const sub = { endpoint: 'https://push.example/1', toJSON: () => ({ endpoint: 'https://push.example/1', keys: { p256dh: 'p', auth: 'a' } }), unsubscribe: vi.fn(async () => true) };
+    let current: typeof sub | null = subscribed ? sub : null;
+    const pushManager = { getSubscription: vi.fn(async () => current), subscribe: vi.fn(async () => (current = sub)) };
+    Object.defineProperty(navigator, 'serviceWorker', { value: { ready: Promise.resolve({ pushManager }) }, configurable: true });
+    vi.stubGlobal('PushManager', class {});
+    vi.stubGlobal('Notification', { requestPermission: vi.fn(async () => 'granted') });
+    return { sub, pushManager };
+  };
+  afterEach(() => { delete (navigator as any).serviceWorker; });
+  const keyHandler = (u: string) => (u.startsWith('/api/push/key') ? json({ key: 'AQID' }) : undefined);
+
+  it('explains when the browser cannot do it and shows no button', async () => {
+    mockApi();
+    renderApp('/akun');
+    expect(await screen.findByText(/belum mendukung notifikasi/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /notifikasi/ })).toBeNull();
+  });
+  it('Aktifkan notifikasi subscribes and tells the server', async () => {
+    const { pushManager } = stubPush();
+    const calls = mockApi({ handler: keyHandler });
+    renderApp('/akun');
+    await userEvent.click(await screen.findByRole('button', { name: 'Aktifkan notifikasi' }));
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/push/subscribe' && c.method === 'POST')).toBe(true));
+    expect(pushManager.subscribe).toHaveBeenCalled();
+    expect(await screen.findByRole('button', { name: 'Matikan notifikasi' })).toBeInTheDocument();
+  });
+  it('Matikan notifikasi removes the device on the server and in the browser', async () => {
+    const { sub } = stubPush(true);
+    const calls = mockApi();
+    renderApp('/akun');
+    await userEvent.click(await screen.findByRole('button', { name: 'Matikan notifikasi' }));
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/push/subscribe' && c.method === 'DELETE')).toBe(true));
+    expect(sub.unsubscribe).toHaveBeenCalled();
+  });
+  it('signing out removes this device\'s subscription first', async () => {
+    stubPush(true);
+    const calls = mockApi();
+    renderApp('/akun');
+    await userEvent.click(await screen.findByRole('button', { name: /Keluar/ }));
+    await waitFor(() => expect(loggedOut(calls)).toBe(true));
+    const order = calls.map((c) => `${c.method} ${c.url}`);
+    expect(order.indexOf('DELETE /api/push/subscribe')).toBeGreaterThan(-1);
+    expect(order.indexOf('DELETE /api/push/subscribe')).toBeLessThan(order.indexOf('POST /api/auth/logout'));
+  });
+});
